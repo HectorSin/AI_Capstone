@@ -1,0 +1,340 @@
+{
+    "companies": {
+      "GOOGLE": {
+        "guideline": "Focus on Google AI, DeepMind, Google Research, Google Cloud, Bard, Gemini, search algorithms, cloud infrastructure, Android development, Chrome, YouTube",
+        "sources": [
+          "ai.googleblog.com",
+          "research.google",
+          "github.com/google",
+          "deepmind.com",
+          "cloud.google.com/blog",
+          "developers.googleblog.com",
+          "android-developers.googleblog.com",
+          "blog.google/technology/developers",
+          "developers.google.com/search/blog",
+          "blog.chromium.org",
+          "workspaceupdates.googleblog.com",
+          "blog.youtube",
+          "developers.google.com",
+          "github.com/googleresearch",
+          "github.com/tensorflow",
+          "github.com/googleai",
+          "github.com/deepmind",
+          "googletechtalks.com",
+          "opensource.googleblog.com",
+          "security.googleblog.com"
+        ],
+        "aliases": ["ALPHABET", "GOOGLE AI", "DEEPMIND", "ANDROID", "CHROME", "YOUTUBE", "GEMINI", "BARD", "PIXEL", "WAYMO"]
+      },
+      "META": {
+        "guideline": "Focus on Meta AI, Reality Labs, LLaMA models, VR/AR research, social media algorithms, metaverse technology, PyTorch development, React ecosystem",
+        "sources": [
+          "ai.meta.com/blog",
+          "github.com/facebookresearch",
+          "research.facebook.com",
+          "engineering.fb.com",
+          "ai.meta.com/research",
+          "ai.meta.com",
+          "github.com/meta",
+          "github.com/pytorch",
+          "github.com/react",
+          "pytorch.org/blog",
+          "reactjs.org/blog",
+          "developers.facebook.com",
+          "about.fb.com/news",
+          "tech.fb.com",
+          "code.facebook.com",
+          "research.fb.com",
+          "opensource.fb.com",
+          "ai.facebook.com",
+          "realitylabs.com",
+          "oculus.com/blog"
+        ],
+        "aliases": ["FACEBOOK", "META AI", "REALITY LABS", "PYTORCH", "REACT", "LLAMA", "INSTAGRAM", "WHATSAPP", "OCULUS", "FAIR"]
+      },
+      "MICROSOFT": {
+        "guideline": "Focus on Azure AI, Copilot, GitHub developments, Office AI integration, research publications, cloud services, Windows development, .NET ecosystem",
+        "sources": [
+          "azure.microsoft.com/en-us/blog",
+          "github.com/microsoft",
+          "research.microsoft.com",
+          "blogs.microsoft.com",
+          "devblogs.microsoft.com",
+          "techcommunity.microsoft.com",
+          "docs.microsoft.com",
+          "github.blog",
+          "aka.ms/azureaiservices",
+          "news.microsoft.com",
+          "dotnet.microsoft.com/blog",
+          "visualstudio.microsoft.com/blog",
+          "azure.microsoft.com/blog/product/azure-openai-service",
+          "learn.microsoft.com",
+          "github.com/Azure",
+          "github.com/dotnet",
+          "powershell.org",
+          "microsoft.com/security/blog",
+          "cloudblogs.microsoft.com",
+          "insider.windows.com"
+        ],
+        "aliases": ["MSFT", "AZURE", "GITHUB", "COPILOT", "WINDOWS", "OFFICE", "DOTNET", "VISUAL STUDIO", "XBOX", "TEAMS"]
+      },
+      "OPENAI": {
+        "guideline": "Focus on GPT models, API updates, research papers, ChatGPT features, safety research, technical capabilities, DALL-E developments",
+        "sources": [
+          "openai.com/news",
+          "openai.com/research",
+          "openai.com/blog",
+          "platform.openai.com/docs",
+          "github.com/openai",
+          "arxiv.org",
+          "openai.com/api",
+          "platform.openai.com",
+          "openai.com/news/research",
+          "openai.com/research/index/release",
+          "platform.openai.com/docs/overview",
+          "platform.openai.com/docs/api-reference",
+          "platform.openai.com/docs/models",
+          "platform.openai.com/docs/guides",
+          "help.openai.com",
+          "community.openai.com",
+          "cookbook.openai.com",
+          "openai.com/safety",
+          "openai.com/papers",
+          "chat.openai.com/blog"
+        ],
+        "aliases": ["CHATGPT", "GPT", "DALL-E", "WHISPER", "CODEX", "GPT-4", "GPT-3", "SORA", "O1"]
+      },
+      "ANTHROPIC": {
+        "guideline": "Focus on Claude models, Constitutional AI, safety research, API developments, responsible AI practices, alignment research",
+        "sources": [
+          "anthropic.com/news",
+          "docs.anthropic.com",
+          "github.com/anthropics",
+          "anthropic.com/api",
+          "anthropic.com/research",
+          "anthropic.com/learn/build-with-claude",
+          "anthropic.com/news/claude-4",
+          "anthropic.com/news/research",
+          "anthropic.com/news/web-search-api",
+          "anthropic.com/safety",
+          "anthropic.com/constitutional-ai",
+          "claude.ai/blog",
+          "arxiv.org",
+          "papers.anthropic.com",
+          "github.com/anthropics/anthropic-sdk-python",
+          "github.com/anthropics/claude-code",
+          "anthropic.com/cookbook",
+          "support.anthropic.com",
+          "anthropic.com/alignment",
+          "anthropic.com/interpretability"
+        ],
+        "aliases": ["CLAUDE", "CONSTITUTIONAL AI", "HARMLESSNESS", "HELPFULNESS", "HONESTY"]
+      },
+      "NVIDIA": {
+        "guideline": "Focus on GPU architecture, CUDA developments, AI chips, gaming technology, data center solutions, deep learning frameworks, autonomous driving",
+        "sources": [
+          "developer.nvidia.com/blog",
+          "blogs.nvidia.com",
+          "github.com/nvidia",
+          "docs.nvidia.com/cuda",
+          "developer.nvidia.com/cuda-toolkit",
+          "developer.nvidia.com",
+          "nvidianews.nvidia.com",
+          "nvidia.com/blog",
+          "github.com/NVIDIA",
+          "developer.nvidia.com/deep-learning",
+          "docs.nvidia.com",
+          "nvidia.com/research",
+          "developer.nvidia.com/tensorrt",
+          "developer.nvidia.com/rapids",
+          "developer.nvidia.com/triton-inference-server",
+          "nvidia.com/ai-data-science",
+          "developer.nvidia.com/omniverse",
+          "nvidia.com/autonomous-machines",
+          "nvidia.com/datacenter",
+          "geforce.com/news"
+        ],
+        "aliases": ["NVDA", "CUDA", "GEFORCE", "TENSORRT", "RAPIDS", "OMNIVERSE", "JETSON", "DGX", "H100", "A100"]
+      },
+      "TESLA": {
+        "guideline": "Focus on FSD (Full Self-Driving), neural networks, battery technology, manufacturing innovations, robotics, Autopilot development, AI Day presentations",
+        "sources": [
+          "tesla.com/blog",
+          "github.com/teslamotors",
+          "ir.tesla.com",
+          "tesla.com/support",
+          "tesla.com/autopilot",
+          "tesla.com/AI",
+          "tesla.com/robotaxi",
+          "tesla.com/energy",
+          "tesla.com/supercharger",
+          "tesla.com/manufacturing",
+          "arxiv.org",
+          "tesla.com/careers",
+          "tesla.com/updates",
+          "youtube.com/user/TeslaMotors",
+          "tesla.com/owner-api",
+          "tesla.com/developer",
+          "tesla.com/news",
+          "tesla.com/sustainability",
+          "tesla.com/roadster",
+          "tesla.com/semi"
+        ],
+        "aliases": ["TSLA", "FSD", "AUTOPILOT", "MODEL S", "MODEL 3", "MODEL X", "MODEL Y", "CYBERTRUCK", "POWERWALL", "SUPERCHARGER"]
+      },
+      "APPLE": {
+        "guideline": "Focus on machine learning, iOS/macOS AI features, chip design (M-series, A-series), privacy technology, Core ML, Siri development, AR/VR",
+        "sources": [
+          "machinelearning.apple.com",
+          "developer.apple.com/news",
+          "github.com/apple",
+          "developer.apple.com/machine-learning",
+          "developer.apple.com/documentation/coreml",
+          "apple.com/newsroom/technology",
+          "developer.apple.com/wwdc",
+          "developer.apple.com/videos",
+          "swift.org/blog",
+          "github.com/apple/swift",
+          "developer.apple.com/metal",
+          "developer.apple.com/arkit",
+          "developer.apple.com/realitykit",
+          "apple.com/privacy",
+          "webkit.org/blog",
+          "github.com/WebKit",
+          "apple.com/research",
+          "developer.apple.com/accelerate",
+          "developer.apple.com/createml",
+          "support.apple.com/developer"
+        ],
+        "aliases": ["AAPL", "IOS", "MACOS", "M-SERIES", "A-SERIES", "SIRI", "CORE ML", "SWIFT", "METAL", "ARKIT", "VISION PRO"]
+      },
+      "AMAZON": {
+        "guideline": "Focus on AWS AI services, Alexa developments, cloud infrastructure, logistics automation, drone technology, machine learning services, robotics",
+        "sources": [
+          "aws.amazon.com/blogs",
+          "developer.amazon.com/blogs",
+          "github.com/aws",
+          "aws.amazon.com/machine-learning/blog",
+          "aws.amazon.com/sagemaker/blog",
+          "amazon.science",
+          "aboutamazon.com/news",
+          "aws.amazon.com/bedrock",
+          "aws.amazon.com/ai",
+          "developer.amazon.com/alexa",
+          "github.com/amazon-research",
+          "github.com/amzn",
+          "aws.amazon.com/blogs/aws",
+          "aws.amazon.com/blogs/big-data",
+          "aws.amazon.com/blogs/compute",
+          "aws.amazon.com/blogs/containers",
+          "aws.amazon.com/blogs/database",
+          "sustainability.aboutamazon.com",
+          "blog.aboutamazon.com",
+          "press.aboutamazon.com"
+        ],
+        "aliases": ["AMZN", "AWS", "ALEXA", "SAGEMAKER", "BEDROCK", "EC2", "S3", "LAMBDA", "PRIME AIR", "KINDLE"]
+      }
+    },
+    "default_sources": [
+      "techcrunch.com",
+      "theverge.com",
+      "arstechnica.com",
+      "wired.com",
+      "engadget.com",
+      "venturebeat.com",
+      "ieee.org",
+      "acm.org",
+      "arxiv.org",
+      "github.com"
+    ],
+    "source_categories": {
+      "primary_tech": [
+        "TechCrunch", "The Verge", "Wired", "Ars Technica", 
+        "IEEE Spectrum", "VentureBeat", "Engadget", "ZDNet", 
+        "CNET", "Tom's Hardware", "AnandTech", "9to5Mac",
+        "9to5Google", "MacRumors", "Android Police"
+      ],
+      "academic": [
+        "arXiv", "Nature", "Science", "ACM Digital Library", 
+        "research institution blogs", "MIT Technology Review", 
+        "Google AI Blog", "OpenAI Blog", "DeepMind Blog",
+        "Apple Machine Learning Journal", "Amazon Science",
+        "Microsoft Research", "Anthropic Research"
+      ],
+      "company_official": [
+        "Official company blogs", "developer documentation", 
+        "technical announcements", "GitHub releases", 
+        "Microsoft Research", "Apple Machine Learning Journal", 
+        "Meta AI Blog", "NVIDIA Developer Blog", "Tesla Blog",
+        "AWS Blogs", "Google Developers Blog"
+      ],
+      "developer_focused": [
+        "Hacker News", "GitHub Blog", "Stack Overflow Blog", 
+        "Developer.com", "InfoQ", "Smashing Magazine", 
+        "Dev.to", "Medium technical publications",
+        "Towards Data Science", "KDnuggets"
+      ],
+      "emerging_tech": [
+        "Next Big Future", "Singularity Hub", "Kurzweil AI", 
+        "AI News", "VentureBeat AI", "The Information (when accessible)",
+        "Fortune AI", "Forbes AI", "Fast Company Technology"
+      ],
+      "hardware_focused": [
+        "Tom's Hardware", "AnandTech", "TechPowerUp", 
+        "Hardware.info", "PCWorld", "Computerworld",
+        "Electronics Weekly", "EE Times", "Semiconductor Engineering"
+      ],
+      "open_source": [
+        "GitHub Blog", "GitLab Blog", "Linux Foundation News", 
+        "Apache Software Foundation Blog", "Mozilla Hacks", 
+        "Red Hat Developer Blog", "CNCF Blog", "Docker Blog"
+      ],
+      "ai_specialized": [
+        "Towards AI", "AI Research", "Machine Learning Mastery",
+        "Papers With Code", "Distill.pub", "The Gradient",
+        "AI Ethics", "Partnership on AI", "AI Now Institute"
+      ],
+      "cloud_infrastructure": [
+        "AWS Blog", "Azure Blog", "Google Cloud Blog",
+        "DigitalOcean Blog", "Cloudflare Blog", "Kubernetes Blog",
+        "Docker Blog", "HashiCorp Blog", "Redis Blog"
+      ],
+      "security_privacy": [
+        "Krebs on Security", "The Hacker News", "Security Week",
+        "Dark Reading", "Privacy International", "EFF Blog",
+        "OWASP Blog", "SANS Reading Room", "Threatpost"
+      ]
+    },
+    "search_priorities": {
+      "real_time": [
+        "Twitter/X official accounts", "Reddit tech subreddits",
+        "Hacker News", "Product Hunt", "Live conferences"
+      ],
+      "technical_depth": [
+        "arXiv preprints", "ACM/IEEE papers", "Company research blogs",
+        "GitHub repositories", "Technical documentation"
+      ],
+      "industry_analysis": [
+        "Gartner", "Forrester", "IDC", "McKinsey Digital",
+        "BCG Technology", "Deloitte Tech Trends"
+      ]
+    },
+    "content_types": {
+      "research_papers": {
+        "primary": ["arxiv.org", "acm.org", "ieee.org"],
+        "company_specific": ["research.google", "research.microsoft.com", "amazon.science", "research.facebook.com"]
+      },
+      "code_repositories": {
+        "primary": ["github.com"],
+        "company_specific": ["github.com/google", "github.com/microsoft", "github.com/openai", "github.com/anthropics"]
+      },
+      "documentation": {
+        "primary": ["docs."], 
+        "api_docs": ["platform.", "developer.", "api."]
+      },
+      "news_announcements": {
+        "primary": ["/news", "/blog", "/press", "/newsroom"],
+        "company_specific": ["nvidianews.nvidia.com", "ir.tesla.com", "aboutamazon.com/news"]
+      }
+    }
+  }
