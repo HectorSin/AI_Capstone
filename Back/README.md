@@ -1,4 +1,14 @@
-# DB
+# BackEnd
+
+## DB 세팅
+![PostgreSQL](https://www.postgresql.org/download/) 설치
+
+## 실행
+```
+conda activate capstone
+cd Back/app
+uvicorn main:app --reload
+```
 
 ## 데이터베이스 스키마
 
