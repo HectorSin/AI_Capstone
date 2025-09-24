@@ -1,21 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
 
-import crud
 import schemas
-from database import database
+import auth
 
-router = APIRouter()
+router = APIRouter(
+    tags=["Users"],
+    prefix="/users",
+    # 이 라우터의 모든 API는 인증이 필요하다고 명시할 수 있습니다.
+    # dependencies=[Depends(auth.get_current_user)] 
+)
 
-# DB 세션을 얻기 위한 함수
-async def get_db():
-    async with database.AsyncSessionLocal() as session:
-        yield session
-
-@router.post("/", response_model=schemas.User)
-async def create_user_api(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
-    db_user = await crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return await crud.create_user(db=db, user=user)
+@router.get("/me", response_model=schemas.User)
+async def read_users_me(current_user: schemas.User = Depends(auth.get_current_user)):
+    # get_current_user 함수가 토큰을 검증하고 user 객체를 반환해줍니다.
+    return current_user

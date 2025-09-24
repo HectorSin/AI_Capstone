@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from database.database import engine, Base
-from routers import users
+from routers import users, auth
 
 # DB 테이블 생성을 위한 코드
 async def create_tables():
@@ -19,7 +19,14 @@ async def on_startup():
 app.include_router(
     users.router,
     prefix="/users", # URL 경로 앞에 /users 를 붙여줌
-    tags=["users"],   # API 문서에서 'users' 그룹으로 묶어줌
+    tags=["Users"],   # API 문서에서 'users' 그룹으로 묶어줌
+)
+
+# auth 라우터 포함
+app.include_router(
+    auth.router,
+    prefix="/auth",
+    tags=["Authentication"],
 )
 
 @app.get("/")
