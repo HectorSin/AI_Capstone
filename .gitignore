@@ -209,5 +209,40 @@ __marimo__/
 # data
 data/
 
+# 프로젝트 특정 파일들
+uploads/
+*.db
+*.sqlite3
+*.sqlite
+
+# 로그 파일
+logs/
+*.log
+
+# 임시 파일
+temp/
+tmp/
+*.tmp
+
+# Docker 볼륨 데이터
+postgres_data/
+redis_data/
+
+# API 키 및 인증서
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# 백업 파일
+*.bak
+*.backup
+
+# 환경 변수 파일들
 .env
+.env.local
+.env.production
+.env.staging
+*.env
 /env

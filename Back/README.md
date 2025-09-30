@@ -40,6 +40,59 @@ URL 묶음을 입력하면 AI가 종합 분석하여 요약 리포트와 오디�
     ```
 4.  **API 문서 확인**: 서버 실행 후, 웹 브라우저에서 `http://127.0.0.1:8000/docs` 로 접속하여 자동 생성된 API 문서를 확인하고 테스트할 수 있습니다.
 
+## Docker Compose를 이용한 실행 (Docker Execution)
+
+Docker Compose를 사용하면 데이터베이스와 백엔드 서버를 한 번에 실행할 수 있습니다.
+
+1.  **환경 변수 설정**
+    ```bash
+    cp env.example .env
+    # .env 파일을 열어서 다음 정보들을 설정하세요:
+    # - POSTGRES_PASSWORD: 데이터베이스 비밀번호
+    # - SECRET_KEY: JWT 토큰 암호화 키
+    # - API 키들: Perplexity, Google, Naver CLOVA API 키
+    ```
+
+2.  **Docker Compose로 서비스 실행**
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  **서비스 상태 확인**
+    ```bash
+    docker-compose ps
+    ```
+
+4.  **로그 확인**
+    ```bash
+    # 모든 서비스 로그
+    docker-compose logs
+    
+    # 특정 서비스 로그
+    docker-compose logs backend
+    docker-compose logs postgres
+    ```
+
+5.  **서비스 중지**
+    ```bash
+    docker-compose down
+    ```
+
+6.  **데이터까지 완전 삭제**
+    ```bash
+    docker-compose down -v
+    ```
+
+### Docker Compose 서비스 구성
+- **postgres**: PostgreSQL 17 데이터베이스 (포트: 5432)
+- **backend**: FastAPI 백엔드 서버 (포트: 8000)
+- **redis**: Redis 캐시 서버 (포트: 6379)
+
+### 보안 주의사항
+- `.env` 파일은 절대 Git에 커밋하지 마세요 (`.gitignore`에 포함됨)
+- 프로덕션 환경에서는 반드시 강력한 비밀번호와 API 키를 사용하세요
+- `env.example` 파일을 참고하여 필요한 환경 변수를 설정하세요
+
 ## 데이터베이스 스키마 (Database Schema)
 
 ![데이터베이스 스키마](../img/database.png)
