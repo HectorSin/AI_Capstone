@@ -81,7 +81,8 @@ def main():
         workflow = AIWorkflow(
             perplexity_api_key=AISettings.PERPLEXITY_API_KEY,
             google_api_key=AISettings.GOOGLE_API_KEY,
-            google_credentials_path=AISettings.GOOGLE_APPLICATION_CREDENTIALS,
+            naver_clova_client_id=AISettings.NAVER_CLOVA_CLIENT_ID,
+            naver_clova_client_secret=AISettings.NAVER_CLOVA_CLIENT_SECRET,
             config_path=AISettings.CONFIG_PATH
         )
         print("AI 워크플로우 초기화 완료")

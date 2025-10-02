@@ -19,7 +19,10 @@ class AISettings:
     # API 키 설정
     PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
     GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
-    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    
+    # 네이버 클로바 TTS 설정
+    NAVER_CLOVA_CLIENT_ID: Optional[str] = os.getenv("NAVER_CLOVA_CLIENT_ID")
+    NAVER_CLOVA_CLIENT_SECRET: Optional[str] = os.getenv("NAVER_CLOVA_CLIENT_SECRET")
     
     # 파일 경로 설정
     CONFIG_PATH: str = os.getenv("AI_CONFIG_PATH", os.path.join(os.path.dirname(__file__), "company_config.json"))
@@ -72,8 +75,8 @@ class AISettings:
         if not cls.GOOGLE_API_KEY:
             validation_result["warnings"].append("GOOGLE_API_KEY가 설정되지 않았습니다. LLM 기능이 제한됩니다.")
         
-        if not cls.GOOGLE_APPLICATION_CREDENTIALS:
-            validation_result["warnings"].append("GOOGLE_APPLICATION_CREDENTIALS가 설정되지 않았습니다. TTS 기능이 제한됩니다.")
+        if not cls.NAVER_CLOVA_CLIENT_ID or not cls.NAVER_CLOVA_CLIENT_SECRET:
+            validation_result["warnings"].append("NAVER_CLOVA_CLIENT_ID 또는 NAVER_CLOVA_CLIENT_SECRET이 설정되지 않았습니다. TTS 기능이 제한됩니다.")
         
         # 파일 경로 검증
         if not os.path.exists(cls.CONFIG_PATH):

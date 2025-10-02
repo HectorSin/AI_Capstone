@@ -14,14 +14,15 @@ from .tts_processor import TTSProcessor
 class AudioManager:
     """오디오 관리 클래스"""
     
-    def __init__(self, google_credentials_path: Optional[str] = None):
+    def __init__(self, client_id: str, client_secret: str):
         """
         AudioManager 초기화
         
         Args:
-            google_credentials_path (Optional[str]): Google Cloud 서비스 계정 키 파일 경로
+            client_id (str): 네이버 클로바 TTS 클라이언트 ID
+            client_secret (str): 네이버 클로바 TTS 클라이언트 시크릿
         """
-        self.tts_processor = TTSProcessor(google_credentials_path)
+        self.tts_processor = TTSProcessor(client_id, client_secret)
     
     def create_audio_workflow(self, script_file_path: str, category: str, 
                             output_dir: Optional[str] = None) -> Optional[Dict[str, Any]]:
@@ -36,9 +37,9 @@ class AudioManager:
         Returns:
             Optional[Dict[str, Any]]: 생성된 오디오 파일 정보
         """
-        print("🎵 오디오 워크플로우 시작!")
-        print(f"📂 카테고리: {category}")
-        print(f"📄 대본 파일: {script_file_path}")
+        print("오디오 워크플로우 시작!")
+        print(f"카테고리: {category}")
+        print(f"대본 파일: {script_file_path}")
         print("-" * 50)
         
         # 출력 디렉토리 설정
@@ -48,11 +49,11 @@ class AudioManager:
             output_dir = f"data/output/{safe_category}_{timestamp}/audio"
         
         # 오디오 파일 생성
-        print("🎙️ 팟캐스트 음성 파일 생성 중...")
+        print("팟캐스트 음성 파일 생성 중...")
         audio_file = self.tts_processor.generate_podcast_audio(script_file_path, output_dir)
         
         if not audio_file:
-            print("❌ 오디오 파일 생성에 실패했습니다.")
+            print("오디오 파일 생성에 실패했습니다.")
             return None
         
         # 파일 정보 수집
@@ -66,9 +67,9 @@ class AudioManager:
             "output_dir": output_dir
         }
         
-        print(f"✅ 오디오 워크플로우 완료!")
-        print(f"🎵 음성 파일: {audio_file}")
-        print(f"📊 파일 크기: {result['file_size_mb']} MB")
+        print(f"오디오 워크플로우 완료!")
+        print(f"음성 파일: {audio_file}")
+        print(f"파일 크기: {result['file_size_mb']} MB")
         
         return result
     
@@ -79,7 +80,7 @@ class AudioManager:
         Returns:
             bool: TTS 사용 가능 여부
         """
-        return self.tts_processor.tts_client is not None
+        return self.tts_processor.tts_available
     
     def get_tts_status(self) -> Dict[str, Any]:
         """
@@ -90,6 +91,6 @@ class AudioManager:
         """
         return {
             "tts_available": self.is_tts_available(),
-            "google_tts_available": self.tts_processor.tts_client is not None,
+            "naver_clova_tts_available": self.tts_processor.tts_available,
             "libraries_installed": True  # 이 부분은 실제로는 라이브러리 설치 상태를 확인해야 함
         }

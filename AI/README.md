@@ -57,8 +57,9 @@ PERPLEXITY_API_KEY=your_perplexity_api_key_here
 # 선택적 API 키 (LLM 기능용)
 GOOGLE_API_KEY=your_google_api_key_here
 
-# Google Cloud TTS용 서비스 계정 키 파일 경로
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/service-account-key.json
+# 네이버 클로바 TTS API 설정
+NAVER_CLOVA_CLIENT_ID=your_naver_clova_client_id
+NAVER_CLOVA_CLIENT_SECRET=your_naver_clova_client_secret
 
 # AI 팟캐스트 생성 시스템 설정
 AI_CONFIG_PATH=../AI/config/company_config.json
@@ -69,12 +70,12 @@ AI_HOST2_NAME=박AI
 
 **참고**: 모든 환경변수는 `Back/.env` 파일 하나에서 관리됩니다.
 
-### 3. Google Cloud 설정 (TTS 사용시)
+### 3. 네이버 클로바 TTS 설정
 
-1. Google Cloud Console에서 프로젝트 생성
-2. Text-to-Speech API 활성화
-3. 서비스 계정 생성 및 키 파일 다운로드
-4. 환경변수에 키 파일 경로 설정
+1. [네이버 클라우드 플랫폼](https://www.ncloud.com/) 회원가입
+2. 콘솔에서 클로바 음성 API 서비스 신청
+3. API 키 발급 (Client ID, Client Secret)
+4. 환경변수에 API 키 설정
 
 ## 🎯 사용 방법
 
@@ -202,18 +203,6 @@ def create_podcast_dag():
 - 오디오 처리 상태
 - 에러 및 경고 메시지
 
-## 🤝 기여하기
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다.
-
 ## 🆘 문제 해결
 
 ### 일반적인 문제
@@ -225,7 +214,3 @@ def create_podcast_dag():
 ### 지원
 
 문제가 발생하면 GitHub Issues에 보고해주세요.
-
----
-
-**🎉 AI 팟캐스트 생성 시스템을 사용해보세요!**

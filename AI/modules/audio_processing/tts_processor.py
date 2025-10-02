@@ -2,90 +2,83 @@
 TTS (Text-to-Speech) 처리 모듈
 
 텍스트를 음성으로 변환하고 팟캐스트 음성을 생성하는 클래스
+네이버 클로바 TTS API를 사용합니다.
 """
 
 import os
 import re
+import requests
+import base64
+import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 try:
-    from google.cloud import texttospeech
     from pydub import AudioSegment
     from pydub.effects import normalize
-    GOOGLE_TTS_AVAILABLE = True
+    PYTHON_TTS_AVAILABLE = True
 except ImportError:
-    GOOGLE_TTS_AVAILABLE = False
-    print("Google Cloud TTS 또는 pydub 라이브러리가 설치되지 않았습니다.")
+    PYTHON_TTS_AVAILABLE = False
+    print("⚠️ pydub 라이브러리가 설치되지 않았습니다.")
 
 
 class TTSProcessor:
-    """TTS 처리 클래스"""
+    """TTS 처리 클래스 - 네이버 클로바 TTS API 사용"""
     
-    def __init__(self, google_credentials_path: Optional[str] = None):
+    def __init__(self, client_id: str, client_secret: str):
         """
         TTSProcessor 초기화
         
         Args:
-            google_credentials_path (Optional[str]): Google Cloud 서비스 계정 키 파일 경로
+            client_id (str): 네이버 클로바 TTS 클라이언트 ID
+            client_secret (str): 네이버 클로바 TTS 클라이언트 시크릿
         """
-        self.tts_client = None
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.api_url = "https://naveropenapi.apigw.ntruss.com/tts-premium/v1/tts"
         
-        if GOOGLE_TTS_AVAILABLE:
-            if google_credentials_path:
-                os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = google_credentials_path
-            
-            try:
-                self.tts_client = texttospeech.TextToSpeechClient()
-                print("Google TTS 클라이언트 초기화 완료")
-            except Exception as e:
-                print(f"Google TTS 클라이언트 초기화 실패: {e}")
-                print("Google Cloud 인증을 확인해주세요.")
+        if not client_id or not client_secret:
+            print("❌ 네이버 클로바 TTS API 키가 설정되지 않았습니다.")
+            self.tts_available = False
         else:
-            print("TTS 라이브러리가 설치되지 않았습니다.")
+            self.tts_available = True
+            print("✅ 네이버 클로바 TTS 클라이언트 초기화 완료")
     
-    def text_to_speech(self, text: str, voice_name: str = "ko-KR-Standard-A", 
+    def text_to_speech(self, text: str, speaker: str = "nara", 
                       output_file: Optional[str] = None) -> Optional[str]:
         """
-        텍스트를 음성으로 변환하는 메서드
+        텍스트를 음성으로 변환하는 메서드 (네이버 클로바 TTS)
         
         Args:
             text (str): 변환할 텍스트
-            voice_name (str): 사용할 음성 (기본값: 한국어 남성)
+            speaker (str): 음성 선택 (nara, jinho, shinji, mijin, jihun)
             output_file (Optional[str]): 출력 파일 경로 (기본값: 자동 생성)
         
         Returns:
             Optional[str]: 생성된 음성 파일 경로
         """
-        if not self.tts_client:
-            print("TTS 클라이언트가 초기화되지 않았습니다.")
+        if not self.tts_available:
+            print("❌ TTS 클라이언트가 초기화되지 않았습니다.")
             return None
         
         try:
-            # 음성 설정
-            synthesis_input = texttospeech.SynthesisInput(text=text)
+            # 네이버 클로바 TTS API 요청
+            headers = {
+                "X-NCP-APIGW-API-KEY-ID": self.client_id,
+                "X-NCP-APIGW-API-KEY": self.client_secret,
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
             
-            # 음성 선택 (한국어)
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="ko-KR",
-                name=voice_name,
-                ssml_gender=texttospeech.SsmlVoiceGender.MALE if "A" in voice_name else texttospeech.SsmlVoiceGender.FEMALE
-            )
+            # 요청 데이터
+            data = {
+                "speaker": speaker,
+                "speed": 0,
+                "text": text
+            }
             
-            # 오디오 설정
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3,
-                speaking_rate=1.0,  # 말하기 속도
-                pitch=0.0,  # 음높이
-                volume_gain_db=0.0  # 볼륨
-            )
-            
-            # TTS 요청
-            response = self.tts_client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice,
-                audio_config=audio_config
-            )
+            # API 요청
+            response = requests.post(self.api_url, headers=headers, data=data)
+            response.raise_for_status()
             
             # 파일 저장
             if output_file is None:
@@ -93,13 +86,16 @@ class TTSProcessor:
                 output_file = f"temp_audio_{timestamp}.mp3"
             
             with open(output_file, "wb") as out:
-                out.write(response.audio_content)
+                out.write(response.content)
             
-            print(f"음성 파일 생성 완료: {output_file}")
+            print(f"🎵 음성 파일 생성 완료: {output_file}")
             return output_file
             
+        except requests.exceptions.RequestException as e:
+            print(f"❌ 네이버 클로바 TTS API 요청 실패: {e}")
+            return None
         except Exception as e:
-            print(f"TTS 변환 중 오류 발생: {e}")
+            print(f"❌ TTS 변환 중 오류 발생: {e}")
             return None
     
     def parse_podcast_script(self, script_content: str) -> List[Dict[str, str]]:
@@ -133,7 +129,7 @@ class TTSProcessor:
                             "text": text
                         })
         
-        print(f"총 {len(dialogues)}개의 대화를 찾았습니다.")
+        print(f"📝 총 {len(dialogues)}개의 대화를 찾았습니다.")
         return dialogues
     
     def generate_podcast_audio(self, script_file_path: str, output_dir: str) -> Optional[str]:
@@ -147,8 +143,8 @@ class TTSProcessor:
         Returns:
             Optional[str]: 최종 음성 파일 경로
         """
-        if not self.tts_client:
-            print("TTS 클라이언트가 초기화되지 않았습니다.")
+        if not self.tts_available:
+            print("❌ TTS 클라이언트가 초기화되지 않았습니다.")
             return None
         
         try:
@@ -160,7 +156,7 @@ class TTSProcessor:
             dialogues = self.parse_podcast_script(script_content)
             
             if not dialogues:
-                print("대화를 찾을 수 없습니다.")
+                print("❌ 대화를 찾을 수 없습니다.")
                 return None
             
             # 출력 디렉토리 설정
@@ -174,11 +170,11 @@ class TTSProcessor:
                 speaker = dialogue["speaker"]
                 text = dialogue["text"]
                 
-                # 진행자별 음성 선택
+                # 진행자별 음성 선택 (네이버 클로바 TTS 음성)
                 if speaker == "김테크":
-                    voice_name = "ko-KR-Standard-A"  # 남성 음성
+                    voice_speaker = "jinho"  # 남성 음성
                 else:  # 박AI
-                    voice_name = "ko-KR-Standard-C"  # 여성 음성
+                    voice_speaker = "nara"   # 여성 음성
                 
                 # 임시 파일명
                 temp_file = os.path.join(output_dir, f"temp_{i:03d}_{speaker}.mp3")
@@ -186,16 +182,16 @@ class TTSProcessor:
                 print(f"🎤 {speaker}: {text[:50]}...")
                 
                 # TTS 변환
-                audio_file = self.text_to_speech(text, voice_name, temp_file)
+                audio_file = self.text_to_speech(text, voice_speaker, temp_file)
                 if audio_file:
                     audio_files.append(audio_file)
             
             if not audio_files:
-                print("음성 파일 생성에 실패했습니다.")
+                print("❌ 음성 파일 생성에 실패했습니다.")
                 return None
             
             # 음성 파일들 병합
-            print("음성 파일들을 병합 중...")
+            print("🔗 음성 파일들을 병합 중...")
             final_audio = self.merge_audio_files(audio_files, output_dir)
             
             # 임시 파일들 삭제
@@ -203,11 +199,11 @@ class TTSProcessor:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
             
-            print(f"팟캐스트 음성 파일 생성 완료: {final_audio}")
+            print(f"✅ 팟캐스트 음성 파일 생성 완료: {final_audio}")
             return final_audio
             
         except Exception as e:
-            print(f"팟캐스트 음성 생성 중 오류 발생: {e}")
+            print(f"❌ 팟캐스트 음성 생성 중 오류 발생: {e}")
             return None
     
     def merge_audio_files(self, audio_files: List[str], output_dir: str) -> Optional[str]:
@@ -221,8 +217,8 @@ class TTSProcessor:
         Returns:
             Optional[str]: 병합된 음성 파일 경로
         """
-        if not GOOGLE_TTS_AVAILABLE:
-            print("pydub 라이브러리가 필요합니다.")
+        if not PYTHON_TTS_AVAILABLE:
+            print("❌ pydub 라이브러리가 필요합니다.")
             return None
         
         try:
@@ -244,9 +240,9 @@ class TTSProcessor:
             
             combined.export(output_file, format="mp3")
             
-            print(f"음성 파일 병합 완료: {output_file}")
+            print(f"🎵 음성 파일 병합 완료: {output_file}")
             return output_file
             
         except Exception as e:
-            print(f"음성 파일 병합 중 오류 발생: {e}")
+            print(f"❌ 음성 파일 병합 중 오류 발생: {e}")
             return None

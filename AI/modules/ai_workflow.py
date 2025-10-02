@@ -20,7 +20,8 @@ class AIWorkflow:
     def __init__(self, 
                  perplexity_api_key: str,
                  google_api_key: Optional[str] = None,
-                 google_credentials_path: Optional[str] = None,
+                 naver_clova_client_id: Optional[str] = None,
+                 naver_clova_client_secret: Optional[str] = None,
                  config_path: str = "config/company_config.json"):
         """
         AIWorkflow 초기화
@@ -28,7 +29,8 @@ class AIWorkflow:
         Args:
             perplexity_api_key (str): Perplexity API 키
             google_api_key (Optional[str]): Google API 키 (LLM용)
-            google_credentials_path (Optional[str]): Google Cloud 서비스 계정 키 파일 경로
+            naver_clova_client_id (Optional[str]): 네이버 클로바 TTS 클라이언트 ID
+            naver_clova_client_secret (Optional[str]): 네이버 클로바 TTS 클라이언트 시크릿
             config_path (str): 회사 설정 파일 경로
         """
         # 데이터 수집 초기화
@@ -53,8 +55,8 @@ class AIWorkflow:
         # 콘텐츠 생성 관리자 초기화
         self.content_manager = ContentManager(self.llm)
         
-        # 오디오 관리자 초기화
-        self.audio_manager = AudioManager(google_credentials_path)
+        # 오디오 관리자 초기화 (네이버 클로바 TTS)
+        self.audio_manager = AudioManager(naver_clova_client_id, naver_clova_client_secret)
     
     def run_complete_workflow(self, 
                             category: str,
