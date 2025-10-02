@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import models
-import schemas
+from app.database import models
+from app import schemas
 
 # --- User CRUD ---
 async def get_user_by_email(db: AsyncSession, email: str):

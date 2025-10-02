@@ -6,14 +6,16 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import crud
-import schemas
-from database import database
+from app import crud
+from app import schemas
+from app.database import database
 
-# 실제 운영에서는 .env 파일 등으로 분리해야 하는 보안 비밀 정보입니다.
-SECRET_KEY = "your-very-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from app.config import settings
+
+# 환경 변수에서 설정값 가져오기
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 # OAuth2 스킴 정의: /auth/login 경로에서 토큰을 발급받도록 설정
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")

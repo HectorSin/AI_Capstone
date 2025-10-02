@@ -1,11 +1,12 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
+from app.config import settings
 
-# 실제 DB 접속 정보 (사용자명, 비밀번호, 호스트, DB이름)
-DATABASE_URL = "postgresql+asyncpg://postgres:kkang15634@127.0.0.1:5432/my_project_db"
+# 환경 변수에서 DB 접속 정보 가져오기
+DATABASE_URL = settings.database_url
 
 # 비동기 엔진 생성
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=settings.debug)
 
 # 비동기 세션 생성
 AsyncSessionLocal = sessionmaker(
