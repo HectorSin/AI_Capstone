@@ -34,8 +34,13 @@ export default function HomeScreen() {
       <SectionList
         sections={feedSections}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <FeedCard title={item.title} content={item.content} imageUri={item.imageUri} />
+        renderItem={({ item, index, section }) => (
+          <FeedCard
+            title={item.title}
+            content={item.content}
+            imageUri={item.imageUri}
+            showDivider={index !== section.data.length - 1}
+          />
         )}
         renderSectionHeader={({ section: { title } }) => (
           <View style={styles.sectionHeader}>
