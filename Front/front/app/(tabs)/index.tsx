@@ -1,10 +1,53 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { SectionList, StyleSheet, Text, View } from 'react-native';
+
+import { FeedCard } from '@/components/FeedCard';
+import feedItemsData from '@/test_data/feedItems.json';
+
+type FeedItem = {
+  id: string;
+  title: string;
+  date: string;
+  content: string;
+  imageUri: string;
+};
+
+type FeedSection = {
+  title: string;
+  data: FeedItem[];
+};
+
+const feedItems = feedItemsData as FeedItem[];
+
+const feedSections: FeedSection[] = feedItems.reduce<FeedSection[]>((sections, item) => {
+  const lastSection = sections[sections.length - 1];
+  if (!lastSection || lastSection.title !== item.date) {
+    sections.push({ title: item.date, data: [item] });
+  } else {
+    lastSection.data.push(item);
+  }
+  return sections;
+}, []);
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home</Text>
-      <Text style={styles.subtitle}>Set up your dashboard content here.</Text>
+      <SectionList
+        sections={feedSections}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <FeedCard title={item.title} content={item.content} imageUri={item.imageUri} />
+        )}
+        renderSectionHeader={({ section: { title } }) => (
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionDivider} />
+            <Text style={styles.sectionHeaderText}>{title}</Text>
+            <View style={styles.sectionDivider} />
+          </View>
+        )}
+        stickySectionHeadersEnabled
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
@@ -12,18 +55,28 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: '#ffffff',
+  },
+  listContent: {
+    paddingBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    gap: 12,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
   },
-  title: {
-    fontSize: 24,
+  sectionHeaderText: {
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 12,
+    color: '#6b7280',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#4b5563',
-    textAlign: 'center',
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
   },
 });
