@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function HomeScreen() {
+export default function ProfileScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to your Expo app</Text>
-      <Text style={styles.subtitle}>Start building from a clean slate.</Text>
+      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.subtitle}>Show user details, settings, and account controls on this screen.</Text>
     </View>
   );
 }
@@ -15,17 +15,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#ffffff',
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
-    textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#4d4d4d',
+    color: '#4b5563',
     textAlign: 'center',
   },
 });
