@@ -1,8 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
+import { useAuth } from '@/providers/AuthProvider';
+
 export default function TabsLayout() {
+  const { isSignedIn } = useAuth();
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
