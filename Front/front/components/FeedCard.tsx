@@ -5,11 +5,12 @@ type FeedCardProps = {
   imageUri: string;
   title: string;
   content: string;
+  showDivider?: boolean;
 };
 
-function FeedCardComponent({ imageUri, title, content }: FeedCardProps) {
+function FeedCardComponent({ imageUri, title, content, showDivider = true }: FeedCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, !showDivider && styles.cardNoDivider]}>
       <Image source={{ uri: imageUri }} style={styles.avatar} />
       <View style={styles.body}>
         <Text style={styles.title}>{title}</Text>
@@ -30,7 +31,11 @@ const styles = StyleSheet.create({
     gap: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    marginVertical: 4,
+    marginVertical: 8,
+  },
+  cardNoDivider: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   avatar: {
     width: 32,
