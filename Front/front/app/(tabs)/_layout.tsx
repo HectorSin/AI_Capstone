@@ -6,12 +6,12 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabsLayout() {
   const { isSignedIn } = useAuth();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   if (!isSignedIn) {
     return <Redirect href="/(auth)/login" />;
   }
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   return (
     <Tabs

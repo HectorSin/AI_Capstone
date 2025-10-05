@@ -8,17 +8,7 @@ export default function HomeStackLayout() {
         options={{
           headerTitle: 'Home',
           headerTitleAlign: 'left',
-          headerTitleContainerStyle: {
-            width: '50%',
-          },
-          headerStyle: {
-            elevation: 0,
-            shadowOpacity: 0,
-            borderBottomWidth: 0,
-          },
-          headerTitleStyle: {
-            marginBottom: 0,
-          },
+          headerShadowVisible: false,
         }}
       />
     </Stack>

@@ -22,7 +22,7 @@ export default function LoginScreen() {
     setIsSubmitting(false);
 
     if (success) {
-      router.replace('/(tabs)');
+      router.replace('/index');
     }
   };
 
