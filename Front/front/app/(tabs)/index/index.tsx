@@ -36,7 +36,7 @@ export default function HomeScreen() {
 
   const navigateToKeyword = (keyword: string) => {
     router.push({
-      pathname: 'keyword/[keyword]',
+      pathname: '/keyword/[keyword]',
       params: { keyword },
     });
   };
@@ -54,7 +54,7 @@ export default function HomeScreen() {
             keyword={item.keyword}
             onPressCard={() =>
               router.push({
-                pathname: '[id]',
+                pathname: '/article/[id]',
                 params: { id: item.id },
               })
             }
@@ -80,7 +80,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
     backgroundColor: '#ffffff',
   },
   listContent: {
@@ -90,7 +89,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingBottom: 8,
     paddingHorizontal: 20,
     backgroundColor: '#ffffff',
   },

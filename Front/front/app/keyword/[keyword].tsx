@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import {
   FlatList,
   Image,
@@ -29,10 +28,9 @@ const feedItems = feedItemsData as FeedItem[];
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
 
-export default function KeywordFeedScreen() {
+export default function KeywordScreen() {
   const { keyword } = useLocalSearchParams<{ keyword?: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
   const [isFollowing, setIsFollowing] = useState(false);
 
   const keywordText = typeof keyword === 'string' ? keyword : 'Unknown';
@@ -55,12 +53,11 @@ export default function KeywordFeedScreen() {
       summary={item.summary}
       imageUri={item.imageUri}
       keyword={item.keyword}
-      onPressCard={() =>
-        router.push({
-          pathname: '../[id]',
-          params: { id: item.id },
-        })
-      }
+      date={item.date}
+      showDate
+      onPressCard={() => router.push({ pathname: '/article/[id]', params: { id: item.id } })}
+      onPressImage={() => router.push({ pathname: '/keyword/[keyword]', params: { keyword: item.keyword } })}
+      onPressKeyword={() => router.push({ pathname: '/keyword/[keyword]', params: { keyword: item.keyword } })}
     />
   );
 
@@ -68,7 +65,7 @@ export default function KeywordFeedScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.headerBar}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
           hitSlop={8}
           style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
         >
@@ -146,6 +143,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#e5e7eb',
+  },
+  keywordText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,17 +170,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#4b5563',
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#e5e7eb',
-  },
-  keywordText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
   },
   followButton: {
     paddingHorizontal: 24,

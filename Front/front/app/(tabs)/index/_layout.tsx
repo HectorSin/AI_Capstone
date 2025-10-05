@@ -21,8 +21,6 @@ export default function HomeStackLayout() {
           },
         }}
       />
-      <Stack.Screen name="[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="keyword/[keyword]" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -1,19 +1,38 @@
 import { memo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type ArticleDetailProps = {
   title: string;
   keyword: string;
+  imageUri?: string;
   summary?: string;
   content: string;
   date?: string;
+  onPressKeyword?: () => void;
 };
 
-function ArticleDetailComponent({ title, keyword, summary, content, date }: ArticleDetailProps) {
+function ArticleDetailComponent({ title, keyword, imageUri, summary, content, date, onPressKeyword }: ArticleDetailProps) {
+  const avatarSource = imageUri ?? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.metaSection}>
-        <Text style={styles.keyword}>{keyword}</Text>
+        <View style={styles.keywordRow}>
+          <Pressable
+            onPress={onPressKeyword}
+            hitSlop={6}
+            style={({ pressed }) => [styles.keywordAvatarWrapper, pressed && styles.keywordPressed]}
+          >
+            <Image source={{ uri: avatarSource }} style={styles.keywordAvatar} />
+          </Pressable>
+          <Pressable
+            onPress={onPressKeyword}
+            hitSlop={6}
+            style={({ pressed }) => [styles.keywordTextWrapper, pressed && styles.keywordPressed]}
+          >
+            <Text style={styles.keywordText}>{keyword}</Text>
+          </Pressable>
+        </View>
         <Text style={styles.title}>{title}</Text>
         {summary ? <Text style={styles.summary}>{summary}</Text> : null}
         {date ? <Text style={styles.date}>{date}</Text> : null}
@@ -39,10 +58,32 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 8,
   },
-  keyword: {
+  keywordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  keywordAvatarWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  keywordAvatar: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e5e7eb',
+  },
+  keywordText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366f1',
+    color: '#4338ca',
+  },
+  keywordTextWrapper: {
+    paddingHorizontal: 4,
+  },
+  keywordPressed: {
+    opacity: 0.7,
   },
   title: {
     fontSize: 24,

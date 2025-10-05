@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
-import { Pressable, SafeAreaView, Share, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Share, StyleSheet, Text, Pressable, SafeAreaView, View } from 'react-native';
 
 import { ArticleDetail } from '@/components/ArticleDetail';
 import feedItemsData from '@/test_data/feedItems.json';
@@ -29,15 +28,11 @@ const FALLBACK_ITEM: FeedItem = {
   keyword: 'AI INSIGHT',
 };
 
-export default function FeedDetailScreen() {
+export default function ArticleScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const navigation = useNavigation();
+  const router = useRouter();
 
   const feedItem = useMemo(() => feedItems.find((item) => item.id === id) ?? FALLBACK_ITEM, [id]);
-
-  useEffect(() => {
-    navigation.setOptions?.({ headerTitle: feedItem.title });
-  }, [feedItem, navigation]);
 
   const handleShare = useCallback(async () => {
     try {
@@ -55,16 +50,16 @@ export default function FeedDetailScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.headerBar}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
           hitSlop={8}
-          style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
         >
           <Text style={styles.backText}>뒤로</Text>
         </Pressable>
         <Pressable
           onPress={handleShare}
           hitSlop={8}
-          style={({ pressed }) => [styles.shareButton, pressed && styles.buttonPressed]}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
         >
           <Text style={styles.shareText}>공유</Text>
         </Pressable>
@@ -73,9 +68,16 @@ export default function FeedDetailScreen() {
         <ArticleDetail
           title={feedItem.title}
           keyword={feedItem.keyword}
+          imageUri={feedItem.imageUri}
           summary={feedItem.summary}
           content={feedItem.content}
           date={feedItem.date}
+          onPressKeyword={() =>
+            router.push({
+              pathname: '/keyword/[keyword]',
+              params: { keyword: feedItem.keyword },
+            })
+          }
         />
       </View>
     </SafeAreaView>
@@ -95,10 +97,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-  },
-  shareButton: {
+  headerButton: {
     alignSelf: 'flex-start',
   },
   buttonPressed: {

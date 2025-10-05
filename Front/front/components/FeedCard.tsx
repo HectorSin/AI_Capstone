@@ -10,6 +10,8 @@ type FeedCardProps = {
   onPressCard?: () => void;
   onPressImage?: () => void;
   onPressKeyword?: () => void;
+  date?: string;
+  showDate?: boolean;
 };
 
 function FeedCardComponent({
@@ -20,6 +22,8 @@ function FeedCardComponent({
   onPressCard,
   onPressImage,
   onPressKeyword,
+  date,
+  showDate = false,
 }: FeedCardProps) {
   const [isTopPressed, setIsTopPressed] = useState(false);
 
@@ -48,32 +52,35 @@ function FeedCardComponent({
   return (
     <Pressable onPress={onPressCard} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
       <View style={styles.topSection}>
-        <Pressable
-          android_ripple={{ color: '#d1d5db', borderless: false }}
-          onPressIn={handleTopPressIn}
-          onPressOut={handleTopPressOut}
-          onPress={handleImagePress}
-          style={styles.avatarPressable}
-        >
-          {({ pressed }) => (
-            <Image
-              source={{ uri: imageUri }}
-              style={[styles.avatar, (pressed || isTopPressed) && styles.avatarPressed]}
-            />
-          )}
-        </Pressable>
-        <Pressable
-          android_ripple={{ color: '#d1d5db', borderless: false }}
-          onPressIn={handleTopPressIn}
-          onPressOut={handleTopPressOut}
-          onPress={handleKeywordPress}
-          style={styles.keywordPressable}
-        >
-          {({ pressed }) => {
-            const active = pressed || isTopPressed;
-            return <Text style={[styles.keywordText, active && styles.keywordTextPressed]}>{keyword}</Text>;
-          }}
-        </Pressable>
+        <View style={styles.topLeft}>
+          <Pressable
+            android_ripple={{ color: '#d1d5db', borderless: false }}
+            onPressIn={handleTopPressIn}
+            onPressOut={handleTopPressOut}
+            onPress={handleImagePress}
+            style={styles.avatarPressable}
+          >
+            {({ pressed }) => (
+              <Image
+                source={{ uri: imageUri }}
+                style={[styles.avatar, (pressed || isTopPressed) && styles.avatarPressed]}
+              />
+            )}
+          </Pressable>
+          <Pressable
+            android_ripple={{ color: '#d1d5db', borderless: false }}
+            onPressIn={handleTopPressIn}
+            onPressOut={handleTopPressOut}
+            onPress={handleKeywordPress}
+            style={styles.keywordPressable}
+          >
+            {({ pressed }) => {
+              const active = pressed || isTopPressed;
+              return <Text style={[styles.keywordText, active && styles.keywordTextPressed]}>{keyword}</Text>;
+            }}
+          </Pressable>
+        </View>
+        {showDate && date ? <Text style={styles.date}>{date}</Text> : null}
       </View>
       <View style={styles.bottomSection}>
         <Text style={styles.title}>{title}</Text>
@@ -101,7 +108,14 @@ const styles = StyleSheet.create({
   topSection: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
+  },
+  topLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 1,
   },
   avatarPressable: {
     width: 32,
@@ -117,13 +131,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   keywordPressable: {
-    flex: 1,
     paddingVertical: 4,
+    flexShrink: 1,
   },
   keywordText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
+    flexShrink: 1,
   },
   keywordTextPressed: {
     color: '#111827',
@@ -135,6 +150,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+  },
+  date: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
   },
   summary: {
     fontSize: 15,
