@@ -1,13 +1,35 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+type MenuItem = {
+  label: string;
+  onPress: () => void;
+};
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
+  const menuItems: MenuItem[] = [
+    { label: '알림 설정', onPress: () => router.push('/(tabs)/profile/notifications') },
+    { label: '로그아웃', onPress: () => {} },
+    { label: '회원탈퇴', onPress: () => {} },
+  ];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>프로필이 준비 중이에요</Text>
-        <Text style={styles.emptyBody}>계정 설정과 활동 기록을 곧 이곳에서 확인할 수 있어요.</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.listWrapper}>
+        {menuItems.map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            style={styles.listItem}
+            activeOpacity={0.7}
+            onPress={item.onPress}
+          >
+            <Text style={styles.listItemText}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -16,22 +38,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
+  listWrapper: {
+    paddingVertical: 16,
+  },
+  listItem: {
+    paddingVertical: 20,
     paddingHorizontal: 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  listItemText: {
+    fontSize: 16,
+    fontWeight: '500',
     color: '#111827',
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontSize: 15,
-    color: '#6b7280',
-    textAlign: 'center',
   },
 });

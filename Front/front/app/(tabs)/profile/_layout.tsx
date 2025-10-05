@@ -4,12 +4,12 @@ export default function ProfileStackLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTitle: 'Profile',
         headerTitleAlign: 'left',
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="index" options={{ headerTitle: '프로필' }} />
+      <Stack.Screen name="notifications" options={{ headerShown: false }} />
     </Stack>
   );
 }
