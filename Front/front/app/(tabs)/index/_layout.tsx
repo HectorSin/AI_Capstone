@@ -6,11 +6,23 @@ export default function HomeStackLayout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: '홈 피드',
+          headerTitle: 'Home',
           headerTitleAlign: 'left',
+          headerTitleContainerStyle: {
+            width: '50%',
+          },
+          headerStyle: {
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 0,
+          },
+          headerTitleStyle: {
+            marginBottom: 0,
+          },
         }}
       />
       <Stack.Screen name="[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="keyword/[keyword]" options={{ headerShown: false }} />
     </Stack>
   );
 }

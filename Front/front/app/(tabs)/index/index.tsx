@@ -34,6 +34,13 @@ const feedSections: FeedSection[] = feedItems.reduce<FeedSection[]>((sections, i
 export default function HomeScreen() {
   const router = useRouter();
 
+  const navigateToKeyword = (keyword: string) => {
+    router.push({
+      pathname: 'keyword/[keyword]',
+      params: { keyword },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <SectionList
@@ -51,6 +58,8 @@ export default function HomeScreen() {
                 params: { id: item.id },
               })
             }
+            onPressImage={() => navigateToKeyword(item.keyword)}
+            onPressKeyword={() => navigateToKeyword(item.keyword)}
           />
         )}
         renderSectionHeader={({ section: { title } }) => (
@@ -71,6 +80,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 16,
     backgroundColor: '#ffffff',
   },
   listContent: {
@@ -80,7 +90,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 4,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     backgroundColor: '#ffffff',
   },
