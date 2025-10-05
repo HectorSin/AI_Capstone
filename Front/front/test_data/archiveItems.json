@@ -1,0 +1,17 @@
+[
+  {
+    "date": "2025-10-05",
+    "keywords": ["META", "GOOGLE", "OPENAI"],
+    "durationSeconds": 2823
+  },
+  {
+    "date": "2025-10-04",
+    "keywords": ["APPLE", "AMAZON", "MICROSOFT"],
+    "durationSeconds": 3804
+  },
+  {
+    "date": "2025-10-03",
+    "keywords": ["TESLA", "NVIDIA", "IBM"],
+    "durationSeconds": 1965
+  }
+]
