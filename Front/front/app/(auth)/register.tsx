@@ -28,7 +28,7 @@ export default function RegisterScreen() {
     setIsSubmitting(false);
 
     if (success) {
-      router.replace('/index');
+      router.replace('/(tabs)' as any);
     }
   };
 
