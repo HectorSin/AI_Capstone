@@ -5,26 +5,27 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 type FeedCardProps = {
   imageUri: string;
   title: string;
-  content: string;
+  summary: string;
   keyword: string;
+  onPressCard?: () => void;
+  onPressImage?: () => void;
+  onPressKeyword?: () => void;
 };
 
-function FeedCardComponent({ imageUri, title, content, keyword }: FeedCardProps) {
-  const [isCardPressed, setIsCardPressed] = useState(false);
+function FeedCardComponent({
+  imageUri,
+  title,
+  summary,
+  keyword,
+  onPressCard,
+  onPressImage,
+  onPressKeyword,
+}: FeedCardProps) {
   const [isTopPressed, setIsTopPressed] = useState(false);
-
-  const handleCardPressIn = () => {
-    setIsCardPressed(true);
-  };
-
-  const handleCardPressOut = () => {
-    setIsCardPressed(false);
-  };
 
   const handleTopPressIn = (event: GestureResponderEvent) => {
     event.stopPropagation();
     setIsTopPressed(true);
-    setIsCardPressed(false);
   };
 
   const handleTopPressOut = (event: GestureResponderEvent) => {
@@ -32,24 +33,26 @@ function FeedCardComponent({ imageUri, title, content, keyword }: FeedCardProps)
     setIsTopPressed(false);
   };
 
-  const handleTopPress = (event: GestureResponderEvent) => {
+  const handleImagePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
     setIsTopPressed(false);
+    onPressImage?.();
+  };
+
+  const handleKeywordPress = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    setIsTopPressed(false);
+    onPressKeyword?.();
   };
 
   return (
-    <Pressable
-      android_ripple={{ color: '#e5e7eb' }}
-      onPressIn={handleCardPressIn}
-      onPressOut={handleCardPressOut}
-      style={[styles.card, isCardPressed && styles.cardPressed]}
-    >
+    <Pressable onPress={onPressCard} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
       <View style={styles.topSection}>
         <Pressable
           android_ripple={{ color: '#d1d5db', borderless: false }}
           onPressIn={handleTopPressIn}
           onPressOut={handleTopPressOut}
-          onPress={handleTopPress}
+          onPress={handleImagePress}
           style={styles.avatarPressable}
         >
           {({ pressed }) => (
@@ -63,7 +66,7 @@ function FeedCardComponent({ imageUri, title, content, keyword }: FeedCardProps)
           android_ripple={{ color: '#d1d5db', borderless: false }}
           onPressIn={handleTopPressIn}
           onPressOut={handleTopPressOut}
-          onPress={handleTopPress}
+          onPress={handleKeywordPress}
           style={styles.keywordPressable}
         >
           {({ pressed }) => {
@@ -74,8 +77,8 @@ function FeedCardComponent({ imageUri, title, content, keyword }: FeedCardProps)
       </View>
       <View style={styles.bottomSection}>
         <Text style={styles.title}>{title}</Text>
-        <Text numberOfLines={3} style={styles.content}>
-          {content}
+        <Text numberOfLines={3} style={styles.summary}>
+          {summary}
         </Text>
       </View>
     </Pressable>
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
-  content: {
+  summary: {
     fontSize: 15,
     lineHeight: 22,
     color: '#374151',

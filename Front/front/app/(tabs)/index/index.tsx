@@ -1,4 +1,5 @@
 import { SectionList, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { FeedCard } from '@/components/FeedCard';
 import feedItemsData from '@/test_data/feedItems.json';
@@ -7,6 +8,7 @@ type FeedItem = {
   id: string;
   title: string;
   date: string;
+  summary: string;
   content: string;
   imageUri: string;
   keyword: string;
@@ -30,13 +32,26 @@ const feedSections: FeedSection[] = feedItems.reduce<FeedSection[]>((sections, i
 }, []);
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <SectionList
         sections={feedSections}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <FeedCard title={item.title} content={item.content} imageUri={item.imageUri} keyword={item.keyword} />
+          <FeedCard
+            title={item.title}
+            summary={item.summary}
+            imageUri={item.imageUri}
+            keyword={item.keyword}
+            onPressCard={() =>
+              router.push({
+                pathname: '[id]',
+                params: { id: item.id },
+              })
+            }
+          />
         )}
         renderSectionHeader={({ section: { title } }) => (
           <View style={styles.sectionHeader}>
@@ -56,7 +71,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 16,
     backgroundColor: '#ffffff',
   },
   listContent: {
@@ -66,7 +80,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingVertical: 4,
     paddingHorizontal: 20,
     backgroundColor: '#ffffff',
   },
