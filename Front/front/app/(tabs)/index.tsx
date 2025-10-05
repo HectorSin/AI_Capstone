@@ -56,7 +56,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: '#ffffff',
   },
   listContent: {
@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: '#ffffff',
   },
   sectionHeaderText: {
