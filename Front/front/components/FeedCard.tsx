@@ -5,14 +5,17 @@ type FeedCardProps = {
   imageUri: string;
   title: string;
   content: string;
-  showDivider?: boolean;
+  keyword: string;
 };
 
-function FeedCardComponent({ imageUri, title, content, showDivider = true }: FeedCardProps) {
+function FeedCardComponent({ imageUri, title, content, keyword }: FeedCardProps) {
   return (
-    <View style={[styles.card, !showDivider && styles.cardNoDivider]}>
-      <Image source={{ uri: imageUri }} style={styles.avatar} />
-      <View style={styles.body}>
+    <View style={styles.card}>
+      <View style={styles.topSection}>
+        <Image source={{ uri: imageUri }} style={styles.avatar} />
+        <Text style={styles.keywordText}>{keyword}</Text>
+      </View>
+      <View style={styles.bottomSection}>
         <Text style={styles.title}>{title}</Text>
         <Text numberOfLines={3} style={styles.content}>
           {content}
@@ -26,16 +29,13 @@ export const FeedCard = memo(FeedCardComponent);
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    paddingVertical: 16,
-    gap: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    marginVertical: 8,
+    paddingVertical: 24,
+    gap: 10,
   },
-  cardNoDivider: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
+  topSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   avatar: {
     width: 32,
@@ -43,9 +43,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#e5e7eb',
   },
-  body: {
+  keywordText: {
     flex: 1,
-    gap: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  bottomSection: {
+    gap: 10,
   },
   title: {
     fontSize: 18,

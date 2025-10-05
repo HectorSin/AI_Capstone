@@ -4,349 +4,399 @@
     "title": "Daily Highlight 1",
     "date": "2024. 03. 20",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "2",
     "title": "Daily Highlight 2",
     "date": "2024. 03. 20",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "3",
     "title": "Daily Highlight 3",
     "date": "2024. 03. 20",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "4",
     "title": "Daily Highlight 4",
     "date": "2024. 03. 20",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "5",
     "title": "Daily Highlight 5",
     "date": "2024. 03. 20",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "6",
     "title": "Daily Highlight 6",
     "date": "2024. 03. 19",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "7",
     "title": "Daily Highlight 7",
     "date": "2024. 03. 19",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "8",
     "title": "Daily Highlight 8",
     "date": "2024. 03. 19",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "9",
     "title": "Daily Highlight 9",
     "date": "2024. 03. 19",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "10",
     "title": "Daily Highlight 10",
     "date": "2024. 03. 19",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "11",
     "title": "Daily Highlight 11",
     "date": "2024. 03. 18",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "12",
     "title": "Daily Highlight 12",
     "date": "2024. 03. 18",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "13",
     "title": "Daily Highlight 13",
     "date": "2024. 03. 18",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "14",
     "title": "Daily Highlight 14",
     "date": "2024. 03. 18",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "15",
     "title": "Daily Highlight 15",
     "date": "2024. 03. 18",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "16",
     "title": "Daily Highlight 16",
     "date": "2024. 03. 17",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "17",
     "title": "Daily Highlight 17",
     "date": "2024. 03. 17",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "18",
     "title": "Daily Highlight 18",
     "date": "2024. 03. 17",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "19",
     "title": "Daily Highlight 19",
     "date": "2024. 03. 17",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "20",
     "title": "Daily Highlight 20",
     "date": "2024. 03. 17",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "21",
     "title": "Daily Highlight 21",
     "date": "2024. 03. 16",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "22",
     "title": "Daily Highlight 22",
     "date": "2024. 03. 16",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "23",
     "title": "Daily Highlight 23",
     "date": "2024. 03. 16",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "24",
     "title": "Daily Highlight 24",
     "date": "2024. 03. 16",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "25",
     "title": "Daily Highlight 25",
     "date": "2024. 03. 16",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "26",
     "title": "Daily Highlight 26",
     "date": "2024. 03. 15",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "27",
     "title": "Daily Highlight 27",
     "date": "2024. 03. 15",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "28",
     "title": "Daily Highlight 28",
     "date": "2024. 03. 15",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "29",
     "title": "Daily Highlight 29",
     "date": "2024. 03. 15",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "30",
     "title": "Daily Highlight 30",
     "date": "2024. 03. 15",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "31",
     "title": "Daily Highlight 31",
     "date": "2024. 03. 14",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "32",
     "title": "Daily Highlight 32",
     "date": "2024. 03. 14",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "33",
     "title": "Daily Highlight 33",
     "date": "2024. 03. 14",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "34",
     "title": "Daily Highlight 34",
     "date": "2024. 03. 14",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "35",
     "title": "Daily Highlight 35",
     "date": "2024. 03. 14",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "36",
     "title": "Daily Highlight 36",
     "date": "2024. 03. 13",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "37",
     "title": "Daily Highlight 37",
     "date": "2024. 03. 13",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "38",
     "title": "Daily Highlight 38",
     "date": "2024. 03. 13",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "39",
     "title": "Daily Highlight 39",
     "date": "2024. 03. 13",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "40",
     "title": "Daily Highlight 40",
     "date": "2024. 03. 13",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "41",
     "title": "Daily Highlight 41",
     "date": "2024. 03. 12",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "42",
     "title": "Daily Highlight 42",
     "date": "2024. 03. 12",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "43",
     "title": "Daily Highlight 43",
     "date": "2024. 03. 12",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "44",
     "title": "Daily Highlight 44",
     "date": "2024. 03. 12",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "45",
     "title": "Daily Highlight 45",
     "date": "2024. 03. 12",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   },
   {
     "id": "46",
     "title": "Daily Highlight 46",
     "date": "2024. 03. 11",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1485988412941-77a35537dae4?auto=format&fit=crop&w=160&q=80",
+    "keyword": "GOOGLE"
   },
   {
     "id": "47",
     "title": "Daily Highlight 47",
     "date": "2024. 03. 11",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=160&q=80",
+    "keyword": "META"
   },
   {
     "id": "48",
     "title": "Daily Highlight 48",
     "date": "2024. 03. 11",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=160&q=80",
+    "keyword": "APPLE"
   },
   {
     "id": "49",
     "title": "Daily Highlight 49",
     "date": "2024. 03. 11",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=160&q=80",
+    "keyword": "NVIDIA"
   },
   {
     "id": "50",
     "title": "Daily Highlight 50",
     "date": "2024. 03. 11",
     "content": "커뮤니티에서 공유된 최신 인사이트와 업데이트를 모았습니다. 프로젝트 진행 상황과 학습 자료를 함께 확인해보세요.",
-    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80"
+    "imageUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=160&q=80",
+    "keyword": "AMAZON"
   }
 ]

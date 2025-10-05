@@ -9,6 +9,7 @@ type FeedItem = {
   date: string;
   content: string;
   imageUri: string;
+  keyword: string;
 };
 
 type FeedSection = {
@@ -34,13 +35,8 @@ export default function HomeScreen() {
       <SectionList
         sections={feedSections}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index, section }) => (
-          <FeedCard
-            title={item.title}
-            content={item.content}
-            imageUri={item.imageUri}
-            showDivider={index !== section.data.length - 1}
-          />
+        renderItem={({ item }) => (
+          <FeedCard title={item.title} content={item.content} imageUri={item.imageUri} keyword={item.keyword} />
         )}
         renderSectionHeader={({ section: { title } }) => (
           <View style={styles.sectionHeader}>
@@ -61,7 +57,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 16,
     backgroundColor: '#ffffff',
   },
   listContent: {
@@ -71,7 +66,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
     backgroundColor: '#ffffff',
   },
   sectionHeaderText: {
