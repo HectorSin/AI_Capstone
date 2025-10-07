@@ -21,14 +21,14 @@ services:
       - NAVER_CLOVA_CLIENT_SECRET=${NAVER_CLOVA_CLIENT_SECRET}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
-      - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
+      - UPLOAD_DIR=/app/database
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
     volumes:
       - ./Back/app:/app/app
-      - ./Back/uploads:/app/uploads
+      - /home/smart/database:/app/database
       - ./AI:/app/ai_modules  # AI 모듈 마운트
     depends_on:
       - postgres
@@ -72,144 +72,144 @@ services:
     restart: unless-stopped
 
   # ===========================================
-  # Apache Airflow 웹서버
+  # Apache Airflow 웹서버 (미사용: 주석 처리)
   # ===========================================
-  airflow-webserver:
-    image: apache/airflow:2.8.0
-    container_name: capstone_airflow_webserver
-    restart: always
-    user: "50000:0"  # airflow 사용자 ID 설정
-    depends_on:
-      - airflow-redis
-      - airflow-postgres
-    environment:
-      &airflow-common-env
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
-      AIRFLOW__CORE__FERNET_KEY: ''
-      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-      AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-      _PIP_ADDITIONAL_REQUIREMENTS: '-r /opt/airflow/requirements.txt'
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
-      - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
-    ports:
-      - "8080:8080"
-    command: webserver
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone_network
+  # airflow-webserver:
+  #   image: apache/airflow:2.8.0
+  #   container_name: capstone_airflow_webserver
+  #   restart: always
+  #   user: "50000:0"  # airflow 사용자 ID 설정
+  #   depends_on:
+  #     - airflow-redis
+  #     - airflow-postgres
+  #   environment:
+  #     &airflow-common-env
+  #     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  #     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+  #     AIRFLOW__CORE__FERNET_KEY: ''
+  #     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+  #     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+  #     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+  #     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+  #     _PIP_ADDITIONAL_REQUIREMENTS: '-r /opt/airflow/requirements.txt'
+  #   volumes:
+  #     - ./airflow/dags:/opt/airflow/dags
+  #     - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
+  #     - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
+  #   ports:
+  #     - "8080:8080"
+  #   command: webserver
+  #   healthcheck:
+  #     test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - capstone_network
 
   # ===========================================
-  # Apache Airflow 스케줄러
+  # Apache Airflow 스케줄러 (미사용: 주석 처리)
   # ===========================================
-  airflow-scheduler:
-    image: apache/airflow:2.8.0
-    container_name: capstone_airflow_scheduler
-    restart: always
-    user: "50000:0"  # airflow 사용자 ID 설정
-    depends_on:
-      - airflow-redis
-      - airflow-postgres
-    environment:
-      <<: *airflow-common-env
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
-      - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
-    command: scheduler
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone_network
+  # airflow-scheduler:
+  #   image: apache/airflow:2.8.0
+  #   container_name: capstone_airflow_scheduler
+  #   restart: always
+  #   user: "50000:0"  # airflow 사용자 ID 설정
+  #   depends_on:
+  #     - airflow-redis
+  #     - airflow-postgres
+  #   environment:
+  #     <<: *airflow-common-env
+  #   volumes:
+  #     - ./airflow/dags:/opt/airflow/dags
+  #     - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
+  #     - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
+  #   command: scheduler
+  #   healthcheck:
+  #     test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - capstone_network
 
   # ===========================================
-  # Apache Airflow 워커
+  # Apache Airflow 워커 (미사용: 주석 처리)
   # ===========================================
-  airflow-worker:
-    image: apache/airflow:2.8.0
-    container_name: capstone_airflow_worker
-    restart: always
-    user: "50000:0"  # airflow 사용자 ID 설정
-    depends_on:
-      - airflow-redis
-      - airflow-postgres
-    environment:
-      <<: *airflow-common-env
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
-      - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
-    command: celery worker
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone_network
+  # airflow-worker:
+  #   image: apache/airflow:2.8.0
+  #   container_name: capstone_airflow_worker
+  #   restart: always
+  #   user: "50000:0"  # airflow 사용자 ID 설정
+  #   depends_on:
+  #     - airflow-redis
+  #     - airflow-postgres
+  #   environment:
+  #     <<: *airflow-common-env
+  #   volumes:
+  #     - ./airflow/dags:/opt/airflow/dags
+  #     - ./AI:/opt/airflow/ai_modules  # AI 모듈 마운트
+  #     - ./airflow/requirements.txt:/opt/airflow/requirements.txt  # Airflow requirements
+  #   command: celery worker
+  #   healthcheck:
+  #     test:
+  #       - "CMD-SHELL"
+  #       - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - capstone_network
 
   # ===========================================
-  # Airflow Redis
+  # Airflow Redis (미사용: 주석 처리)
   # ===========================================
-  airflow-redis:
-    image: redis:7.2-alpine
-    container_name: capstone_airflow_redis
-    restart: always
-    ports:
-      - "6380:6379"  # 다른 포트 사용
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone_network
+  # airflow-redis:
+  #   image: redis:7.2-alpine
+  #   container_name: capstone_airflow_redis
+  #   restart: always
+  #   ports:
+  #     - "6380:6379"  # 다른 포트 사용
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - capstone_network
 
   # ===========================================
-  # Airflow PostgreSQL
+  # Airflow PostgreSQL (미사용: 주석 처리)
   # ===========================================
-  airflow-postgres:
-    image: postgres:15
-    container_name: capstone_airflow_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - airflow_postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"  # 다른 포트 사용
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - capstone_network
+  # airflow-postgres:
+  #   image: postgres:15
+  #   container_name: capstone_airflow_postgres
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: airflow
+  #     POSTGRES_PASSWORD: airflow
+  #     POSTGRES_DB: airflow
+  #   volumes:
+  #     - airflow_postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5433:5432"  # 다른 포트 사용
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "airflow"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - capstone_network
 
 volumes:
   postgres_data:
   redis_data:
-  airflow_postgres_data:
+  # airflow_postgres_data:
 
 networks:
   capstone_network:

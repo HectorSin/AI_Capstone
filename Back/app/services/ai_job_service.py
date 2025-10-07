@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 from app.database.models import AIJob, JobLog, JobStatusEnum, JobTypeEnum
 from app.schemas import AIJobCreate, AIJobUpdate, JobStatus, JobType
-from app.services.airflow_service import airflow_service
+from app.config import settings
+from app.utils.internal_runner import run_ai_job_internal
 from app.services.notification_service import notification_service
 from app.config import settings
 
@@ -42,8 +43,47 @@ class AIJobService:
             )
             
             self.db.add(db_job)
-            self.db.commit()
-            self.db.refresh(db_job)
+            # AsyncSession 사용: commit/refresh는 await 필요
+            commit = getattr(self.db, "commit", None)
+            refresh = getattr(self.db, "refresh", None)
+            if commit and callable(commit):
+                try:
+                    await commit()
+                except TypeError:
+                    self.db.commit()
+            else:
+                self.db.commit()
+            if refresh and callable(refresh):
+                try:
+                    await refresh(db_job)
+                except TypeError:
+                    self.db.refresh(db_job)
+            else:
+                self.db.refresh(db_job)
+
+            # 생성 직후 None 값이 남아 응답 검증에 실패하는 경우를 방지
+            # (DB default가 반영되지 않은 드문 케이스 대비)
+            if db_job.progress is None:
+                db_job.progress = 0
+            if db_job.created_at is None:
+                db_job.created_at = datetime.now()
+            if db_job.updated_at is None:
+                db_job.updated_at = datetime.now()
+            # 보정값 커밋
+            if commit and callable(commit):
+                try:
+                    await commit()
+                except TypeError:
+                    self.db.commit()
+            else:
+                self.db.commit()
+            if refresh and callable(refresh):
+                try:
+                    await refresh(db_job)
+                except TypeError:
+                    self.db.refresh(db_job)
+            else:
+                self.db.refresh(db_job)
             
             # 로그 기록
             await self._log_job_event(
@@ -56,7 +96,14 @@ class AIJobService:
             return db_job
             
         except Exception as e:
-            self.db.rollback()
+            rollback = getattr(self.db, "rollback", None)
+            if rollback and callable(rollback):
+                try:
+                    await rollback()
+                except TypeError:
+                    self.db.rollback()
+            else:
+                self.db.rollback()
             logger.error(f"AI 작업 생성 실패: {e}")
             raise
     
@@ -79,45 +126,50 @@ class AIJobService:
             if db_job.status != JobStatusEnum.PENDING:
                 raise ValueError(f"작업이 이미 시작되었거나 완료되었습니다: {db_job.status}")
             
-            # Airflow DAG 실행
-            dag_id = self._get_dag_id_for_job_type(db_job.job_type)
-            conf = {
-                "job_id": job_id,
-                "user_id": db_job.user_id,
-                "input_data": db_job.input_data
-            }
-            
-            if db_job.topic_id:
-                conf["topic_id"] = db_job.topic_id
-            
-            dag_run_id = await airflow_service.trigger_dag_run(
-                dag_id=dag_id,
-                conf=conf
+            # 내부 실행 (Airflow 미사용)
+            run_ai_job_internal(
+                job_id=db_job.job_id,
+                job_type=db_job.job_type.value,
+                input_data=db_job.input_data,
             )
             
             # 작업 상태 업데이트
             db_job.status = JobStatusEnum.RUNNING
             db_job.started_at = datetime.now()
-            db_job.airflow_dag_run_id = dag_run_id
+            # Airflow 미사용 경로에서는 dag_run_id 없음
             db_job.updated_at = datetime.now()
             
-            self.db.commit()
-            self.db.refresh(db_job)
+            commit = getattr(self.db, "commit", None)
+            refresh = getattr(self.db, "refresh", None)
+            if commit and callable(commit):
+                try:
+                    await commit()
+                except TypeError:
+                    self.db.commit()
+            else:
+                self.db.commit()
+            if refresh and callable(refresh):
+                try:
+                    await refresh(db_job)
+                except TypeError:
+                    self.db.refresh(db_job)
+            else:
+                self.db.refresh(db_job)
             
             # 로그 기록
             await self._log_job_event(
                 job_id, 
                 "INFO", 
-                f"작업 시작됨. DAG Run ID: {dag_run_id}"
+                "작업 시작됨"
             )
             
             # 알림 전송
-            await notification_service.notify_job_started(job_id, f"DAG Run ID: {dag_run_id}")
+            await notification_service.notify_job_started(job_id, "작업이 시작되었습니다")
             
             # 모니터링 시작
             await notification_service.start_job_monitoring_with_notifications(job_id)
             
-            logger.info(f"AI 작업 시작됨: {job_id}, DAG Run ID: {dag_run_id}")
+            logger.info(f"AI 작업 시작됨: {job_id}")
             return db_job
             
         except Exception as e:
@@ -264,12 +316,7 @@ class AIJobService:
             if db_job.status in [JobStatusEnum.SUCCESS, JobStatusEnum.FAILED, JobStatusEnum.CANCELLED]:
                 return False
             
-            # Airflow DAG Run 취소
-            if db_job.airflow_dag_run_id:
-                await airflow_service.cancel_dag_run(
-                    dag_id=self._get_dag_id_for_job_type(db_job.job_type),
-                    dag_run_id=db_job.airflow_dag_run_id
-                )
+            # Airflow 미사용: 외부 DAG 취소 로직 제거
             
             # 작업 상태 업데이트
             db_job.status = JobStatusEnum.CANCELLED

@@ -33,6 +33,9 @@ class AIWorkflow:
             naver_clova_client_secret (Optional[str]): 네이버 클로바 TTS 클라이언트 시크릿
             config_path (str): 회사 설정 파일 경로
         """
+        # API 키 검증
+        self._validate_api_keys(perplexity_api_key, google_api_key, naver_clova_client_id, naver_clova_client_secret)
+        
         # 데이터 수집 초기화
         self.news_collector = NewsCollector(perplexity_api_key, config_path)
         
@@ -57,6 +60,66 @@ class AIWorkflow:
         
         # 오디오 관리자 초기화 (네이버 클로바 TTS)
         self.audio_manager = AudioManager(naver_clova_client_id, naver_clova_client_secret)
+    
+    def _validate_api_keys(self, 
+                          perplexity_api_key: str,
+                          google_api_key: Optional[str],
+                          naver_clova_client_id: Optional[str],
+                          naver_clova_client_secret: Optional[str]) -> None:
+        """
+        API 키 검증 및 에러 메시지 출력
+        
+        Args:
+            perplexity_api_key (str): Perplexity API 키
+            google_api_key (Optional[str]): Google API 키
+            naver_clova_client_id (Optional[str]): 네이버 클로바 TTS 클라이언트 ID
+            naver_clova_client_secret (Optional[str]): 네이버 클로바 TTS 클라이언트 시크릿
+        """
+        missing_keys = []
+        
+        # 필수 API 키 검증
+        if not perplexity_api_key or perplexity_api_key.strip() == "":
+            missing_keys.append("Perplexity API 키")
+        
+        # 선택적 API 키 검증
+        if not google_api_key or google_api_key.strip() == "":
+            missing_keys.append("Google API 키 (LLM용)")
+        
+        if not naver_clova_client_id or naver_clova_client_id.strip() == "":
+            missing_keys.append("네이버 클로바 TTS 클라이언트 ID")
+        
+        if not naver_clova_client_secret or naver_clova_client_secret.strip() == "":
+            missing_keys.append("네이버 클로바 TTS 클라이언트 시크릿")
+        
+        if missing_keys:
+            print("=" * 80)
+            print("🚨 API 키 설정이 필요합니다!")
+            print("=" * 80)
+            print("다음 API 키들을 설정해주세요:")
+            for i, key in enumerate(missing_keys, 1):
+                print(f"  {i}. {key}")
+            print("=" * 80)
+            print("API 키 설정 방법:")
+            print("1. 환경변수로 설정:")
+            print("   export PERPLEXITY_API_KEY='your_key_here'")
+            print("   export GOOGLE_API_KEY='your_key_here'")
+            print("   export NAVER_CLOVA_CLIENT_ID='your_id_here'")
+            print("   export NAVER_CLOVA_CLIENT_SECRET='your_secret_here'")
+            print("")
+            print("2. 또는 AIWorkflow 초기화 시 직접 전달:")
+            print("   workflow = AIWorkflow(")
+            print("       perplexity_api_key='your_key_here',")
+            print("       google_api_key='your_key_here',")
+            print("       naver_clova_client_id='your_id_here',")
+            print("       naver_clova_client_secret='your_secret_here'")
+            print("   )")
+            print("=" * 80)
+            
+            # 필수 API 키가 없으면 예외 발생
+            if not perplexity_api_key or perplexity_api_key.strip() == "":
+                raise ValueError("Perplexity API 키는 필수입니다. API 키를 설정해주세요.")
+        else:
+            print("✅ 모든 API 키가 설정되었습니다!")
     
     def run_complete_workflow(self, 
                             category: str,

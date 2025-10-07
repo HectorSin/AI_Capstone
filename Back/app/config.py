@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     
     # 파일 업로드 설정
     max_file_size: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
-    upload_dir: str = os.getenv("UPLOAD_DIR", "/app/uploads")
+    upload_dir: str = os.getenv("UPLOAD_DIR", "/app/database")
     
     # CORS 설정
     allowed_origins: Union[str, List[str]] = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
@@ -47,10 +47,7 @@ class Settings(BaseSettings):
     cache_ttl: int = int(os.getenv("CACHE_TTL", "3600"))  # 1시간
     session_ttl: int = int(os.getenv("SESSION_TTL", "1800"))  # 30분
     
-    # Airflow 설정
-    airflow_host: str = os.getenv("AIRFLOW_HOST", "http://localhost:8080")
-    airflow_username: str = os.getenv("AIRFLOW_USERNAME", "admin")
-    airflow_password: str = os.getenv("AIRFLOW_PASSWORD", "admin")
+    # Airflow 설정 (미사용)
     
     # WebSocket 설정
     websocket_port: int = int(os.getenv("WEBSOCKET_PORT", "8001"))

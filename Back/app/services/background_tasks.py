@@ -7,7 +7,6 @@ from typing import Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.database import AsyncSessionLocal
-from app.services.airflow_service import airflow_service
 from app.schemas import JobStatus, JobType
 from app.config import settings
 
@@ -73,9 +72,7 @@ class BackgroundTaskManager:
                         logger.info(f"작업 {job_id} 완료됨: {job.status.value}")
                         break
                     
-                    # Airflow DAG Run 상태 확인
-                    if job.airflow_dag_run_id:
-                        await self._check_airflow_status(job_service, job)
+                    # Airflow 미사용: 외부 DAG 상태 확인 로직 제거
                     
                     # 다음 체크까지 대기
                     await asyncio.sleep(self.task_interval)
@@ -90,72 +87,7 @@ class BackgroundTaskManager:
             if job_id in self.running_tasks:
                 del self.running_tasks[job_id]
     
-    async def _check_airflow_status(self, job_service, job):
-        """
-        Airflow DAG Run 상태를 확인하고 작업 상태를 업데이트합니다.
-        
-        Args:
-            job_service: AI 작업 서비스
-            job: AI 작업 객체
-        """
-        try:
-            # DAG ID 결정
-            dag_id = self._get_dag_id_for_job_type(job.job_type)
-            
-            # Airflow DAG Run 상태 조회
-            dag_run_info = await airflow_service.get_dag_run_status(
-                dag_id=dag_id,
-                dag_run_id=job.airflow_dag_run_id
-            )
-            
-            # Task Instances 조회
-            task_instances = await airflow_service.get_task_instances(
-                dag_id=dag_id,
-                dag_run_id=job.airflow_dag_run_id
-            )
-            
-            # 진행률 계산
-            total_tasks = len(task_instances)
-            completed_tasks = sum(1 for task in task_instances 
-                                if task['state'] in ['success', 'failed', 'upstream_failed'])
-            progress = int((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
-            
-            # 상태 매핑
-            airflow_state = dag_run_info['state']
-            job_status = self._map_airflow_state_to_job_status(airflow_state)
-            
-            # 작업 상태 업데이트
-            if job_status != job.status:
-                await job_service.update_job_status(
-                    job_id=job.job_id,
-                    status=job_status,
-                    progress=progress
-                )
-                
-                # 완료된 경우 결과 데이터 저장
-                if job_status in [JobStatus.SUCCESS, JobStatus.FAILED]:
-                    result_data = {
-                        'airflow_dag_run_id': job.airflow_dag_run_id,
-                        'dag_run_state': airflow_state,
-                        'task_instances': task_instances,
-                        'completed_at': datetime.now().isoformat()
-                    }
-                    
-                    await job_service.update_job_status(
-                        job_id=job.job_id,
-                        status=job_status,
-                        result_data=result_data
-                    )
-            
-            # 진행률만 업데이트
-            elif progress != job.progress:
-                await job_service.update_job_status(
-                    job_id=job.job_id,
-                    progress=progress
-                )
-                
-        except Exception as e:
-            logger.error(f"Airflow 상태 확인 실패 (작업 {job.job_id}): {e}")
+    # Airflow 관련 상태 체크 로직 제거됨
     
     def _get_dag_id_for_job_type(self, job_type: JobType) -> str:
         """

@@ -155,8 +155,6 @@ class AIJobUpdate(BaseModel):
     progress: Optional[int] = None
     result_data: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    airflow_dag_run_id: Optional[str] = None
-    airflow_task_id: Optional[str] = None
 
 class AIJob(AIJobBase):
     job_id: int
@@ -164,8 +162,6 @@ class AIJob(AIJobBase):
     progress: int = 0
     result_data: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    airflow_dag_run_id: Optional[str] = None
-    airflow_task_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     started_at: Optional[datetime] = None
@@ -174,28 +170,7 @@ class AIJob(AIJobBase):
     class Config:
         from_attributes = True
 
-# =================================================================
-# 10. Airflow Integration Schemas
-# =================================================================
-class AirflowDAGRunRequest(BaseModel):
-    dag_id: str
-    conf: Optional[Dict[str, Any]] = None
-    execution_date: Optional[datetime] = None
-
-class AirflowDAGRunResponse(BaseModel):
-    dag_run_id: str
-    state: str
-    execution_date: datetime
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-
-class AirflowTaskInstance(BaseModel):
-    task_id: str
-    state: str
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    duration: Optional[float] = None
-    log_url: Optional[str] = None
+# (Airflow 통합 스키마 제거)
 
 # =================================================================
 # 11. WebSocket Message Schemas

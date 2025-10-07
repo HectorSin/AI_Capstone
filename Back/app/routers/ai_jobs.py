@@ -5,15 +5,15 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
-from app.database.database import get_db
+from app.database.database import get_db, AsyncSessionLocal
 from app.schemas import (
-    AIJob, AIJobCreate, AIJobUpdate, JobStatus, JobType,
-    AirflowDAGRunRequest, AirflowDAGRunResponse, AirflowTaskInstance
+    AIJob, AIJobCreate, AIJobUpdate, JobStatus, JobType
 )
 from app.services.ai_job_service import AIJobService
-from app.services.airflow_service import airflow_service
+# Airflow 미사용으로 관련 서비스 임포트 제거
 from app.auth import get_current_user
 from app.schemas import User
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +39,33 @@ async def create_ai_job(
         # 작업 생성
         job = await job_service.create_job(job_data)
         
-        # 백그라운드에서 작업 시작
-        background_tasks.add_task(job_service.start_job, job.job_id)
+        # 백그라운드에서 새 세션으로 작업 시작
+        async def start_job_bg(job_id: int):
+            async with AsyncSessionLocal() as session:
+                from app.services.ai_job_service import AIJobService as _Svc
+                svc = _Svc(session)
+                await svc.start_job(job_id)
+
+        background_tasks.add_task(start_job_bg, job.job_id)
         
         logger.info(f"AI 작업 생성됨: {job.job_id} by user {current_user.user_id}")
-        return job
+        # 응답을 명시적으로 직렬화하여 필수 필드 보장
+        return {
+            "job_id": int(job.job_id) if job.job_id is not None else 0,
+            "job_type": job.job_type.value if hasattr(job.job_type, "value") else str(job.job_type),
+            "user_id": int(job.user_id),
+            "topic_id": job.topic_id,
+            "input_data": job.input_data or {},
+            "priority": int(job.priority or 0),
+            "status": job.status.value if hasattr(job.status, "value") else str(job.status),
+            "progress": int(job.progress or 0),
+            "result_data": job.result_data,
+            "error_message": job.error_message,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
+            "started_at": job.started_at,
+            "completed_at": job.completed_at,
+        }
         
     except Exception as e:
         logger.error(f"AI 작업 생성 실패: {e}")
@@ -209,96 +231,4 @@ async def get_ai_job_logs(
         logger.error(f"AI 작업 로그 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/airflow/dag-run", response_model=AirflowDAGRunResponse, summary="Airflow DAG 실행")
-async def trigger_airflow_dag(
-    dag_request: AirflowDAGRunRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Airflow DAG를 직접 실행합니다.
-    """
-    try:
-        # DAG 실행
-        dag_run_id = await airflow_service.trigger_dag_run(
-            dag_id=dag_request.dag_id,
-            conf=dag_request.conf,
-            execution_date=dag_request.execution_date
-        )
-        
-        # DAG Run 정보 조회
-        dag_run_info = await airflow_service.get_dag_run_status(
-            dag_id=dag_request.dag_id,
-            dag_run_id=dag_run_id
-        )
-        
-        return AirflowDAGRunResponse(
-            dag_run_id=dag_run_info["dag_run_id"],
-            state=dag_run_info["state"],
-            execution_date=dag_run_info["execution_date"],
-            start_date=dag_run_info["start_date"],
-            end_date=dag_run_info["end_date"]
-        )
-        
-    except Exception as e:
-        logger.error(f"Airflow DAG 실행 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/airflow/dag-run/{dag_id}/{dag_run_id}", summary="Airflow DAG Run 상태 조회")
-async def get_airflow_dag_run_status(
-    dag_id: str,
-    dag_run_id: str,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Airflow DAG Run의 상태를 조회합니다.
-    """
-    try:
-        dag_run_info = await airflow_service.get_dag_run_status(dag_id, dag_run_id)
-        return dag_run_info
-        
-    except Exception as e:
-        logger.error(f"Airflow DAG Run 상태 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/airflow/dag-run/{dag_id}/{dag_run_id}/tasks", response_model=List[AirflowTaskInstance], summary="Airflow Task Instances 조회")
-async def get_airflow_task_instances(
-    dag_id: str,
-    dag_run_id: str,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Airflow DAG Run의 Task Instances를 조회합니다.
-    """
-    try:
-        task_instances = await airflow_service.get_task_instances(dag_id, dag_run_id)
-        
-        return [
-            AirflowTaskInstance(
-                task_id=task["task_id"],
-                state=task["state"],
-                start_date=task["start_date"],
-                end_date=task["end_date"],
-                duration=task["duration"],
-                log_url=task["log_url"]
-            )
-            for task in task_instances
-        ]
-        
-    except Exception as e:
-        logger.error(f"Airflow Task Instances 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/airflow/dags", summary="사용 가능한 DAG 목록 조회")
-async def list_airflow_dags(
-    current_user: User = Depends(get_current_user)
-):
-    """
-    사용 가능한 Airflow DAG 목록을 조회합니다.
-    """
-    try:
-        dags = await airflow_service.list_dags()
-        return {"dags": dags}
-        
-    except Exception as e:
-        logger.error(f"Airflow DAG 목록 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+"""Airflow 관련 엔드포인트는 미사용으로 제거되었습니다."""

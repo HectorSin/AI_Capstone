@@ -178,8 +178,7 @@ class AIJob(Base):
     input_data = Column(JSON, nullable=False)
     result_data = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
-    airflow_dag_run_id = Column(String, nullable=True)
-    airflow_task_id = Column(String, nullable=True)
+    # Airflow 관련 컬럼 제거
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     started_at = Column(DateTime, nullable=True)

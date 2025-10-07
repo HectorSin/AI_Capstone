@@ -29,18 +29,18 @@ google-cloud-texttospeech==2.29.0
 google-api-core==2.25.1
 google-auth==2.40.3
 
-# LangChain
-langchain==0.1.0
-langchain-core==0.1.52
-langchain-google-genai==2.1.10
+# LangChain (0.3.x 라인으로 정렬)
+langchain==0.3.27
+langchain-core==0.3.76
 langchain-text-splitters==0.3.11
-langsmith==0.1.147
+langsmith==0.4.27
+langchain-google-genai==2.1.10
 
 # 기타 유틸리티
 python-dotenv==1.1.1
 pyyaml==6.0.2
 pydub==0.25.1
-tenacity==9.1.2
+tenacity==8.2.3
 rich==14.1.0
 
 # 개발 도구
@@ -49,8 +49,8 @@ watchfiles==1.1.0
 # Redis
 redis==5.0.1
 
-# Airflow API 클라이언트
-apache-airflow-client==2.10.0
+# Airflow API 클라이언트 (Airflow 미사용 시 비활성화)
+# apache-airflow-client==2.10.0
 
 # WebSocket 지원
 websockets==12.0
