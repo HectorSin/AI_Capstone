@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Table, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Table, func, JSON, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from .database import Base
+import enum
 
 # AnalysisTopic과 SourceURL의 다대다(Many-to-Many) 관계를 위한 중간 테이블
 TopicURL = Table(
@@ -145,3 +146,65 @@ class Schedule(Base):
     created_at = Column(DateTime, default=func.now())
 
     topic = relationship("AnalysisTopic", back_populates="schedules")
+
+
+# =================================================================
+# AI Job Management Models
+# =================================================================
+class JobStatusEnum(enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class JobTypeEnum(enum.Enum):
+    URL_ANALYSIS = "url_analysis"
+    TOPIC_GENERATION = "topic_generation"
+    SCRIPT_GENERATION = "script_generation"
+    AUDIO_GENERATION = "audio_generation"
+    FULL_PIPELINE = "full_pipeline"
+
+class AIJob(Base):
+    __tablename__ = "ai_job"
+
+    job_id = Column(Integer, primary_key=True, index=True)
+    job_type = Column(SQLEnum(JobTypeEnum), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
+    topic_id = Column(Integer, ForeignKey('analysis_topic.topic_id'), nullable=True)
+    status = Column(SQLEnum(JobStatusEnum), default=JobStatusEnum.PENDING)
+    progress = Column(Integer, default=0)
+    priority = Column(Integer, default=0)
+    input_data = Column(JSON, nullable=False)
+    result_data = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+    airflow_dag_run_id = Column(String, nullable=True)
+    airflow_task_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    user = relationship("User")
+    topic = relationship("AnalysisTopic")
+
+    def __str__(self):
+        return f"AIJob {self.job_id} - {self.job_type.value} - {self.status.value}"
+
+
+class JobLog(Base):
+    __tablename__ = "job_log"
+
+    log_id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey('ai_job.job_id'), nullable=False)
+    level = Column(String, nullable=False)  # INFO, WARNING, ERROR, DEBUG
+    message = Column(Text, nullable=False)
+    details = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+    # Relationships
+    job = relationship("AIJob")
+
+    def __str__(self):
+        return f"JobLog {self.log_id} - {self.level} - {self.job_id}"

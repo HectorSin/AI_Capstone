@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     cache_ttl: int = int(os.getenv("CACHE_TTL", "3600"))  # 1시간
     session_ttl: int = int(os.getenv("SESSION_TTL", "1800"))  # 30분
     
+    # Airflow 설정
+    airflow_host: str = os.getenv("AIRFLOW_HOST", "http://localhost:8080")
+    airflow_username: str = os.getenv("AIRFLOW_USERNAME", "admin")
+    airflow_password: str = os.getenv("AIRFLOW_PASSWORD", "admin")
+    
+    # WebSocket 설정
+    websocket_port: int = int(os.getenv("WEBSOCKET_PORT", "8001"))
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

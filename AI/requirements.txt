@@ -25,3 +25,9 @@ pytest>=7.0.0
 pytest-cov>=4.0.0
 black>=23.0.0
 flake8>=6.0.0
+
+# 추가 의존성 (Phase 1 모듈화)
+urllib3>=1.26.0
+certifi>=2023.0.0
+charset-normalizer>=3.0.0
+idna>=3.0.0

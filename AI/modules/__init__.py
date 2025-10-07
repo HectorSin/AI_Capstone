@@ -7,9 +7,10 @@ AI 모듈 패키지
 from .data_collection import NewsCollector, PromptGenerator, DataValidator
 from .content_generation import ReportGenerator, ScriptGenerator, ContentManager
 from .audio_processing import TTSProcessor, AudioManager
+from .ai_workflow import AIWorkflow
 
 __all__ = [
     'NewsCollector', 'PromptGenerator', 'DataValidator',
     'ReportGenerator', 'ScriptGenerator', 'ContentManager',
-    'TTSProcessor', 'AudioManager'
+    'TTSProcessor', 'AudioManager', 'AIWorkflow'
 ]

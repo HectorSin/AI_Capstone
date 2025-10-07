@@ -1,115 +1,180 @@
 """
-AI 시스템 설정 파일
+AI 팟캐스트 생성 시스템 설정
 
-환경변수와 기본 설정을 관리하는 모듈
+환경변수와 설정을 관리하는 클래스
 """
 
 import os
-from typing import Optional
+from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 
-# Back 디렉토리의 .env 파일 로드
-back_env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Back', '.env')
-load_dotenv(back_env_path)
+# .env 파일 로드
+load_dotenv()
 
 
 class AISettings:
     """AI 시스템 설정 클래스"""
     
     # API 키 설정
-    PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
-    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
-    
-    # 네이버 클로바 TTS 설정
-    NAVER_CLOVA_CLIENT_ID: Optional[str] = os.getenv("NAVER_CLOVA_CLIENT_ID")
-    NAVER_CLOVA_CLIENT_SECRET: Optional[str] = os.getenv("NAVER_CLOVA_CLIENT_SECRET")
+    PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+    NAVER_CLOVA_CLIENT_ID = os.getenv("NAVER_CLOVA_CLIENT_ID", "")
+    NAVER_CLOVA_CLIENT_SECRET = os.getenv("NAVER_CLOVA_CLIENT_SECRET", "")
     
     # 파일 경로 설정
-    CONFIG_PATH: str = os.getenv("AI_CONFIG_PATH", os.path.join(os.path.dirname(__file__), "company_config.json"))
-    OUTPUT_DIR: str = os.getenv("AI_OUTPUT_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "output"))
-    TEMP_DIR: str = os.getenv("AI_TEMP_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "temp"))
+    CONFIG_PATH = os.getenv("AI_CONFIG_PATH", "config/company_config.json")
+    OUTPUT_DIR = os.getenv("AI_OUTPUT_DIR", "data/output")
+    TEMP_DIR = os.getenv("AI_TEMP_DIR", "data/temp")
     
-    # 모델 설정
-    LLM_MODEL: str = os.getenv("AI_LLM_MODEL", "gemini-1.5-flash")
-    LLM_TEMPERATURE: float = float(os.getenv("AI_LLM_TEMPERATURE", "0.7"))
-    LLM_MAX_TOKENS: int = int(os.getenv("AI_LLM_MAX_TOKENS", "4000"))
+    # AI 모델 설정
+    LLM_MODEL = os.getenv("AI_LLM_MODEL", "gemini-1.5-flash")
+    LLM_TEMPERATURE = float(os.getenv("AI_LLM_TEMPERATURE", "0.7"))
+    LLM_MAX_TOKENS = int(os.getenv("AI_LLM_MAX_TOKENS", "4000"))
     
     # TTS 설정
-    TTS_VOICE_MALE: str = os.getenv("AI_TTS_VOICE_MALE", "ko-KR-Standard-A")
-    TTS_VOICE_FEMALE: str = os.getenv("AI_TTS_VOICE_FEMALE", "ko-KR-Standard-C")
-    TTS_SPEAKING_RATE: float = float(os.getenv("AI_TTS_SPEAKING_RATE", "1.0"))
-    TTS_PITCH: float = float(os.getenv("AI_TTS_PITCH", "0.0"))
+    TTS_VOICE_MALE = os.getenv("AI_TTS_VOICE_MALE", "jinho")
+    TTS_VOICE_FEMALE = os.getenv("AI_TTS_VOICE_FEMALE", "nara")
     
     # 검색 설정
-    DEFAULT_SEARCH_RECENCY: str = os.getenv("AI_SEARCH_RECENCY", "week")
-    MAX_ARTICLES_PER_CATEGORY: int = int(os.getenv("AI_MAX_ARTICLES", "10"))
+    SEARCH_RECENCY = os.getenv("AI_SEARCH_RECENCY", "week")
+    MAX_ARTICLES = int(os.getenv("AI_MAX_ARTICLES", "10"))
     
     # 호스트 설정
-    DEFAULT_HOST1: str = os.getenv("AI_HOST1_NAME", "김테크")
-    DEFAULT_HOST2: str = os.getenv("AI_HOST2_NAME", "박AI")
+    HOST1_NAME = os.getenv("AI_HOST1_NAME", "김테크")
+    HOST2_NAME = os.getenv("AI_HOST2_NAME", "박AI")
     
-    # 로깅 설정
-    LOG_LEVEL: str = os.getenv("AI_LOG_LEVEL", "INFO")
-    LOG_FILE: Optional[str] = os.getenv("AI_LOG_FILE")
+    # 파일 크기 제한
+    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
     
     @classmethod
-    def validate_settings(cls) -> dict:
+    def validate_settings(cls) -> Dict[str, Any]:
         """
         설정 유효성 검증
         
         Returns:
-            dict: 검증 결과
+            Dict[str, Any]: 검증 결과
         """
-        validation_result = {
-            "valid": True,
-            "errors": [],
-            "warnings": []
-        }
+        errors = []
+        warnings = []
         
         # 필수 API 키 검증
         if not cls.PERPLEXITY_API_KEY:
-            validation_result["errors"].append("PERPLEXITY_API_KEY가 설정되지 않았습니다.")
-            validation_result["valid"] = False
+            errors.append("PERPLEXITY_API_KEY가 설정되지 않았습니다.")
         
         # 선택적 API 키 경고
         if not cls.GOOGLE_API_KEY:
-            validation_result["warnings"].append("GOOGLE_API_KEY가 설정되지 않았습니다. LLM 기능이 제한됩니다.")
+            warnings.append("GOOGLE_API_KEY가 설정되지 않았습니다. LLM 기능이 제한됩니다.")
         
         if not cls.NAVER_CLOVA_CLIENT_ID or not cls.NAVER_CLOVA_CLIENT_SECRET:
-            validation_result["warnings"].append("NAVER_CLOVA_CLIENT_ID 또는 NAVER_CLOVA_CLIENT_SECRET이 설정되지 않았습니다. TTS 기능이 제한됩니다.")
+            warnings.append("네이버 클로바 TTS API 키가 설정되지 않았습니다. 오디오 생성이 제한됩니다.")
         
         # 파일 경로 검증
         if not os.path.exists(cls.CONFIG_PATH):
-            validation_result["errors"].append(f"설정 파일을 찾을 수 없습니다: {cls.CONFIG_PATH}")
-            validation_result["valid"] = False
+            errors.append(f"설정 파일을 찾을 수 없습니다: {cls.CONFIG_PATH}")
         
-        return validation_result
+        # 출력 디렉토리 생성
+        try:
+            os.makedirs(cls.OUTPUT_DIR, exist_ok=True)
+            os.makedirs(cls.TEMP_DIR, exist_ok=True)
+        except Exception as e:
+            errors.append(f"디렉토리 생성 실패: {e}")
+        
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings
+        }
     
     @classmethod
-    def get_status_summary(cls) -> str:
+    def get_required_env_vars(cls) -> List[str]:
         """
-        설정 상태 요약 문자열 반환
+        필수 환경변수 목록 반환
         
         Returns:
-            str: 설정 상태 요약
+            List[str]: 필수 환경변수 목록
         """
-        validation = cls.validate_settings()
+        return [
+            "PERPLEXITY_API_KEY"
+        ]
+    
+    @classmethod
+    def get_optional_env_vars(cls) -> List[str]:
+        """
+        선택적 환경변수 목록 반환
         
-        if validation["valid"]:
-            status = "설정 완료"
-        else:
-            status = "설정 오류"
+        Returns:
+            List[str]: 선택적 환경변수 목록
+        """
+        return [
+            "GOOGLE_API_KEY",
+            "NAVER_CLOVA_CLIENT_ID",
+            "NAVER_CLOVA_CLIENT_SECRET",
+            "AI_CONFIG_PATH",
+            "AI_OUTPUT_DIR",
+            "AI_TEMP_DIR",
+            "AI_LLM_MODEL",
+            "AI_LLM_TEMPERATURE",
+            "AI_LLM_MAX_TOKENS",
+            "AI_TTS_VOICE_MALE",
+            "AI_TTS_VOICE_FEMALE",
+            "AI_SEARCH_RECENCY",
+            "AI_MAX_ARTICLES",
+            "AI_HOST1_NAME",
+            "AI_HOST2_NAME",
+            "MAX_FILE_SIZE"
+        ]
+    
+    @classmethod
+    def get_all_env_vars(cls) -> Dict[str, str]:
+        """
+        모든 환경변수 값 반환
         
-        summary = f"AI 시스템 설정 상태: {status}\n"
+        Returns:
+            Dict[str, str]: 환경변수 딕셔너리
+        """
+        return {
+            "PERPLEXITY_API_KEY": cls.PERPLEXITY_API_KEY,
+            "GOOGLE_API_KEY": cls.GOOGLE_API_KEY,
+            "NAVER_CLOVA_CLIENT_ID": cls.NAVER_CLOVA_CLIENT_ID,
+            "NAVER_CLOVA_CLIENT_SECRET": cls.NAVER_CLOVA_CLIENT_SECRET,
+            "AI_CONFIG_PATH": cls.CONFIG_PATH,
+            "AI_OUTPUT_DIR": cls.OUTPUT_DIR,
+            "AI_TEMP_DIR": cls.TEMP_DIR,
+            "AI_LLM_MODEL": cls.LLM_MODEL,
+            "AI_LLM_TEMPERATURE": str(cls.LLM_TEMPERATURE),
+            "AI_LLM_MAX_TOKENS": str(cls.LLM_MAX_TOKENS),
+            "AI_TTS_VOICE_MALE": cls.TTS_VOICE_MALE,
+            "AI_TTS_VOICE_FEMALE": cls.TTS_VOICE_FEMALE,
+            "AI_SEARCH_RECENCY": cls.SEARCH_RECENCY,
+            "AI_MAX_ARTICLES": str(cls.MAX_ARTICLES),
+            "AI_HOST1_NAME": cls.HOST1_NAME,
+            "AI_HOST2_NAME": cls.HOST2_NAME,
+            "MAX_FILE_SIZE": str(cls.MAX_FILE_SIZE)
+        }
+    
+    @classmethod
+    def print_settings(cls):
+        """설정 정보 출력"""
+        print("AI 팟캐스트 생성 시스템 설정")
+        print("=" * 50)
         
-        if validation["errors"]:
-            summary += "오류:\n"
-            for error in validation["errors"]:
-                summary += f"  - {error}\n"
+        all_vars = cls.get_all_env_vars()
+        required_vars = cls.get_required_env_vars()
+        optional_vars = cls.get_optional_env_vars()
         
-        if validation["warnings"]:
-            summary += "경고:\n"
-            for warning in validation["warnings"]:
-                summary += f"  - {warning}\n"
+        print("필수 설정:")
+        for var in required_vars:
+            value = all_vars.get(var, "")
+            status = "✓" if value else "✗"
+            print(f"  {status} {var}: {'설정됨' if value else '미설정'}")
         
-        return summary
+        print("\n선택적 설정:")
+        for var in optional_vars:
+            value = all_vars.get(var, "")
+            status = "✓" if value else "○"
+            print(f"  {status} {var}: {value if value else '기본값 사용'}")
+        
+        print("\n파일 경로:")
+        print(f"  설정 파일: {cls.CONFIG_PATH}")
+        print(f"  출력 디렉토리: {cls.OUTPUT_DIR}")
+        print(f"  임시 디렉토리: {cls.TEMP_DIR}")

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 
 # =================================================================
 # 1. User Schemas
@@ -121,3 +122,93 @@ class SubscriptionCreate(BaseModel):
 class ScheduleCreate(BaseModel):
     cron_expression: str
     is_active: bool = True
+
+# =================================================================
+# 9. AI Job Management Schemas
+# =================================================================
+class JobStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class JobType(str, Enum):
+    URL_ANALYSIS = "url_analysis"
+    TOPIC_GENERATION = "topic_generation"
+    SCRIPT_GENERATION = "script_generation"
+    AUDIO_GENERATION = "audio_generation"
+    FULL_PIPELINE = "full_pipeline"
+
+class AIJobBase(BaseModel):
+    job_type: JobType
+    user_id: int
+    topic_id: Optional[int] = None
+    input_data: Dict[str, Any]
+    priority: int = 0
+
+class AIJobCreate(AIJobBase):
+    pass
+
+class AIJobUpdate(BaseModel):
+    status: Optional[JobStatus] = None
+    progress: Optional[int] = None
+    result_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    airflow_dag_run_id: Optional[str] = None
+    airflow_task_id: Optional[str] = None
+
+class AIJob(AIJobBase):
+    job_id: int
+    status: JobStatus
+    progress: int = 0
+    result_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    airflow_dag_run_id: Optional[str] = None
+    airflow_task_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# =================================================================
+# 10. Airflow Integration Schemas
+# =================================================================
+class AirflowDAGRunRequest(BaseModel):
+    dag_id: str
+    conf: Optional[Dict[str, Any]] = None
+    execution_date: Optional[datetime] = None
+
+class AirflowDAGRunResponse(BaseModel):
+    dag_run_id: str
+    state: str
+    execution_date: datetime
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+class AirflowTaskInstance(BaseModel):
+    task_id: str
+    state: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    duration: Optional[float] = None
+    log_url: Optional[str] = None
+
+# =================================================================
+# 11. WebSocket Message Schemas
+# =================================================================
+class WebSocketMessage(BaseModel):
+    type: str
+    job_id: int
+    data: Dict[str, Any]
+    timestamp: datetime
+
+class JobStatusUpdate(BaseModel):
+    job_id: int
+    status: JobStatus
+    progress: int
+    message: Optional[str] = None
+    timestamp: datetime

@@ -15,3 +15,11 @@ AsyncSessionLocal = sessionmaker(
 
 # 모델 클래스들이 상속받을 기본 클래스
 Base = declarative_base()
+
+# 데이터베이스 세션 의존성 함수
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

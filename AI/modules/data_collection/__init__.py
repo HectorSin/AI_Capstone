@@ -5,8 +5,14 @@ AI 데이터 수집 모듈
 구조화된 JSON 형태로 반환하는 기능을 제공합니다.
 """
 
-from .news_collector import NewsCollector
+from .news_collector import NewsCollector, Article, NewsData
 from .prompt_generator import PromptGenerator
 from .data_validator import DataValidator
 
-__all__ = ['NewsCollector', 'PromptGenerator', 'DataValidator']
+__all__ = [
+    'NewsCollector',
+    'Article', 
+    'NewsData',
+    'PromptGenerator',
+    'DataValidator'
+]
