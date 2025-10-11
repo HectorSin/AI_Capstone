@@ -18,11 +18,19 @@ export default function LoginScreen() {
     }
 
     setIsSubmitting(true);
-    const success = await signIn({ email, password });
-    setIsSubmitting(false);
+    try {
+      const success = await signIn({ email, password });
+      if (success) {
+        router.replace('/(tabs)' as any);
+        return;
+      }
 
-    if (success) {
-      router.replace('/(tabs)' as any);
+      Alert.alert('안내', '로그인에 실패했습니다. 다시 시도해주세요.');
+    } catch (error) {
+      console.warn('signIn failed', error);
+      Alert.alert('안내', '로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
