@@ -1,209 +1,162 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Table, func, JSON, Enum as SQLEnum
+from sqlalchemy import (
+    Column, String, Text, DateTime, Boolean, Integer, ForeignKey,
+    Enum as SQLEnum, ARRAY, Date, func, text
+)
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from .database import Base
 import enum
 
-# AnalysisTopic과 SourceURL의 다대다(Many-to-Many) 관계를 위한 중간 테이블
-TopicURL = Table(
-    'topic_url',  # <-- 'topicURL'에서 'topic_url'로 수정
-    Base.metadata,
-    Column('topic_id', Integer, ForeignKey('analysis_topic.topic_id'), primary_key=True),
-    Column('url_id', Integer, ForeignKey('source_url.url_id'), primary_key=True)
-)
+# ==========================================================
+# ENUM 정의
+# ==========================================================
+class PlanType(enum.Enum):
+    free = "free"
+    premium = "premium"
 
+class SocialProviderType(enum.Enum):
+    google = "google"
+    kakao = "kakao"
+    none = "none"
+
+class TopicType(enum.Enum):
+    company = "company"
+    keyword = "keyword"
+
+
+# ==========================================================
+# User 테이블
+# ==========================================================
 class User(Base):
-    __tablename__ = "user"
+    __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True, index=True)
-    social_id = Column(String, unique=True, index=True)
-    provider = Column(String)  # 'google', 'kakao'
-    email = Column(String, unique=True, index=True)
-    nickname = Column(String)
-    profile_image_url = Column(String, nullable=True)
-    plan = Column(String, default='free')  # 'free', 'premium'
-    created_at = Column(DateTime, default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    email = Column(String(255), unique=True)
+    nickname = Column(String(100), unique=True, nullable=False)
+    plan = Column(SQLEnum(PlanType, name="plan_type"), nullable=False, server_default="free")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    social_provider = Column(SQLEnum(SocialProviderType, name="social_provider_type"), server_default="none")
+    social_id = Column(String(255))
+    notification_time = Column(JSONB)
 
-    # User와 다른 테이블들의 관계 정의
-    topics = relationship("AnalysisTopic", back_populates="user")
-    preferences = relationship("UserVoicePreference", back_populates="user")
-    # foreign_keys를 실제 Column 객체로 지정하도록 수정
-    subscriptions = relationship("Subscription", foreign_keys="[Subscription.user_id]", back_populates="subscriber")
-    subscribers = relationship("Subscription", foreign_keys="[Subscription.creator_id]", back_populates="creator")
+    topics = relationship("UserTopic", back_populates="user", cascade="all, delete-orphan")
 
-    def __str__(self):
-        return self.nickname
+    def __repr__(self):
+        return f"<User(id={self.id}, nickname={self.nickname}, plan={self.plan})>"
 
-# --- 이하 코드는 모두 올바르게 작성되어 수정할 필요가 없습니다. ---
 
-class AnalysisTopic(Base):
-    __tablename__ = "analysis_topic"
+# ==========================================================
+# Topic 테이블
+# ==========================================================
+class Topic(Base):
+    __tablename__ = "topics"
 
-    topic_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'))
-    title = Column(String)
-    one_line_summary = Column(String, nullable=True)
-    thumbnail_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    name = Column(String(100), unique=True, nullable=False)
+    type = Column(SQLEnum(TopicType, name="topic_type"), nullable=False)
+    summary = Column(Text)
+    image_uri = Column(Text, nullable=False)
+    keywords = Column(ARRAY(Text))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    users = relationship("UserTopic", back_populates="topic", cascade="all, delete-orphan")
+    sources = relationship("TopicSource", back_populates="topic", cascade="all, delete-orphan")
+    articles = relationship("Article", back_populates="topic", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Topic(id={self.id}, name={self.name}, type={self.type})>"
+
+
+# ==========================================================
+# UserTopic (다대다 관계)
+# ==========================================================
+class UserTopic(Base):
+    __tablename__ = "user_topic"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="topics")
-    source_urls = relationship("SourceURL", secondary=TopicURL, back_populates="topics")
-    result = relationship("TopicResult", back_populates="topic", uselist=False)
-    schedules = relationship("Schedule", back_populates="topic")
-
-    def __str__(self):
-        return self.title
+    topic = relationship("Topic", back_populates="users")
 
 
-class SourceURL(Base):
-    __tablename__ = "source_url"
+# ==========================================================
+# TopicSources
+# ==========================================================
+class TopicSource(Base):
+    __tablename__ = "topic_sources"
 
-    url_id = Column(Integer, primary_key=True, index=True)
-    original_url = Column(String, unique=True, index=True)
-    created_at = Column(DateTime, default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), nullable=False)
+    source_name = Column(String(255), nullable=False)
+    source_url = Column(Text, nullable=False)
+    is_active = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
-    topics = relationship("AnalysisTopic", secondary=TopicURL, back_populates="source_urls")
+    topic = relationship("Topic", back_populates="sources")
 
-    def __str__(self):
-        return self.original_url
-
-
-class TopicResult(Base):
-    __tablename__ = "topic_result"
-
-    result_id = Column(Integer, primary_key=True, index=True)
-    topic_id = Column(Integer, ForeignKey('analysis_topic.topic_id'), unique=True)
-    status = Column(String)
-    combined_summary_text = Column(Text, nullable=True)
-    podcast_script = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=func.now())
-    completed_at = Column(DateTime, nullable=True)
-    
-    topic = relationship("AnalysisTopic", back_populates="result")
-    podcasts = relationship("GeneratedPodcast", back_populates="result")
+    def __repr__(self):
+        return f"<TopicSource(id={self.id}, source_name={self.source_name}, active={self.is_active})>"
 
 
-class GeneratedPodcast(Base):
-    __tablename__ = "generated_podcast"
+# ==========================================================
+# Article
+# ==========================================================
+class Article(Base):
+    __tablename__ = "articles"
 
-    podcast_id = Column(Integer, primary_key=True, index=True)
-    result_id = Column(Integer, ForeignKey('topic_result.result_id'))
-    voice_id = Column(Integer, ForeignKey('voice.voice_id'))
-    episode_number = Column(Integer, nullable=True)
-    podcast_url = Column(String)
-    podcast_duration_sec = Column(Integer)
-    
-    result = relationship("TopicResult", back_populates="podcasts")
-    voice = relationship("Voice", back_populates="podcasts")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), nullable=False)
+    title = Column(Text, nullable=False)
+    summary = Column(Text, nullable=False)
+    content = Column(Text, nullable=False)
+    source_url = Column(Text)
+    date = Column(Date, nullable=False)
+    json_data = Column(JSONB)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
+    topic = relationship("Topic", back_populates="articles")
+    podcast_script = relationship("PodcastScript", back_populates="article", uselist=False, cascade="all, delete-orphan")
+    podcast = relationship("Podcast", back_populates="article", uselist=False, cascade="all, delete-orphan")
 
-class Voice(Base):
-    __tablename__ = "voice"
-
-    voice_id = Column(Integer, primary_key=True, index=True)
-    voice_name = Column(String, unique=True)
-    language = Column(String)
-    gender = Column(String)
-
-    podcasts = relationship("GeneratedPodcast", back_populates="voice")
-    preferences = relationship("UserVoicePreference", back_populates="voice")
-
-    def __str__(self):
-        return self.voice_name
+    def __repr__(self):
+        return f"<Article(id={self.id}, title={self.title[:30]}...)>"
 
 
-class UserVoicePreference(Base):
-    __tablename__ = "user_voice_preference"
+# ==========================================================
+# PodcastScript
+# ==========================================================
+class PodcastScript(Base):
+    __tablename__ = "podcast_scripts"
 
-    preference_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'))
-    voice_id = Column(Integer, ForeignKey('voice.voice_id'))
-    play_order = Column(Integer)
-    is_default = Column(Boolean, default=False)
-    
-    user = relationship("User", back_populates="preferences")
-    voice = relationship("Voice", back_populates="preferences")
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    article_id = Column(UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False)
+    data = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
+    article = relationship("Article", back_populates="podcast_script")
+    podcast = relationship("Podcast", back_populates="script", uselist=False)
 
-class Subscription(Base):
-    __tablename__ = "subscription"
-
-    subscription_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'))
-    creator_id = Column(Integer, ForeignKey('user.user_id'))
-    created_at = Column(DateTime, default=func.now())
-
-    subscriber = relationship("User", foreign_keys=[user_id], back_populates="subscriptions")
-    creator = relationship("User", foreign_keys=[creator_id], back_populates="subscribers")
+    def __repr__(self):
+        return f"<PodcastScript(id={self.id}, article_id={self.article_id})>"
 
 
-class Schedule(Base):
-    __tablename__ = "schedule"
+# ==========================================================
+# Podcast
+# ==========================================================
+class Podcast(Base):
+    __tablename__ = "podcasts"
 
-    schedule_id = Column(Integer, primary_key=True, index=True)
-    topic_id = Column(Integer, ForeignKey('analysis_topic.topic_id'))
-    cron_expression = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    article_id = Column(UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False)
+    script_id = Column(UUID(as_uuid=True), ForeignKey("podcast_scripts.id", ondelete="CASCADE"), unique=True)
+    audio_uri = Column(Text, nullable=False)
+    duration = Column(Integer)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
-    topic = relationship("AnalysisTopic", back_populates="schedules")
+    article = relationship("Article", back_populates="podcast")
+    script = relationship("PodcastScript", back_populates="podcast")
 
-
-# =================================================================
-# AI Job Management Models
-# =================================================================
-class JobStatusEnum(enum.Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCESS = "success"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-class JobTypeEnum(enum.Enum):
-    URL_ANALYSIS = "url_analysis"
-    TOPIC_GENERATION = "topic_generation"
-    SCRIPT_GENERATION = "script_generation"
-    AUDIO_GENERATION = "audio_generation"
-    FULL_PIPELINE = "full_pipeline"
-
-class AIJob(Base):
-    __tablename__ = "ai_job"
-
-    job_id = Column(Integer, primary_key=True, index=True)
-    job_type = Column(SQLEnum(JobTypeEnum), nullable=False)
-    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
-    topic_id = Column(Integer, ForeignKey('analysis_topic.topic_id'), nullable=True)
-    status = Column(SQLEnum(JobStatusEnum), default=JobStatusEnum.PENDING)
-    progress = Column(Integer, default=0)
-    priority = Column(Integer, default=0)
-    input_data = Column(JSON, nullable=False)
-    result_data = Column(JSON, nullable=True)
-    error_message = Column(Text, nullable=True)
-    # Airflow 관련 컬럼 제거
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
-
-    # Relationships
-    user = relationship("User")
-    topic = relationship("AnalysisTopic")
-
-    def __str__(self):
-        return f"AIJob {self.job_id} - {self.job_type.value} - {self.status.value}"
-
-
-class JobLog(Base):
-    __tablename__ = "job_log"
-
-    log_id = Column(Integer, primary_key=True, index=True)
-    job_id = Column(Integer, ForeignKey('ai_job.job_id'), nullable=False)
-    level = Column(String, nullable=False)  # INFO, WARNING, ERROR, DEBUG
-    message = Column(Text, nullable=False)
-    details = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=func.now())
-
-    # Relationships
-    job = relationship("AIJob")
-
-    def __str__(self):
-        return f"JobLog {self.log_id} - {self.level} - {self.job_id}"
+    def __repr__(self):
+        return f"<Podcast(id={self.id}, duration={self.duration})>"
