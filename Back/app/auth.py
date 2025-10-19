@@ -11,6 +11,7 @@ from app import schemas
 from app.database import database
 
 from app.config import settings
+#test 입니다.
 
 # 환경 변수에서 설정값 가져오기
 SECRET_KEY = settings.secret_key
