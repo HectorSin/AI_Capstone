@@ -1,7 +1,8 @@
 import re
 import secrets
 
-from typing import List, Optional
+from datetime import time
+from typing import List, Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy import select
@@ -95,6 +96,14 @@ async def create_local_user(
     nickname: str,
     password_hash: str,
 ) -> models.User:
+    preference = models.NotificationPreference(
+        allowed=False,
+        time_enabled=False,
+        send_time=time(hour=7, minute=0),
+        days_of_week=[0, 1, 2, 3, 4],
+        prompted=False,
+    )
+
     user = models.User(
         email=email,
         nickname=nickname,
@@ -102,6 +111,7 @@ async def create_local_user(
         social_provider=models.SocialProviderType.none,
         social_id=None,
         password_hash=password_hash,
+        notification_preference=preference,
     )
     db.add(user)
     try:
@@ -123,6 +133,14 @@ async def create_social_user(
     provider: models.SocialProviderType,
     social_id: str,
 ) -> models.User:
+    preference = models.NotificationPreference(
+        allowed=False,
+        time_enabled=False,
+        send_time=time(hour=7, minute=0),
+        days_of_week=[0, 1, 2, 3, 4],
+        prompted=False,
+    )
+
     user = models.User(
         email=email,
         nickname=nickname,
@@ -130,6 +148,7 @@ async def create_social_user(
         social_provider=provider,
         social_id=social_id,
         password_hash=None,
+        notification_preference=preference,
     )
     db.add(user)
     try:
@@ -153,6 +172,59 @@ async def update_user_password(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def get_notification_preference(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Optional[models.NotificationPreference]:
+    stmt = select(models.NotificationPreference).where(models.NotificationPreference.user_id == user_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def ensure_notification_preference(
+    db: AsyncSession,
+    user_id: UUID,
+) -> models.NotificationPreference:
+    preference = await get_notification_preference(db, user_id)
+    if preference:
+        return preference
+
+    preference = models.NotificationPreference(
+        user_id=user_id,
+        allowed=False,
+        time_enabled=False,
+        send_time=time(hour=7, minute=0),
+        days_of_week=[0, 1, 2, 3, 4],
+        prompted=False,
+    )
+    db.add(preference)
+    await db.commit()
+    await db.refresh(preference)
+    return preference
+
+
+async def update_notification_preference(
+    db: AsyncSession,
+    preference: models.NotificationPreference,
+    *,
+    allowed: bool,
+    time_enabled: bool,
+    send_time_value: Optional[time],
+    days_of_week: Sequence[int],
+    prompted: bool,
+) -> models.NotificationPreference:
+    preference.allowed = allowed
+    preference.time_enabled = time_enabled
+    preference.send_time = send_time_value
+    preference.days_of_week = list(days_of_week)
+    preference.prompted = prompted
+
+    db.add(preference)
+    await db.commit()
+    await db.refresh(preference)
+    return preference
 
 
 async def delete_user(db: AsyncSession, user: models.User) -> None:

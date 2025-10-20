@@ -1,6 +1,17 @@
-import { useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+
+import { useAuth } from '@/providers/AuthProvider';
 
 type TimePreference = {
   period: '오전' | '오후';
@@ -9,6 +20,17 @@ type TimePreference = {
 };
 
 const ALL_DAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+const DAY_TO_INDEX: Record<typeof ALL_DAYS[number], number> = {
+  월: 0,
+  화: 1,
+  수: 2,
+  목: 3,
+  금: 4,
+  토: 5,
+  일: 6,
+};
+const INDEX_TO_DAY = ALL_DAYS;
+
 type DayPreset = 'daily' | 'weekday' | 'weekend' | 'custom';
 
 const DAY_PRESET_OPTIONS: { key: DayPreset; label: string }[] = [
@@ -31,45 +53,161 @@ const getPresetDays = (preset: DayPreset): string[] => {
   return [...PRESET_DAY_MAP[preset]];
 };
 
+const detectDayPreset = (days: string[]): DayPreset => {
+  const sorted = [...days].sort((a, b) => DAY_TO_INDEX[a as typeof ALL_DAYS[number]] - DAY_TO_INDEX[b as typeof ALL_DAYS[number]]);
+  for (const option of DAY_PRESET_OPTIONS) {
+    if (option.key === 'custom') continue;
+    const presetDays = PRESET_DAY_MAP[option.key].slice().sort(
+      (a, b) => DAY_TO_INDEX[a as typeof ALL_DAYS[number]] - DAY_TO_INDEX[b as typeof ALL_DAYS[number]]
+    );
+    if (presetDays.length === sorted.length && presetDays.every((day, index) => day === sorted[index])) {
+      return option.key;
+    }
+  }
+  return 'custom';
+};
+
+const toTimePreference = (hour: number, minute: number): TimePreference => {
+  const period: '오전' | '오후' = hour >= 12 ? '오후' : '오전';
+  const twelveHour = hour % 12 === 0 ? 12 : hour % 12;
+  return { period, hour: twelveHour, minute };
+};
+
+const to24Hour = (time: TimePreference): { hour: number; minute: number } => {
+  let hour = time.hour % 12;
+  if (time.period === '오후') {
+    hour += 12;
+  }
+  if (hour === 24) {
+    hour = 0;
+  }
+  return { hour, minute: time.minute };
+};
+
+const ORDERED_DAYS = [...ALL_DAYS];
+
+const normalizeDays = (days: string[]): string[] => {
+  const unique = new Set(days);
+  return ORDERED_DAYS.filter((day) => unique.has(day));
+};
+
 export default function NotificationSettingsScreen() {
   const router = useRouter();
+  const {
+    notificationPreference,
+    updateNotificationPreference,
+    refreshNotificationPreference,
+  } = useAuth();
+
   const [allowNotifications, setAllowNotifications] = useState(true);
   const [timeSettingEnabled, setTimeSettingEnabled] = useState(true);
   const [selectedDays, setSelectedDays] = useState<string[]>(() => getPresetDays('daily'));
   const [timePreference, setTimePreference] = useState<TimePreference>({ period: '오전', hour: 7, minute: 0 });
   const [dayPreset, setDayPreset] = useState<DayPreset>('daily');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!notificationPreference) {
+      return;
+    }
+
+    const {
+      allowed,
+      timeEnabled,
+      hour,
+      minute,
+      daysOfWeek,
+    } = notificationPreference;
+
+    setAllowNotifications(allowed);
+    setTimeSettingEnabled(timeEnabled);
+
+    const activeHour = hour ?? 7;
+    const activeMinute = minute ?? 0;
+    setTimePreference(toTimePreference(activeHour, activeMinute));
+
+    const mappedDays = daysOfWeek.length
+      ? normalizeDays(daysOfWeek.map((index) => INDEX_TO_DAY[index] ?? ''))
+      : getPresetDays('weekday');
+    setSelectedDays(mappedDays);
+
+    const preset = detectDayPreset(mappedDays);
+    setDayPreset(preset);
+  }, [notificationPreference]);
+
+  useEffect(() => {
+    if (!allowNotifications) {
+      setTimeSettingEnabled(false);
+    }
+  }, [allowNotifications]);
+
+  const scheduleActive = allowNotifications && timeSettingEnabled;
+  const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
+  const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
+  const minuteOptions = Array.from({ length: 12 }, (_, index) => index * 5);
+  const formattedTime = `${timePreference.period} ${timePreference.hour
+    .toString()
+    .padStart(2, '0')}:${timePreference.minute.toString().padStart(2, '0')}`;
+
+  const currentSnapshot = useMemo(() => {
+    const { hour, minute } = to24Hour(timePreference);
+    return {
+      allowed: allowNotifications,
+      timeEnabled: timeSettingEnabled,
+      hour: scheduleActive ? hour : null,
+      minute: scheduleActive ? minute : null,
+      days: scheduleActive ? [...selectedDays] : [],
+    };
+  }, [allowNotifications, scheduleActive, selectedDays, timePreference, timeSettingEnabled]);
+
+  const initialSnapshot = useMemo(() => {
+    if (!notificationPreference) return null;
+    return {
+      allowed: notificationPreference.allowed,
+      timeEnabled: notificationPreference.timeEnabled,
+      hour: notificationPreference.timeEnabled ? notificationPreference.hour ?? 7 : null,
+      minute: notificationPreference.timeEnabled ? notificationPreference.minute ?? 0 : null,
+      days: notificationPreference.timeEnabled
+        ? normalizeDays(notificationPreference.daysOfWeek.map((index) => INDEX_TO_DAY[index] ?? ''))
+        : [],
+    };
+  }, [notificationPreference]);
+
+  const isDirty = useMemo(() => {
+    if (!initialSnapshot) return false;
+    const currentDaysSorted = normalizeDays(currentSnapshot.days).join(',');
+    const initialDaysSorted = normalizeDays(initialSnapshot.days).join(',');
+    return (
+      currentSnapshot.allowed !== initialSnapshot.allowed ||
+      currentSnapshot.timeEnabled !== initialSnapshot.timeEnabled ||
+      currentSnapshot.hour !== initialSnapshot.hour ||
+      currentSnapshot.minute !== initialSnapshot.minute ||
+      currentDaysSorted !== initialDaysSorted
+    );
+  }, [currentSnapshot, initialSnapshot]);
 
   const toggleAllowNotifications = (value: boolean) => {
     setAllowNotifications(value);
     if (!value) {
-      setTimeSettingEnabled(false);
-      setSelectedDays(getPresetDays('daily'));
-      setDayPreset('daily');
-      setTimePreference({ period: '오전', hour: 7, minute: 0 });
+      setSelectedDays(getPresetDays('weekday'));
+      setDayPreset('weekday');
     }
   };
 
   const toggleTimeSetting = (value: boolean) => {
     setTimeSettingEnabled(value);
     if (!value) {
-      if (dayPreset === 'custom') {
-        setSelectedDays((prev) => (prev.length > 0 ? prev : ['월']));
-      } else {
-        setSelectedDays(getPresetDays(dayPreset));
-      }
+      setSelectedDays(getPresetDays('weekday'));
+      setDayPreset('weekday');
     } else if (selectedDays.length === 0) {
-      if (dayPreset === 'custom') {
-        setSelectedDays(['월']);
-      } else {
-        setSelectedDays(getPresetDays(dayPreset));
-      }
+      setSelectedDays(['월']);
     }
   };
 
   const applyDayPreset = (preset: DayPreset) => {
     setDayPreset(preset);
     if (preset === 'custom') {
-      setSelectedDays((prev) => (prev.length > 0 ? prev : ['월']));
+      setSelectedDays((prev) => (prev.length > 0 ? normalizeDays(prev) : ['월']));
       return;
     }
     setSelectedDays(getPresetDays(preset));
@@ -81,8 +219,7 @@ export default function NotificationSettingsScreen() {
         const updated = prev.filter((item) => item !== day);
         return updated;
       }
-
-      return [...prev, day];
+      return normalizeDays([...prev, day]);
     });
   };
 
@@ -105,13 +242,36 @@ export default function NotificationSettingsScreen() {
     setTimePreference((current) => ({ ...current, minute }));
   };
 
-  const scheduleActive = allowNotifications && timeSettingEnabled;
-  const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
-  const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
-  const minuteOptions = Array.from({ length: 12 }, (_, index) => index * 5);
-  const formattedTime = `${timePreference.period} ${timePreference.hour
-    .toString()
-    .padStart(2, '0')}:${timePreference.minute.toString().padStart(2, '0')}`;
+  const handleSave = async () => {
+    if (!notificationPreference) return;
+
+    if (scheduleActive && selectedDays.length === 0) {
+      Alert.alert('안내', '희망 요일을 한 가지 이상 선택해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { hour, minute } = to24Hour(timePreference);
+      const success = await updateNotificationPreference({
+        allowed: allowNotifications,
+        timeEnabled: scheduleActive,
+        hour: scheduleActive ? hour : null,
+        minute: scheduleActive ? minute : null,
+        daysOfWeek: scheduleActive ? selectedDays.map((day) => DAY_TO_INDEX[day as typeof ALL_DAYS[number]]) : [],
+        prompted: true,
+      });
+
+      if (success) {
+        await refreshNotificationPreference();
+        Alert.alert('안내', '알림 설정이 저장되었습니다.');
+      } else {
+        Alert.alert('안내', '알림 설정 저장에 실패했습니다.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -120,7 +280,18 @@ export default function NotificationSettingsScreen() {
           <Text style={styles.backText}>뒤로</Text>
         </Pressable>
         <Text style={styles.headerTitle}>알림 설정</Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          disabled={!isDirty || isSaving}
+          onPress={handleSave}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.headerButton,
+            (!isDirty || isSaving) && styles.headerButtonDisabled,
+            pressed && isDirty && !isSaving && styles.buttonPressed,
+          ]}
+        >
+          <Text style={[styles.saveText, (!isDirty || isSaving) && styles.saveTextDisabled]}>{isSaving ? '저장 중' : '저장'}</Text>
+        </Pressable>
       </View>
       <View style={styles.content}>
         <View style={styles.row}>
@@ -199,28 +370,24 @@ export default function NotificationSettingsScreen() {
                   <ScrollView
                     showsVerticalScrollIndicator
                     style={styles.pickerScroll}
-                    contentContainerStyle={styles.pickerScrollContent}
+                    contentContainerStyle={styles.pickerContent}
                   >
-                    {periodOptions.map((period) => (
-                      <Pressable
-                        key={period}
-                        onPress={() => selectPeriod(period)}
-                        style={({ pressed }) => [
-                          styles.optionButton,
-                          timePreference.period === period && styles.optionSelected,
-                          pressed && styles.optionPressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.optionText,
-                            timePreference.period === period && styles.optionTextSelected,
+                    {periodOptions.map((option) => {
+                      const active = timePreference.period === option;
+                      return (
+                        <Pressable
+                          key={option}
+                          onPress={() => selectPeriod(option)}
+                          style={({ pressed }) => [
+                            styles.pickerItem,
+                            active && styles.pickerItemActive,
+                            pressed && styles.pickerItemPressed,
                           ]}
                         >
-                          {period}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text style={[styles.pickerText, active && styles.pickerTextActive]}>{option}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </ScrollView>
                 </View>
                 <View style={styles.pickerColumn}>
@@ -228,28 +395,24 @@ export default function NotificationSettingsScreen() {
                   <ScrollView
                     showsVerticalScrollIndicator
                     style={styles.pickerScroll}
-                    contentContainerStyle={styles.pickerScrollContent}
+                    contentContainerStyle={styles.pickerContent}
                   >
-                    {hourOptions.map((hour) => (
-                      <Pressable
-                        key={hour}
-                        onPress={() => selectHour(hour)}
-                        style={({ pressed }) => [
-                          styles.optionButton,
-                          timePreference.hour === hour && styles.optionSelected,
-                          pressed && styles.optionPressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.optionText,
-                            timePreference.hour === hour && styles.optionTextSelected,
+                    {hourOptions.map((option) => {
+                      const active = timePreference.hour === option;
+                      return (
+                        <Pressable
+                          key={option}
+                          onPress={() => selectHour(option)}
+                          style={({ pressed }) => [
+                            styles.pickerItem,
+                            active && styles.pickerItemActive,
+                            pressed && styles.pickerItemPressed,
                           ]}
                         >
-                          {hour.toString().padStart(2, '0')}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text style={[styles.pickerText, active && styles.pickerTextActive]}>{option}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </ScrollView>
                 </View>
                 <View style={styles.pickerColumn}>
@@ -257,28 +420,24 @@ export default function NotificationSettingsScreen() {
                   <ScrollView
                     showsVerticalScrollIndicator
                     style={styles.pickerScroll}
-                    contentContainerStyle={styles.pickerScrollContent}
+                    contentContainerStyle={styles.pickerContent}
                   >
-                    {minuteOptions.map((minute) => (
-                      <Pressable
-                        key={minute}
-                        onPress={() => selectMinute(minute)}
-                        style={({ pressed }) => [
-                          styles.optionButton,
-                          timePreference.minute === minute && styles.optionSelected,
-                          pressed && styles.optionPressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.optionText,
-                            timePreference.minute === minute && styles.optionTextSelected,
+                    {minuteOptions.map((option) => {
+                      const active = timePreference.minute === option;
+                      return (
+                        <Pressable
+                          key={option}
+                          onPress={() => selectMinute(option)}
+                          style={({ pressed }) => [
+                            styles.pickerItem,
+                            active && styles.pickerItemActive,
+                            pressed && styles.pickerItemPressed,
                           ]}
                         >
-                          {minute.toString().padStart(2, '0')}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text style={[styles.pickerText, active && styles.pickerTextActive]}>{option.toString().padStart(2, '0')}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </ScrollView>
                 </View>
               </View>
@@ -293,92 +452,110 @@ export default function NotificationSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
   },
   headerButton: {
-    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  headerButtonDisabled: {
+    opacity: 0.4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  backText: {
+    fontSize: 14,
+    color: '#2563eb',
+  },
+  saveText: {
+    fontSize: 14,
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  saveTextDisabled: {
+    color: '#9ca3af',
   },
   buttonPressed: {
     opacity: 0.5,
   },
-  backText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  headerSpacer: {
-    width: 48,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#111827',
-  },
   content: {
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    gap: 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+    gap: 20,
   },
   row: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   label: {
-    fontSize: 17,
-    fontWeight: '500',
+    fontSize: 16,
     color: '#111827',
+    fontWeight: '500',
   },
   disabledRow: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   disabledLabel: {
-    color: '#6b7280',
+    color: '#9ca3af',
   },
   scheduleSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     gap: 12,
   },
   sectionLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
   },
   presetRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   radioButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
   },
   radioSelected: {
-    backgroundColor: '#111827',
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
   },
   radioPressed: {
     opacity: 0.7,
   },
   radioLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    color: '#1f2937',
   },
   radioLabelSelected: {
-    color: '#ffffff',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#6b7280',
+    color: '#1d4ed8',
+    fontWeight: '600',
   },
   dayGrid: {
     flexDirection: 'row',
@@ -394,94 +571,83 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   dayPillActive: {
-    borderColor: '#111827',
-    backgroundColor: '#111827',
+    borderColor: '#059669',
+    backgroundColor: '#dcfce7',
   },
   dayPillPressed: {
     opacity: 0.7,
   },
   dayText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
+    color: '#1f2937',
   },
   dayTextActive: {
-    color: '#ffffff',
+    color: '#047857',
+    fontWeight: '600',
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   timePickerCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#f9fafb',
-    gap: 16,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  timeSummary: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    textAlign: 'center',
-  },
-  timeSummaryHint: {
-    fontSize: 13,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'flex-start',
-  },
-  pickerColumn: {
-    flex: 1,
-    minWidth: 90,
-    gap: 10,
-  },
-  pickerColumnLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4b5563',
-    textAlign: 'center',
-  },
-  pickerScroll: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
-    maxHeight: 220,
-  },
-  pickerScrollContent: {
-    paddingHorizontal: 6,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  optionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    padding: 16,
     backgroundColor: '#f9fafb',
+    gap: 12,
   },
-  optionSelected: {
-    backgroundColor: '#111827',
-    borderColor: '#111827',
+  timeSummary: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1f2937',
   },
-  optionPressed: {
-    opacity: 0.75,
+  timeSummaryHint: {
+    fontSize: 14,
+    color: '#6b7280',
   },
-  optionText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#111827',
+  pickerRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  optionTextSelected: {
-    color: '#ffffff',
+  pickerColumn: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  pickerColumnLabel: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  pickerScroll: {
+    maxHeight: 160,
+  },
+  pickerContent: {
+    paddingVertical: 6,
+  },
+  pickerItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pickerItemActive: {
+    backgroundColor: '#e0f2fe',
+  },
+  pickerItemPressed: {
+    opacity: 0.6,
+  },
+  pickerText: {
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  pickerTextActive: {
+    color: '#0c4a6e',
+    fontWeight: '600',
   },
 });

@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Text, DateTime, Boolean, Integer, ForeignKey,
-    Enum as SQLEnum, ARRAY, Date, func, text
+    Enum as SQLEnum, ARRAY, Date, Time, func, text
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -41,6 +41,12 @@ class User(Base):
     notification_time = Column(JSONB)
 
     topics = relationship("UserTopic", back_populates="user", cascade="all, delete-orphan")
+    notification_preference = relationship(
+        "NotificationPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<User(id={self.id}, nickname={self.nickname}, plan={self.plan})>"
@@ -161,3 +167,28 @@ class Podcast(Base):
 
     def __repr__(self):
         return f"<Podcast(id={self.id}, duration={self.duration})>"
+
+
+# ==========================================================
+# NotificationPreference
+# ==========================================================
+class NotificationPreference(Base):
+    __tablename__ = "notification_schedule"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    allowed = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    time_enabled = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    send_time = Column(Time)
+    days_of_week = Column(ARRAY(Integer), nullable=False, server_default=text("'{}'::int[]"))
+    prompted = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="notification_preference")
+
+    def __repr__(self):
+        return (
+            f"<NotificationPreference(user_id={self.user_id}, allowed={self.allowed}, "
+            f"time_enabled={self.time_enabled}, send_time={self.send_time})>"
+        )

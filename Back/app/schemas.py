@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, constr
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, constr, field_validator
 
 
 # ==========================================================
@@ -71,6 +71,36 @@ class TokenData(BaseModel):
 
 class AvailabilityResponse(BaseModel):
     available: bool
+
+
+class NotificationPreferenceBase(BaseModel):
+    allowed: bool
+    time_enabled: bool
+    hour: Optional[int] = Field(default=None, ge=0, le=23)
+    minute: Optional[int] = Field(default=None, ge=0, le=59)
+    days_of_week: List[int] = Field(default_factory=list)
+    prompted: bool = False
+
+    @field_validator('days_of_week')
+    @classmethod
+    def validate_days(cls, value: List[int]) -> List[int]:
+        for day in value:
+            if day < 0 or day > 6:
+                raise ValueError('days_of_week values must be between 0 (Monday) and 6 (Sunday).')
+        return value
+
+
+class NotificationPreference(NotificationPreferenceBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationPreferenceUpdate(NotificationPreferenceBase):
+    pass
 
 
 class GoogleLoginRequest(BaseModel):
