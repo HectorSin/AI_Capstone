@@ -52,12 +52,12 @@ class UserUpdate(BaseModel):
 class LocalRegisterRequest(BaseModel):
     email: EmailStr
     nickname: str
-    password: constr(min_length=8, max_length=128)
+    password: constr(min_length=8, max_length=32)
 
 
 class LocalLoginRequest(BaseModel):
     email: EmailStr
-    password: constr(min_length=8, max_length=128)
+    password: constr(min_length=8, max_length=32)
 
 
 class Token(BaseModel):

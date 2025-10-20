@@ -31,7 +31,7 @@ export default function RegisterScreen() {
     if (!password) return false;
     const hasLetter = /[A-Za-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    return password.length >= 8 && password.length <= 128 && hasLetter && hasNumber;
+    return password.length >= 8 && password.length <= 32 && hasLetter && hasNumber;
   }, [password]);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function RegisterScreen() {
     }
 
     if (!isPasswordStrong) {
-      setPasswordError('비밀번호는 8~128자이며, 영문과 숫자를 포함해야 합니다.');
+      setPasswordError('비밀번호는 8~32자이며, 영문과 숫자를 포함해야 합니다.');
     } else {
       setPasswordError(null);
     }
@@ -178,7 +178,7 @@ export default function RegisterScreen() {
         Alert.alert('안내', '회원가입이 완료되었습니다. 로그인해주세요.', [
           {
             text: '확인',
-            onPress: () => router.replace('/(auth)/login' as any),
+            onPress: () => router.back(),
           },
         ]);
         return;

@@ -18,8 +18,8 @@ router = APIRouter(
 def _validate_password_strength(password: str) -> None:
     if len(password) < 8:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 8 characters long.")
-    if len(password) > 128:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be 128 characters or less.")
+    if len(password) > 32:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be 32 characters or less.")
     has_alpha = any(ch.isalpha() for ch in password)
     has_digit = any(ch.isdigit() for ch in password)
     if not (has_alpha and has_digit):
