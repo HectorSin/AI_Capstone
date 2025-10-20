@@ -6,9 +6,6 @@ from app import auth
 
 router = APIRouter(
     tags=["Users"],
-    prefix="/users",
-    # 이 라우터의 모든 API는 인증이 필요하다고 명시할 수 있습니다.
-    # dependencies=[Depends(auth.get_current_user)] 
 )
 
 @router.get("/me", response_model=schemas.User)
