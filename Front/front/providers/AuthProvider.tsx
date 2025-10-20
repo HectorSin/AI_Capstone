@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { API_BASE_URL } from '@/utils/api';
+
 type Credentials = {
   email: string;
   password: string;
@@ -31,7 +33,6 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 const TOKEN_STORAGE_KEY = '@capstone/authToken';
 
 type AuthProviderProps = {
@@ -136,14 +137,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return false;
         }
 
-        // 회원가입 성공 후 자동 로그인 시도
-        return await signIn({ email, password });
+        return true;
       } catch (error) {
         console.warn('[Auth] signUp error', error);
         return false;
       }
     },
-    [signIn]
+    []
   );
 
   const signOut = useCallback(async () => {

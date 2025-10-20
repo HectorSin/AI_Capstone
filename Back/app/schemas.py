@@ -69,6 +69,10 @@ class TokenData(BaseModel):
     user_id: Optional[UUID] = None
 
 
+class AvailabilityResponse(BaseModel):
+    available: bool
+
+
 class GoogleLoginRequest(BaseModel):
     id_token: str
     nickname: Optional[str] = None

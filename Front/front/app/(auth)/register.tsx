@@ -1,8 +1,9 @@
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
+import { checkAvailability } from '@/utils/api';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
@@ -13,22 +14,173 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!email || !nickname || !password || !confirmPassword) {
-      Alert.alert('안내', '모든 필드를 입력해주세요.');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [nicknameStatus, setNicknameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  const isEmailValidFormat = useMemo(() => {
+    if (!email) return false;
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email.trim());
+  }, [email]);
+
+  const isPasswordStrong = useMemo(() => {
+    if (!password) return false;
+    const hasLetter = /[A-Za-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    return password.length >= 8 && password.length <= 128 && hasLetter && hasNumber;
+  }, [password]);
+
+  useEffect(() => {
+    if (!email) {
+      setEmailStatus('idle');
+      setEmailError(null);
+      return;
+    }
+
+    if (!isEmailValidFormat) {
+      setEmailStatus('idle');
+      setEmailError('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    let isActive = true;
+    const controller = new AbortController();
+    setEmailStatus('checking');
+    setEmailError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkAvailability('check-email', email.trim(), controller.signal);
+        if (!isActive) return;
+        setEmailStatus(available ? 'available' : 'taken');
+        setEmailError(available ? null : '이미 등록된 이메일입니다.');
+      } catch (error) {
+        if (!controller.signal.aborted && isActive) {
+          console.warn('email check failed', error);
+          setEmailStatus('idle');
+          setEmailError('이메일 중복 확인에 실패했습니다.');
+        }
+      }
+    }, 400);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [email, isEmailValidFormat]);
+
+  useEffect(() => {
+    if (!nickname) {
+      setNicknameStatus('idle');
+      setNicknameError(null);
+      return;
+    }
+
+    let isActive = true;
+    const controller = new AbortController();
+    setNicknameStatus('checking');
+    setNicknameError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const available = await checkAvailability('check-nickname', nickname.trim(), controller.signal);
+        if (!isActive) return;
+        setNicknameStatus(available ? 'available' : 'taken');
+        setNicknameError(available ? null : '이미 사용 중인 닉네임입니다.');
+      } catch (error) {
+        if (!controller.signal.aborted && isActive) {
+          console.warn('nickname check failed', error);
+          setNicknameStatus('idle');
+          setNicknameError('닉네임 중복 확인에 실패했습니다.');
+        }
+      }
+    }, 400);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [nickname]);
+
+  useEffect(() => {
+    if (!password) {
+      setPasswordError(null);
+      return;
+    }
+
+    if (!isPasswordStrong) {
+      setPasswordError('비밀번호는 8~128자이며, 영문과 숫자를 포함해야 합니다.');
+    } else {
+      setPasswordError(null);
+    }
+  }, [password, isPasswordStrong]);
+
+  useEffect(() => {
+    if (!confirmPassword) {
+      setConfirmError(null);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('안내', '비밀번호가 일치하지 않습니다.');
+      setConfirmError('비밀번호 확인이 일치하지 않습니다.');
+    } else {
+      setConfirmError(null);
+    }
+  }, [password, confirmPassword]);
+
+  const canSubmit = useMemo(() => {
+    return (
+      !!email &&
+      !!nickname &&
+      !!password &&
+      !!confirmPassword &&
+      isEmailValidFormat &&
+      emailStatus === 'available' &&
+      nicknameStatus === 'available' &&
+      isPasswordStrong &&
+      password === confirmPassword &&
+      !emailError &&
+      !nicknameError &&
+      !passwordError &&
+      !confirmError
+    );
+  }, [
+    email,
+    nickname,
+    password,
+    confirmPassword,
+    isEmailValidFormat,
+    emailStatus,
+    nicknameStatus,
+    isPasswordStrong,
+    emailError,
+    nicknameError,
+    passwordError,
+    confirmError,
+  ]);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) {
+      Alert.alert('안내', '입력값을 다시 확인해주세요.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const success = await signUp({ email, password, nickname });
+      const success = await signUp({ email: email.trim(), password, nickname: nickname.trim() });
       if (success) {
-        router.replace('/(tabs)' as any);
+        Alert.alert('안내', '회원가입이 완료되었습니다. 로그인해주세요.', [
+          {
+            text: '확인',
+            onPress: () => router.replace('/(auth)/login' as any),
+          },
+        ]);
         return;
       }
 
@@ -55,6 +207,12 @@ export default function RegisterScreen() {
           autoCapitalize="none"
           style={styles.input}
         />
+        {emailStatus === 'checking' && <Text style={styles.helperText}>이메일 중복 확인 중...</Text>}
+        {emailError && <Text style={styles.errorText}>{emailError}</Text>}
+        {!emailError && emailStatus === 'available' && email && (
+          <Text style={styles.successText}>사용 가능한 이메일입니다.</Text>
+        )}
+
         <TextInput
           value={nickname}
           onChangeText={setNickname}
@@ -62,6 +220,12 @@ export default function RegisterScreen() {
           autoCapitalize="none"
           style={styles.input}
         />
+        {nicknameStatus === 'checking' && <Text style={styles.helperText}>닉네임 중복 확인 중...</Text>}
+        {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+        {!nicknameError && nicknameStatus === 'available' && nickname && (
+          <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+        )}
+
         <TextInput
           value={password}
           onChangeText={setPassword}
@@ -69,6 +233,8 @@ export default function RegisterScreen() {
           secureTextEntry
           style={styles.input}
         />
+        {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+
         <TextInput
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -76,7 +242,13 @@ export default function RegisterScreen() {
           secureTextEntry
           style={styles.input}
         />
-        <Pressable style={[styles.button, isSubmitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={isSubmitting}>
+        {confirmError && <Text style={styles.errorText}>{confirmError}</Text>}
+
+        <Pressable
+          style={[styles.button, (!canSubmit || isSubmitting) && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={!canSubmit || isSubmitting}
+        >
           <Text style={styles.buttonText}>{isSubmitting ? '가입 중...' : '회원가입'}</Text>
         </Pressable>
       </View>
@@ -110,7 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   form: {
-    gap: 16,
+    gap: 12,
   },
   input: {
     height: 52,
@@ -120,12 +292,25 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
     backgroundColor: '#fff',
   },
+  helperText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#dc2626',
+  },
+  successText: {
+    fontSize: 13,
+    color: '#16a34a',
+  },
   button: {
     height: 52,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#22c55e',
+    marginTop: 12,
   },
   buttonDisabled: {
     opacity: 0.6,

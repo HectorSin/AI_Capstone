@@ -1,9 +1,11 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from pydantic import EmailStr
 
 from app import auth, crud, schemas
 from app.database import models
@@ -171,3 +173,21 @@ async def login_kakao(
 
     access_token = auth.create_access_token(subject=str(user.id))
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/check-email", response_model=schemas.AvailabilityResponse)
+async def check_email_availability(
+    email: EmailStr = Query(..., description="검증할 이메일 주소"),
+    db: AsyncSession = Depends(auth.get_db),
+):
+    existing = await crud.get_user_by_email(db, email=email)
+    return {"available": existing is None}
+
+
+@router.get("/check-nickname", response_model=schemas.AvailabilityResponse)
+async def check_nickname_availability(
+    nickname: str = Query(..., min_length=1, description="검증할 닉네임"),
+    db: AsyncSession = Depends(auth.get_db),
+):
+    existing = await crud.get_user_by_nickname(db, nickname=nickname)
+    return {"available": existing is None}
