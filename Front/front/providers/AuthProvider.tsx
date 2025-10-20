@@ -25,6 +25,7 @@ type AuthContextValue = {
   signIn: (credentials: Credentials) => Promise<boolean>;
   signUp: (payload: RegisterPayload) => Promise<boolean>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -150,6 +151,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   }, [persistToken]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/me`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.status !== 204) {
+        console.warn('[Auth] deleteAccount failed', response.status, await response.text().catch(() => ''));
+        return false;
+      }
+
+      await signOut();
+      return true;
+    } catch (error) {
+      console.warn('[Auth] deleteAccount error', error);
+      return false;
+    }
+  }, [signOut, token]);
+
   const refreshProfile = useCallback(async () => {
     if (!token) return;
     await fetchProfile(token);
@@ -179,9 +207,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signIn,
       signUp,
       signOut,
+      deleteAccount,
       refreshProfile,
     }),
-    [token, user, signIn, signUp, signOut, refreshProfile]
+    [token, user, signIn, signUp, signOut, deleteAccount, refreshProfile]
   );
 
   if (!isHydrated) {
