@@ -8,12 +8,13 @@ export default function RegisterScreen() {
   const { signUp } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!email || !nickname || !password || !confirmPassword) {
       Alert.alert('안내', '모든 필드를 입력해주세요.');
       return;
     }
@@ -25,7 +26,7 @@ export default function RegisterScreen() {
 
     setIsSubmitting(true);
     try {
-      const success = await signUp({ email, password });
+      const success = await signUp({ email, password, nickname });
       if (success) {
         router.replace('/(tabs)' as any);
         return;
@@ -51,6 +52,13 @@ export default function RegisterScreen() {
           onChangeText={setEmail}
           placeholder="이메일"
           keyboardType="email-address"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+        <TextInput
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder="닉네임"
           autoCapitalize="none"
           style={styles.input}
         />
