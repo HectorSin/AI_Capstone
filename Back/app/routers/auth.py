@@ -59,7 +59,17 @@ async def register_local_user(
     except IntegrityError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User could not be created due to a conflict.")
 
-    return user
+    return schemas.User(
+        id=user.id,
+        email=user.email,
+        nickname=user.nickname,
+        plan=schemas.PlanType(user.plan.value),
+        social_provider=schemas.SocialProviderType(user.social_provider.value),
+        social_id=user.social_id,
+        notification_time=user.notification_time,
+        created_at=user.created_at,
+        topics=[],
+    )
 
 
 @router.post("/login/local", response_model=schemas.Token)

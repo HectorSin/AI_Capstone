@@ -111,6 +111,7 @@ async def create_local_user(
         raise exc
 
     await db.refresh(user)
+    await db.refresh(user)
     return user
 
 
