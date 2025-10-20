@@ -135,12 +135,7 @@ export default function NotificationSettingsScreen() {
     setDayPreset(preset);
   }, [notificationPreference]);
 
-  useEffect(() => {
-    if (!allowNotifications) {
-      setTimeSettingEnabled(false);
-    }
-  }, [allowNotifications]);
-
+  const scheduleEnabled = timeSettingEnabled;
   const scheduleActive = allowNotifications && timeSettingEnabled;
   const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
   const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -154,11 +149,11 @@ export default function NotificationSettingsScreen() {
     return {
       allowed: allowNotifications,
       timeEnabled: timeSettingEnabled,
-      hour: scheduleActive ? hour : null,
-      minute: scheduleActive ? minute : null,
-      days: scheduleActive ? [...selectedDays] : [],
+      hour: scheduleEnabled ? hour : null,
+      minute: scheduleEnabled ? minute : null,
+      days: scheduleEnabled ? [...selectedDays] : [],
     };
-  }, [allowNotifications, scheduleActive, selectedDays, timePreference, timeSettingEnabled]);
+  }, [allowNotifications, timeSettingEnabled, selectedDays, timePreference]);
 
   const initialSnapshot = useMemo(() => {
     if (!notificationPreference) return null;
@@ -245,7 +240,7 @@ export default function NotificationSettingsScreen() {
   const handleSave = async () => {
     if (!notificationPreference) return;
 
-    if (scheduleActive && selectedDays.length === 0) {
+    if (timeSettingEnabled && selectedDays.length === 0) {
       Alert.alert('안내', '희망 요일을 한 가지 이상 선택해주세요.');
       return;
     }
@@ -255,10 +250,12 @@ export default function NotificationSettingsScreen() {
       const { hour, minute } = to24Hour(timePreference);
       const success = await updateNotificationPreference({
         allowed: allowNotifications,
-        timeEnabled: scheduleActive,
-        hour: scheduleActive ? hour : null,
-        minute: scheduleActive ? minute : null,
-        daysOfWeek: scheduleActive ? selectedDays.map((day) => DAY_TO_INDEX[day as typeof ALL_DAYS[number]]) : [],
+        timeEnabled: timeSettingEnabled,
+        hour: timeSettingEnabled ? hour : null,
+        minute: timeSettingEnabled ? minute : null,
+        daysOfWeek: timeSettingEnabled
+          ? selectedDays.map((day) => DAY_TO_INDEX[day as typeof ALL_DAYS[number]])
+          : [],
         prompted: true,
       });
 
@@ -299,25 +296,24 @@ export default function NotificationSettingsScreen() {
           <Switch value={allowNotifications} onValueChange={toggleAllowNotifications} />
         </View>
         <View style={[styles.row, !allowNotifications && styles.disabledRow]}>
-          <Text style={[styles.label, !allowNotifications && styles.disabledLabel]}>시간 설정</Text>
+          <Text style={[styles.label, !allowNotifications && styles.disabledLabel]}>예약 시간 설정</Text>
           <Switch
             value={timeSettingEnabled}
             onValueChange={toggleTimeSetting}
-            disabled={!allowNotifications}
           />
         </View>
-        <View style={[styles.scheduleSection, !scheduleActive && styles.disabledRow]}>
-          <Text style={[styles.sectionLabel, !scheduleActive && styles.disabledLabel]}>희망 요일</Text>
+        <View style={[styles.scheduleSection, !scheduleEnabled && styles.disabledRow]}>
+          <Text style={[styles.sectionLabel, !scheduleEnabled && styles.disabledLabel]}>희망 요일</Text>
           <View style={styles.presetRow}>
             {DAY_PRESET_OPTIONS.map((option) => (
               <Pressable
                 key={option.key}
-                disabled={!scheduleActive}
+                disabled={!scheduleEnabled}
                 onPress={() => applyDayPreset(option.key)}
                 style={({ pressed }) => [
                   styles.radioButton,
                   dayPreset === option.key && styles.radioSelected,
-                  pressed && scheduleActive && styles.radioPressed,
+                  pressed && scheduleEnabled && styles.radioPressed,
                 ]}
               >
                 <Text
@@ -338,12 +334,12 @@ export default function NotificationSettingsScreen() {
                 return (
                   <Pressable
                     key={day}
-                    disabled={!scheduleActive}
+                    disabled={!scheduleEnabled}
                     onPress={() => handleSelectDay(day)}
                     style={({ pressed }) => [
                       styles.dayPill,
                       active && styles.dayPillActive,
-                      pressed && scheduleActive && styles.dayPillPressed,
+                      pressed && scheduleEnabled && styles.dayPillPressed,
                     ]}
                   >
                     <Text style={[styles.dayText, active && styles.dayTextActive]}>{day}</Text>
@@ -354,12 +350,12 @@ export default function NotificationSettingsScreen() {
           ) : null}
         </View>
         <View
-          style={[styles.scheduleSection, !scheduleActive && styles.disabledRow]}
-          pointerEvents={scheduleActive && selectedDays.length > 0 ? 'auto' : 'none'}
+          style={[styles.scheduleSection, !scheduleEnabled && styles.disabledRow]}
+          pointerEvents={scheduleEnabled && selectedDays.length > 0 ? 'auto' : 'none'}
         >
-          <Text style={[styles.sectionLabel, (!scheduleActive || selectedDays.length === 0) && styles.disabledLabel]}>희망 시간</Text>
+          <Text style={[styles.sectionLabel, (!scheduleEnabled || selectedDays.length === 0) && styles.disabledLabel]}>희망 시간</Text>
           {selectedDays.length === 0 ? (
-            <Text style={[styles.placeholderText, !scheduleActive && styles.disabledLabel]}>희망 요일을 먼저 선택해 주세요.</Text>
+            <Text style={[styles.placeholderText, !scheduleEnabled && styles.disabledLabel]}>희망 요일을 먼저 선택해 주세요.</Text>
           ) : (
             <View style={styles.timePickerCard}>
               <Text style={styles.timeSummary}>{formattedTime}</Text>
