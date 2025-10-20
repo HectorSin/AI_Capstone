@@ -37,6 +37,7 @@ class User(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     social_provider = Column(SQLEnum(SocialProviderType, name="social_provider_type"), server_default="none")
     social_id = Column(String(255))
+    password_hash = Column(Text)
     notification_time = Column(JSONB)
 
     topics = relationship("UserTopic", back_populates="user", cascade="all, delete-orphan")

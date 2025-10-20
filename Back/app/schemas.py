@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, constr
 
 
 # ==========================================================
@@ -49,13 +49,34 @@ class UserUpdate(BaseModel):
     notification_time: Optional[Dict[str, Any]] = None
 
 
+class LocalRegisterRequest(BaseModel):
+    email: EmailStr
+    nickname: str
+    password: constr(min_length=8, max_length=128)
+
+
+class LocalLoginRequest(BaseModel):
+    email: EmailStr
+    password: constr(min_length=8, max_length=128)
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
+    user_id: Optional[UUID] = None
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+    nickname: Optional[str] = None
+
+
+class KakaoLoginRequest(BaseModel):
+    access_token: str
+    nickname: Optional[str] = None
 
 
 # Topic 관련 스키마에서 사용되므로 선행 선언

@@ -18,8 +18,10 @@ class Settings(BaseSettings):
     # API 키 설정
     perplexity_api_key: str = os.getenv("PERPLEXITY_API_KEY", "")
     google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     naver_clova_client_id: str = os.getenv("NAVER_CLOVA_CLIENT_ID", "")
     naver_clova_client_secret: str = os.getenv("NAVER_CLOVA_CLIENT_SECRET", "")
+    kakao_client_id: str = os.getenv("KAKAO_CLIENT_ID", "")
     
     # 파일 업로드 설정
     max_file_size: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB

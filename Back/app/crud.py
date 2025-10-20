@@ -1,7 +1,11 @@
+import re
+import secrets
+
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,6 +41,117 @@ async def create_user(db: AsyncSession, user: schemas.UserCreate) -> models.User
     await db.commit()
     await db.refresh(db_user)
     return db_user
+
+
+# ==========================================================
+# Helper utilities
+# ==========================================================
+def _sanitize_nickname(nickname: str) -> str:
+    candidate = re.sub(r"\s+", "_", nickname.strip())
+    candidate = re.sub(r"[^A-Za-z0-9_.-]", "", candidate)
+    return candidate or f"user_{secrets.token_hex(4)}"
+
+
+async def generate_unique_nickname(db: AsyncSession, desired_nickname: str) -> str:
+    base = _sanitize_nickname(desired_nickname)[:30]
+    suffix = 0
+
+    while suffix < 100:
+        candidate = base if suffix == 0 else f"{base}_{suffix}"
+        stmt = select(models.User.id).where(models.User.nickname == candidate)
+        result = await db.execute(stmt)
+        if result.scalars().first() is None:
+            return candidate
+        suffix += 1
+
+    # 최종 fallback - 충돌이 계속되면 랜덤 닉네임 사용
+    return f"user_{secrets.token_hex(6)}"
+
+
+async def get_user_by_nickname(db: AsyncSession, nickname: str) -> Optional[models.User]:
+    stmt = select(models.User).where(models.User.nickname == nickname)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_user_by_social(
+    db: AsyncSession,
+    *,
+    provider: models.SocialProviderType,
+    social_id: str,
+) -> Optional[models.User]:
+    stmt = select(models.User).where(
+        models.User.social_provider == provider,
+        models.User.social_id == social_id,
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def create_local_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    nickname: str,
+    password_hash: str,
+) -> models.User:
+    user = models.User(
+        email=email,
+        nickname=nickname,
+        plan=models.PlanType.free,
+        social_provider=models.SocialProviderType.none,
+        social_id=None,
+        password_hash=password_hash,
+    )
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise exc
+
+    await db.refresh(user)
+    return user
+
+
+async def create_social_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    nickname: str,
+    provider: models.SocialProviderType,
+    social_id: str,
+) -> models.User:
+    user = models.User(
+        email=email,
+        nickname=nickname,
+        plan=models.PlanType.free,
+        social_provider=provider,
+        social_id=social_id,
+        password_hash=None,
+    )
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise exc
+
+    await db.refresh(user)
+    return user
+
+
+async def update_user_password(
+    db: AsyncSession,
+    *,
+    user: models.User,
+    password_hash: str,
+) -> models.User:
+    user.password_hash = password_hash
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 
 # ==========================================================
