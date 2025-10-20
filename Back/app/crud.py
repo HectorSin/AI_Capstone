@@ -155,6 +155,11 @@ async def update_user_password(
     return user
 
 
+async def delete_user(db: AsyncSession, user: models.User) -> None:
+    await db.delete(user)
+    await db.commit()
+
+
 # ==========================================================
 # Topic helpers
 # ==========================================================
