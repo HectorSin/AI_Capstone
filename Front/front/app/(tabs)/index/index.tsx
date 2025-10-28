@@ -2,6 +2,7 @@ import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { FeedCard } from '@/components/FeedCard';
+import { ServerConnectivityBanner } from '@/components/ServerConnectivityBanner';
 import feedItemsData from '@/test_data/feedItems.json';
 
 type FeedItem = {
@@ -43,6 +44,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <ServerConnectivityBanner />
       <SectionList
         sections={feedSections}
         keyExtractor={(item) => item.id}

@@ -40,31 +40,31 @@ class SessionManager:
     """사용자 세션 관리 클래스"""
     
     @staticmethod
-    def session_key(user_id: int) -> str:
+    def session_key(user_id) -> str:
         """세션 키 생성"""
         return f"session:user:{user_id}"
-    
+
     @staticmethod
-    def set_session(user_id: int, session_data: Dict[str, Any]) -> bool:
+    def set_session(user_id, session_data: Dict[str, Any]) -> bool:
         """사용자 세션 저장"""
         key = SessionManager.session_key(user_id)
         session_data["created_at"] = datetime.now().isoformat()
         return redis_client.set_json(key, session_data, ex=settings.session_ttl)
-    
+
     @staticmethod
-    def get_session(user_id: int) -> Optional[Dict[str, Any]]:
+    def get_session(user_id) -> Optional[Dict[str, Any]]:
         """사용자 세션 조회"""
         key = SessionManager.session_key(user_id)
         return redis_client.get_json(key)
-    
+
     @staticmethod
-    def delete_session(user_id: int) -> bool:
+    def delete_session(user_id) -> bool:
         """사용자 세션 삭제"""
         key = SessionManager.session_key(user_id)
         return redis_client.delete(key)
-    
+
     @staticmethod
-    def refresh_session(user_id: int) -> bool:
+    def refresh_session(user_id) -> bool:
         """세션 만료시간 연장"""
         key = SessionManager.session_key(user_id)
         return redis_client.expire(key, settings.session_ttl)
@@ -73,15 +73,15 @@ class RateLimiter:
     """API 레이트 리미팅 클래스"""
     
     @staticmethod
-    def rate_limit_key(user_id: int, endpoint: str) -> str:
+    def rate_limit_key(user_id, endpoint: str) -> str:
         """레이트 리미트 키 생성"""
         return f"rate_limit:user:{user_id}:{endpoint}"
-    
+
     @staticmethod
-    def check_rate_limit(user_id: int, endpoint: str, limit: int, window: int) -> bool:
+    def check_rate_limit(user_id, endpoint: str, limit: int, window: int) -> bool:
         """레이트 리미트 확인"""
         key = RateLimiter.rate_limit_key(user_id, endpoint)
-        
+
         # 현재 카운트 조회
         current_count = redis_client.incr(key)
         
@@ -92,7 +92,7 @@ class RateLimiter:
         return current_count <= limit
     
     @staticmethod
-    def get_remaining_requests(user_id: int, endpoint: str, limit: int) -> int:
+    def get_remaining_requests(user_id, endpoint: str, limit: int) -> int:
         """남은 요청 수 조회"""
         key = RateLimiter.rate_limit_key(user_id, endpoint)
         current_count = redis_client.get(key)
@@ -106,12 +106,12 @@ class AnalysisCache:
     """분석 결과 캐시 관리 클래스"""
     
     @staticmethod
-    def analysis_key(topic_id: int) -> str:
+    def analysis_key(topic_id) -> str:
         """분석 결과 키 생성"""
         return f"analysis:topic:{topic_id}"
-    
+
     @staticmethod
-    def cache_analysis_result(topic_id: int, result: Dict[str, Any]) -> bool:
+    def cache_analysis_result(topic_id, result: Dict[str, Any]) -> bool:
         """분석 결과 캐시 저장"""
         key = AnalysisCache.analysis_key(topic_id)
         cache_data = {
@@ -122,13 +122,13 @@ class AnalysisCache:
         return redis_client.set_json(key, cache_data, ex=settings.cache_ttl)
     
     @staticmethod
-    def get_analysis_result(topic_id: int) -> Optional[Dict[str, Any]]:
+    def get_analysis_result(topic_id) -> Optional[Dict[str, Any]]:
         """분석 결과 캐시 조회"""
         key = AnalysisCache.analysis_key(topic_id)
         return redis_client.get_json(key)
-    
+
     @staticmethod
-    def invalidate_analysis(topic_id: int) -> bool:
+    def invalidate_analysis(topic_id) -> bool:
         """분석 결과 캐시 무효화"""
         key = AnalysisCache.analysis_key(topic_id)
         return redis_client.delete(key)
@@ -187,7 +187,7 @@ class NotificationManager:
             return False
     
     @staticmethod
-    def notify_analysis_complete(topic_id: int, user_id: int, status: str) -> bool:
+    def notify_analysis_complete(topic_id, user_id, status: str) -> bool:
         """분석 완료 알림"""
         message = {
             "type": "analysis_complete",

@@ -8,6 +8,9 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'capstone_db')\gexec
 -- capstone_db 데이터베이스에 연결
 \c capstone_db;
 
+-- UUID 생성을 위한 확장 설치
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- 사용자 생성 (이미 존재할 수 있으므로 IF NOT EXISTS 사용)
 DO $$
 BEGIN
