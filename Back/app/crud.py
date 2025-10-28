@@ -300,8 +300,50 @@ async def get_topic_by_id(db: AsyncSession, topic_id: UUID) -> Optional[models.T
             .selectinload(models.Article.podcast_script),
             selectinload(models.Topic.articles)
             .selectinload(models.Article.podcast),
-            selectinload(models.Topic.users),
         )
     )
     result = await db.execute(stmt)
     return result.scalars().first()
+
+
+async def create_topic(db: AsyncSession, topic: schemas.TopicCreate) -> models.Topic:
+    topic_obj = models.Topic(
+        name=topic.name,
+        type=models.TopicType[topic.type.name],
+        summary=topic.summary,
+        image_uri=topic.image_uri,
+        keywords=topic.keywords or [],
+    )
+    db.add(topic_obj)
+    await db.flush()
+
+    for source in topic.sources:
+        db.add(
+            models.TopicSource(
+                topic_id=topic_obj.id,
+                source_name=source.source_name,
+                source_url=str(source.source_url),
+                is_active=source.is_active,
+            )
+        )
+
+    await db.commit()
+
+    # sources를 제대로 로드하기 위해 다시 조회
+    return await get_topic_by_id(db=db, topic_id=topic_obj.id)
+
+
+async def list_all_topics(db: AsyncSession) -> List[models.Topic]:
+    stmt = (
+        select(models.Topic)
+        .options(
+            selectinload(models.Topic.sources),
+            selectinload(models.Topic.articles)
+            .selectinload(models.Article.podcast_script),
+            selectinload(models.Topic.articles)
+            .selectinload(models.Article.podcast),
+        )
+        .order_by(models.Topic.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().unique())

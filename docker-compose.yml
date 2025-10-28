@@ -31,8 +31,10 @@ services:
       - /home/smart/database:/app/database
       - ./AI:/app/ai_modules  # AI 모듈 마운트
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - capstone_network
     restart: unless-stopped
@@ -56,6 +58,12 @@ services:
     networks:
       - capstone_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-capstone_user} -d ${POSTGRES_DB:-capstone_db}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   # ===========================================
   # Redis (캐싱 및 세션 관리용)
@@ -70,6 +78,12 @@ services:
     networks:
       - capstone_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   # ===========================================
   # Apache Airflow 웹서버 (미사용: 주석 처리)
