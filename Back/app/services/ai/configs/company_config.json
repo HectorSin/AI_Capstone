@@ -1,0 +1,84 @@
+{
+  "companies": {
+    "GOOGLE": {
+      "guideline": "Focus on latest technical developments, research breakthroughs, product releases, and innovation announcements",
+      "sources": [
+        "research.google",
+        "developers.googleblog.com",
+        "cloud.google.com",
+        "ai.google.dev",
+        "blog.google"
+      ],
+      "aliases": ["GOOGLE", "ALPHABET"]
+    },
+    "META": {
+      "guideline": "Focus on latest technical developments, research breakthroughs, product releases, and innovation announcements",
+      "sources": [
+        "about.fb.com",
+        "developers.facebook.com",
+        "ai.facebook.com",
+        "research.facebook.com"
+      ],
+      "aliases": ["META", "FACEBOOK"]
+    },
+    "OPENAI": {
+      "guideline": "Focus on latest technical developments, research breakthroughs, product releases, and innovation announcements",
+      "sources": [
+        "openai.com",
+        "blog.openai.com",
+        "platform.openai.com"
+      ],
+      "aliases": ["OPENAI"]
+    },
+    "MICROSOFT": {
+      "guideline": "Focus on latest technical developments, research breakthroughs, product releases, and innovation announcements",
+      "sources": [
+        "blogs.microsoft.com",
+        "devblogs.microsoft.com",
+        "azure.microsoft.com",
+        "microsoft.com/en-us/research"
+      ],
+      "aliases": ["MICROSOFT", "MSFT"]
+    },
+    "APPLE": {
+      "guideline": "Focus on latest technical developments, research breakthroughs, product releases, and innovation announcements",
+      "sources": [
+        "developer.apple.com",
+        "www.apple.com/newsroom",
+        "machinelearning.apple.com"
+      ],
+      "aliases": ["APPLE", "AAPL"]
+    }
+  },
+  "default_sources": [
+    "techcrunch.com",
+    "arstechnica.com",
+    "theverge.com",
+    "wired.com",
+    "mit.edu",
+    "stanford.edu",
+    "nature.com",
+    "science.org"
+  ],
+  "source_categories": {
+    "official_company": [
+      "research.google",
+      "developers.googleblog.com",
+      "about.fb.com",
+      "openai.com",
+      "blogs.microsoft.com"
+    ],
+    "tech_news": [
+      "techcrunch.com",
+      "arstechnica.com",
+      "theverge.com",
+      "wired.com"
+    ],
+    "academic": [
+      "mit.edu",
+      "stanford.edu",
+      "nature.com",
+      "science.org"
+    ]
+  }
+}

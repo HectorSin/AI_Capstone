@@ -225,6 +225,28 @@ class UserTopicLink(BaseModel):
 
 
 # ==========================================================
+# 팟캐스트 생성 관련 스키마
+# ==========================================================
+class PodcastCreate(BaseModel):
+    """팟캐스트 생성 요청 스키마"""
+    topic: str = Field(..., description="팟캐스트 주제")
+    keywords: List[str] = Field(default_factory=list, description="관련 키워드 목록")
+    user_id: Optional[UUID] = None
+    topic_id: Optional[UUID] = None
+
+
+class PodcastCreateResponse(BaseModel):
+    """팟캐스트 생성 응답 스키마"""
+    podcast_id: str
+    topic: str
+    keywords: List[str]
+    status: str
+    article: Dict[str, Any]
+    script: str
+    audio: Dict[str, Any]
+
+
+# ==========================================================
 # 기존 서비스에서 사용하던 AI Job 관련 스키마 (선택적 유지)
 # ==========================================================
 class JobStatus(str, Enum):
