@@ -126,20 +126,8 @@ class PromptManager:
         • Verify that URLs lead to actual article content, not login pages or error pages
         • Prioritize open-access sources and free technical publications
 
-        OUTPUT FORMAT:
-        Return ONLY valid JSON with Korean translations:
-
-        {{
-            "category": "{category}",
-            "articles": [
-                {{
-                    "news_url": "direct article URL (must be publicly accessible)",
-                    "title": "Korean translated title (keep technical terms in English when appropriate)",
-                    "text": "Korean summary 200+ characters focusing on technical significance and implications",
-                    "date": "actual publication date (YYYY-MM-DD)"
-                }}
-            ]
-        }}
+        OUTPUT:
+        Return ONLY valid JSON with Korean translations. No explanations or markdown.
 
         QUALITY STANDARDS:
         • Collect maximum number of relevant articles available
@@ -166,18 +154,74 @@ class PromptManager:
         - 전문 용어는 영어로 유지
         """
     
-    def create_script_prompt(self, article_title: str, article_content: str) -> str:
-        """팟캐스트 대본 생성을 위한 프롬프트 생성"""
+    def create_script_prompt(self, article_title: str, article_content: str, speakers: List[str] = None, persona_description: str = None) -> str:
+        """팟캐스트 대본 생성을 위한 프롬프트 생성 (화자 지정 및 JSON 출력)"""
+        speakers = speakers or ["man", "woman"]
+        speakers_text = ", ".join(speakers)
+        # persona_description이 없으면 템플릿에서 불러와 speakers에 맞게 포매팅
+        if persona_description is None:
+            templates = self.config_manager.get_prompt_templates()
+            persona_tpl = templates.get("script_prompt", {}).get("persona_description", "")
+            # 호환 포맷: {speaker0}, {speaker1}
+            try:
+                persona_description = persona_tpl.replace("{speaker0}", speakers[0]).replace("{speaker1}", speakers[1] if len(speakers) > 1 else speakers[0])
+            except Exception:
+                persona_description = persona_tpl
+
         return f"""
-        다음 기사 내용을 바탕으로 팟캐스트 대본을 작성해주세요:
-        
+        다음 기사 내용을 '재미있는 팟캐스트 토크쇼' 대본으로 재구성해주세요. 반드시 JSON만 출력하세요.
+
         기사 제목: {article_title}
         기사 내용: {article_content}
-        
-        대본 작성 요구사항:
-        - 자연스러운 대화체로 작성
-        - 도입부, 본문, 마무리로 구성
-        - 청취자가 이해하기 쉽게 설명
-        - 약 3-5분 분량 (500-800자)
-        - 전문 용어는 쉽게 풀어서 설명
+
+        화자 설정:
+        - 총 인원: {len(speakers)}명
+        - 화자 키: {speakers_text}
+        - 화자 역할(페르소나): {persona_description}
+
+        작성 요구사항:
+        1.  **톤 앤 매너**: 딱딱한 정보 전달이 아닌, '생동감 있고 재치 있는(witty)' 수다(banter) 형식.
+        2.  **도입부 (intro)**: 단순 인사 금지. 청취자의 흥미를 유발할 '강력한 훅(hook)' (예: 충격적인 사실, 공감 가는 질문, 개인적 경험)으로 시작.
+        3.  **본문 (turns[])**:
+            - 기사 내용을 단순히 요약하지 말고, 화자들이 기사에 대해 '서로의 의견을 묻고, 반응(reaction)하며, 때로는 가벼운 농담이나 개인적인 생각'을 덧붙이도록 구성.
+            - '티키타카'가 잘 드러나야 함. 한 사람이 길게 말하기보다 짧은 턴을 주고받는 형식.
+            - 어려운 용어는 '반드시' 청취자의 눈높이에서 비유나 예시를 들어 설명.
+            - 청취자에게 말을 거는 듯한 '수사적 질문' (예: "다들 이런 경험 없으신가요?") 포함.
+        4.  **마무리 (outro)**: 단순 요약/끝인사 금지. 핵심 메시지를 '한 문장으로 요약'하고, 청취자에게 '생각할 거리(food for thought)나 구체적인 행동 제안(Call to Action)' (예: "오늘 집에 가면서 OOO에 대해 한번 생각해보시는 건 어떨까요?")을 던져주세요.
+        5.  **분량**: 3-5분 분량 (약 500-800 **단어**).
+        6.  **기본 원칙**: 사실 기반, 과장/선정성 금지.
+
+        출력:
+        - 오직 JSON만 출력 (설명/마크다운 금지)
+        - JSON 구조: {{ "intro": "...", "turns": [{{ "speaker": "...", "script": "..." }}], "outro": "..." }}
+        - speaker 값은 [{speakers_text}] 중 하나여야 함.
+        """
+
+    def create_article_prompt(self, topic: str, articles: List[Dict[str, Any]]) -> str:
+        """Perplexity 수집 기사 목록을 바탕으로 통합 기사 생성을 위한 프롬프트 생성"""
+        # 기사 리스트를 프롬프트에 포함하기 위해 간단한 텍스트로 직렬화
+        articles_text = "\n".join(
+            [
+                f"- URL: {a.get('news_url','')}\n  TITLE: {a.get('title','')}\n  DATE: {a.get('date','')}\n  TEXT: {a.get('text','')}"
+                for a in (articles or [])
+            ]
+        )
+
+        return f"""
+        너는 최신 기술 뉴스를 한국어로 통합 정리하는 전문 기술 기자야.
+
+        주제: {topic}
+
+        입력 기사들:
+        {articles_text}
+
+        작성 지침:
+        - 완전한 기사 한 편을 작성하되, 구조화된 JSON으로만 출력해.
+        - 과장 없이 정확하게, 기술적 의미와 시사점을 중심으로 작성해.
+        - 출처(URL)는 실제 기사 링크만 포함해. 접근 불가/로그인 필요 페이지는 제외.
+        - 한국어로 작성하되, 고유 기술 용어는 영어를 유지해.
+        - 본문 분량은 800~1200자 수준 권장.
+
+        출력:
+        - 오직 JSON만 출력(설명/마크다운 금지)
         """

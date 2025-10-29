@@ -5,9 +5,13 @@ Perplexity API를 사용하여 데이터 크롤링 및 정보 수집
 import logging
 import json
 import os
+import asyncio
 from typing import Dict, Any, Optional, List
 import httpx
 from datetime import datetime
+from pydantic import BaseModel, ValidationError
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 
 from .base import AIService, AIServiceConfig
 from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
@@ -15,20 +19,18 @@ from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
 logger = logging.getLogger(__name__)
 
 
-class Article:
-    """기사 데이터 모델"""
-    def __init__(self, news_url: str, title: str, text: str, date: str):
-        self.news_url = news_url
-        self.title = title
-        self.text = text
-        self.date = date
+class Article(BaseModel):
+    """기사 데이터 모델 (Pydantic)"""
+    news_url: str
+    title: str
+    text: str
+    date: str
 
 
-class NewsData:
-    """뉴스 데이터 모델"""
-    def __init__(self, category: str, articles: List[Article]):
-        self.category = category
-        self.articles = articles
+class NewsData(BaseModel):
+    """뉴스 데이터 모델 (Pydantic)"""
+    category: str
+    articles: List[Article]
 
 
 class PerplexityService(AIService):
@@ -44,6 +46,9 @@ class PerplexityService(AIService):
         self.config_manager = ConfigManager()
         self.company_manager = CompanyInfoManager(self.config_manager)
         self.prompt_manager = PromptManager(self.config_manager)
+        
+        # LangChain JSON Output Parser 초기화
+        self.json_parser = JsonOutputParser(pydantic_object=NewsData)
     
     async def validate_config(self) -> bool:
         """설정이 유효한지 검증합니다."""
@@ -68,9 +73,10 @@ class PerplexityService(AIService):
         
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         }
-        
+
         payload = {
             "model": kwargs.get("model", "sonar"),
             "messages": [
@@ -79,30 +85,42 @@ class PerplexityService(AIService):
             "max_tokens": kwargs.get("max_tokens", 4000),
             "return_citations": kwargs.get("return_citations", True)
         }
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(self.API_URL, headers=headers, json=payload)
-                response.raise_for_status()
-                
-                response_data = response.json()
-                content = response_data["choices"][0]['message']['content']
-                
-                return {
-                    "service": "perplexity",
-                    "status": "success",
-                    "data": {
-                        "content": content,
-                        "citations": response_data.get("citations", [])
+
+        max_retries = kwargs.get("max_retries", 3)
+        backoff_base = kwargs.get("backoff_base", 1.5)
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=60.0)
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(self.API_URL, headers=headers, json=payload)
+                    # 재시도 가치가 있는 상태코드 처리
+                    if response.status_code in (429, 500, 502, 503, 504):
+                        raise httpx.HTTPStatusError("Server busy", request=response.request, response=response)
+                    response.raise_for_status()
+
+                    response_data = response.json()
+                    content = response_data["choices"][0]['message']['content']
+
+                    return {
+                        "service": "perplexity",
+                        "status": "success",
+                        "data": {
+                            "content": content,
+                            "citations": response_data.get("citations", [])
+                        }
                     }
-                }
-                
-        except httpx.HTTPError as e:
-            logger.error(f"Perplexity API 요청 실패: {e}")
-            return {"error": f"API 요청 실패: {str(e)}"}
-        except KeyError as e:
-            logger.error(f"응답 형식 오류: {e}")
-            return {"error": f"응답 형식 오류: {str(e)}"}
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.HTTPStatusError) as e:
+                logger.warning(f"Perplexity 시도 {attempt}/{max_retries} 실패: {type(e).__name__}: {e}")
+                if attempt == max_retries:
+                    logger.error("Perplexity 최대 재시도 초과")
+                    return {"error": f"API 요청 실패: {type(e).__name__}: {str(e)}"}
+                # 지수 백오프
+                delay = backoff_base ** attempt
+                await asyncio.sleep(delay)
+            except KeyError as e:
+                logger.error(f"응답 형식 오류: {e}")
+                return {"error": f"응답 형식 오류: {str(e)}"}
     
     async def crawl_topic(self, topic: str, keywords: list = None) -> Dict[str, Any]:
         """
@@ -125,10 +143,12 @@ class PerplexityService(AIService):
             
             # API 요청 페이로드 구성
             payload = {
-                "model": "sonar",
-                "messages": [{"role": "user", "content": prompt}],
+                "model": "sonar",  # 노트북에서 사용한 모델
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
                 "search_domain_filter": company_info["sources"],
-                "search_recency_filter": "week",  # 일주일 내의 기사만
+                "search_recency_filter": "week",  # 노트북과 동일
                 "return_citations": True,
                 "max_tokens": 4000
             }
@@ -138,33 +158,96 @@ class PerplexityService(AIService):
                 "Content-Type": "application/json"
             }
             
-            async with httpx.AsyncClient() as client:
-                response = await client.post(self.API_URL, headers=headers, json=payload)
-                response.raise_for_status()
-                
-                response_data = response.json()
-                content = response_data["choices"][0]['message']['content']
-                
-                # JSON 파싱 시도
+            max_retries = 3
+            backoff_base = 1.5
+            for attempt in range(1, max_retries + 1):
                 try:
-                    raw_data = json.loads(content)
-                    return {
-                        "service": "perplexity",
-                        "status": "success",
-                        "data": raw_data
-                    }
-                except json.JSONDecodeError:
-                    logger.error("JSON 파싱 실패")
-                    return {
-                        "error": "JSON 파싱 실패",
-                        "raw_content": content
-                    }
+                    timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=60.0)
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        response = await client.post(self.API_URL, headers=headers, json=payload)
+                        if response.status_code in (429, 500, 502, 503, 504):
+                            raise httpx.HTTPStatusError("Server busy", request=response.request, response=response)
+                        response.raise_for_status()
+
+                        response_data = response.json()
+                        content = response_data["choices"][0]['message']['content']
+
+                        # LangChain JSON Output Parser 사용
+                        try:
+                            parsed_data = self.json_parser.parse(content)
+                            return {
+                                "service": "perplexity",
+                                "status": "success",
+                                "data": parsed_data
+                            }
+                        except Exception as e:
+                            logger.error(f"LangChain JSON 파싱 실패: {e}")
+                            # 폴백: 수동 파싱 시도
+                            try:
+                                if content.startswith("```json"):
+                                    content = content.replace("```json", "").replace("```", "").strip()
+
+                                raw_data = json.loads(content)
+                                news_data = NewsData(**raw_data)
+                                return {
+                                    "service": "perplexity",
+                                    "status": "success",
+                                    "data": news_data.model_dump()
+                                }
+                            except Exception as fallback_error:
+                                logger.error(f"폴백 파싱도 실패: {fallback_error}")
+                                return {
+                                    "error": "JSON 파싱 실패",
+                                    "raw_content": content,
+                                    "langchain_error": str(e),
+                                    "fallback_error": str(fallback_error)
+                                }
+                except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.HTTPStatusError) as e:
+                    logger.warning(f"Perplexity 크롤링 시도 {attempt}/{max_retries} 실패: {type(e).__name__}: {e}")
+                    if attempt == max_retries:
+                        raise
+                    delay = backoff_base ** attempt
+                    await asyncio.sleep(delay)
                     
         except FileNotFoundError as e:
             logger.error(f"설정 파일을 찾을 수 없습니다: {e}")
             return {"error": "설정 파일을 찾을 수 없습니다"}
+        except httpx.HTTPError as e:
+            # HTTP 계열 예외에 대해 최대한 상세한 정보 로깅
+            err_type = type(e).__name__
+            err_msg = str(e) or repr(e)
+            logger.error(f"HTTP 오류: {err_type}: {err_msg}")
+            status_code = None
+            response_text = None
+            request_url = None
+            if getattr(e, 'request', None) is not None:
+                try:
+                    request_url = str(e.request.url)
+                    logger.error(f"요청 URL: {request_url}")
+                except Exception:
+                    pass
+            if getattr(e, 'response', None) is not None:
+                try:
+                    status_code = e.response.status_code
+                    response_text = e.response.text
+                    logger.error(f"응답 상태 코드: {status_code}")
+                    logger.error(f"응답 내용: {response_text}")
+                except Exception:
+                    pass
+            return {
+                "error": "HTTP 오류",
+                "details": {
+                    "type": err_type,
+                    "message": err_msg,
+                    "status_code": status_code,
+                    "request_url": request_url,
+                    "response_text": response_text,
+                },
+            }
         except Exception as e:
             logger.error(f"토픽 크롤링 실패: {e}")
+            import traceback
+            logger.error(f"상세 오류: {traceback.format_exc()}")
             return {"error": f"토픽 크롤링 실패: {str(e)}"}
     
     async def search_articles(self, query: str, max_results: int = 5) -> Dict[str, Any]:

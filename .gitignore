@@ -246,3 +246,6 @@ redis_data/
 .env.staging
 *.env
 /env
+
+# podcasts
+podcasts/

@@ -34,7 +34,8 @@
       "청취자가 이해하기 쉽게 설명",
       "약 3-5분 분량 (500-800자)",
       "전문 용어는 쉽게 풀어서 설명"
-    ]
+    ],
+    "persona_description": "'{speaker0}'는 청취자의 입장에서 궁금증을 질문하고, '{speaker1}'는 전문 지식을 바탕으로 쉽고 명확하게 설명합니다. 두 화자는 재치 있게 티키타카를 이어가며, 어려운 용어는 비유와 예시로 풀어 설명합니다."
   },
   "common_instructions": {
     "output_format": "Return ONLY valid JSON with Korean translations",
