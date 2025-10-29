@@ -175,6 +175,17 @@ class PerplexityService(AIService):
                         # LangChain JSON Output Parser 사용
                         try:
                             parsed_data = self.json_parser.parse(content)
+                            # 기사 비어있음 처리
+                            try:
+                                if not parsed_data or len(parsed_data.articles) == 0:
+                                    return {
+                                        "error": "NO_ARTICLES",
+                                        "details": {
+                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
+                                        },
+                                    }
+                            except Exception:
+                                pass
                             return {
                                 "service": "perplexity",
                                 "status": "success",
@@ -189,6 +200,13 @@ class PerplexityService(AIService):
 
                                 raw_data = json.loads(content)
                                 news_data = NewsData(**raw_data)
+                                if len(news_data.articles) == 0:
+                                    return {
+                                        "error": "NO_ARTICLES",
+                                        "details": {
+                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
+                                        },
+                                    }
                                 return {
                                     "service": "perplexity",
                                     "status": "success",

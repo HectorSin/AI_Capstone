@@ -238,6 +238,23 @@ class PodcastService:
                 except Exception:
                     pass
                 raise RuntimeError(f"Crawling failed: {crawled_data}")
+            # 오류 가드: 기사 배열 비었을 때도 중단
+            try:
+                articles = crawled_data.get("data", {}).get("articles", [])
+                if isinstance(articles, list) and len(articles) == 0:
+                    empty_err = {"error": "NO_ARTICLES", "details": {"message": "크롤링 결과가 비어 있습니다."}}
+                    metadata["steps"]["crawling"]["status"] = "failed"
+                    metadata["steps"]["crawling"]["completed_at"] = datetime.now().isoformat()
+                    metadata["status"] = "failed"
+                    metadata["error"] = empty_err
+                    self._save_metadata(podcast_id, metadata)
+                    try:
+                        self._save_crawled_data(podcast_id, empty_err)
+                    except Exception:
+                        pass
+                    raise RuntimeError("Crawling returned empty articles")
+            except Exception:
+                pass
             self._save_crawled_data(podcast_id, crawled_data)
             
             metadata["steps"]["crawling"]["status"] = "completed"
