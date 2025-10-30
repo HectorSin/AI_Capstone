@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Text, DateTime, Boolean, Integer, ForeignKey,
-    Enum as SQLEnum, ARRAY, Date, Time, func, text
+    Enum as SQLEnum, ARRAY, Date, Time, func, text, CheckConstraint
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -83,6 +83,11 @@ class UserTopic(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    proficiency = Column(Integer, nullable=False, server_default=text("0"))
+
+    __table_args__ = (
+        CheckConstraint("proficiency IN (0, 1, 2)", name="ck_user_topic_proficiency"),
+    )
 
     user = relationship("User", back_populates="topics")
     topic = relationship("Topic", back_populates="users")

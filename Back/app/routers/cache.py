@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/cache/status")
+@router.get("/cache/status", summary="캐시 상태 확인", description="Redis 연결 상태를 확인합니다.")
 async def get_cache_status():
     """Redis 캐시 상태 확인"""
     return {
@@ -17,7 +17,7 @@ async def get_cache_status():
         "status": "healthy" if redis_client.is_connected() else "unhealthy"
     }
 
-@router.post("/cache/set")
+@router.post("/cache/set", summary="캐시 저장", description="키와 데이터를 받아 캐시에 저장합니다.")
 async def set_cache_data(key: str, data: Dict[str, Any], ttl: Optional[int] = None):
     """캐시 데이터 저장"""
     try:
@@ -30,7 +30,7 @@ async def set_cache_data(key: str, data: Dict[str, Any], ttl: Optional[int] = No
         logger.error(f"캐시 저장 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/cache/get/{key}")
+@router.get("/cache/get/{key}", summary="캐시 조회", description="키로 캐시된 데이터를 조회합니다.")
 async def get_cache_data(key: str):
     """캐시 데이터 조회"""
     try:
@@ -44,7 +44,7 @@ async def get_cache_data(key: str):
         logger.error(f"캐시 조회 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/cache/delete/{key}")
+@router.delete("/cache/delete/{key}", summary="캐시 삭제", description="키로 캐시 데이터를 삭제합니다.")
 async def delete_cache_data(key: str):
     """캐시 데이터 삭제"""
     try:
@@ -57,7 +57,7 @@ async def delete_cache_data(key: str):
         logger.error(f"캐시 삭제 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/session/set/{user_id}")
+@router.post("/session/set/{user_id}", summary="세션 저장", description="사용자 세션 데이터를 저장합니다.")
 async def set_user_session(user_id: UUID, session_data: Dict[str, Any]):
     """사용자 세션 저장"""
     try:
@@ -70,7 +70,7 @@ async def set_user_session(user_id: UUID, session_data: Dict[str, Any]):
         logger.error(f"세션 저장 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/session/get/{user_id}")
+@router.get("/session/get/{user_id}", summary="세션 조회", description="사용자 세션 데이터를 조회합니다.")
 async def get_user_session(user_id: UUID):
     """사용자 세션 조회"""
     try:
@@ -84,7 +84,7 @@ async def get_user_session(user_id: UUID):
         logger.error(f"세션 조회 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/session/delete/{user_id}")
+@router.delete("/session/delete/{user_id}", summary="세션 삭제", description="사용자 세션 데이터를 삭제합니다.")
 async def delete_user_session(user_id: UUID):
     """사용자 세션 삭제"""
     try:
@@ -97,7 +97,7 @@ async def delete_user_session(user_id: UUID):
         logger.error(f"세션 삭제 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/rate-limit/check/{user_id}/{endpoint}")
+@router.get("/rate-limit/check/{user_id}/{endpoint}", summary="레이트 리미트 확인", description="지정된 시간창에서 호출 허용 여부와 남은 호출 횟수를 반환합니다.")
 async def check_rate_limit(user_id: UUID, endpoint: str, limit: int = 10, window: int = 60):
     """레이트 리미트 확인"""
     try:
@@ -115,7 +115,7 @@ async def check_rate_limit(user_id: UUID, endpoint: str, limit: int = 10, window
         logger.error(f"레이트 리미트 확인 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/analysis/cache/{topic_id}")
+@router.post("/analysis/cache/{topic_id}", summary="분석 결과 캐시 저장", description="토픽 분석 결과를 캐시에 저장합니다.")
 async def cache_analysis_result(topic_id: UUID, result: Dict[str, Any]):
     """분석 결과 캐시 저장"""
     try:
@@ -128,7 +128,7 @@ async def cache_analysis_result(topic_id: UUID, result: Dict[str, Any]):
         logger.error(f"분석 결과 캐시 저장 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/analysis/cache/{topic_id}")
+@router.get("/analysis/cache/{topic_id}", summary="분석 결과 캐시 조회", description="토픽의 분석 결과를 캐시에서 조회합니다.")
 async def get_analysis_result(topic_id: UUID):
     """분석 결과 캐시 조회"""
     try:
@@ -142,7 +142,7 @@ async def get_analysis_result(topic_id: UUID):
         logger.error(f"분석 결과 조회 오류: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/analysis/cache/{topic_id}")
+@router.delete("/analysis/cache/{topic_id}", summary="분석 결과 캐시 무효화", description="토픽의 분석 결과 캐시를 무효화합니다.")
 async def invalidate_analysis_result(topic_id: UUID):
     """분석 결과 캐시 무효화"""
     try:

@@ -261,7 +261,7 @@ async def create_topic_for_user(
             )
         )
 
-    db.add(models.UserTopic(user_id=user_id, topic_id=topic_obj.id))
+    db.add(models.UserTopic(user_id=user_id, topic_id=topic_obj.id, proficiency=0))
     await db.commit()
 
     await db.refresh(
@@ -347,3 +347,37 @@ async def list_all_topics(db: AsyncSession) -> List[models.Topic]:
     )
     result = await db.execute(stmt)
     return list(result.scalars().unique())
+
+
+# ==========================================================
+# User-Topic selection helpers
+# ==========================================================
+async def upsert_user_topic(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    topic_id: UUID,
+    proficiency: int,
+) -> models.UserTopic:
+    # 토픽 존재 확인
+    topic = await get_topic_by_id(db, topic_id)
+    if topic is None:
+        raise ValueError("topic_not_found")
+
+    # 기존 링크 조회
+    stmt = select(models.UserTopic).where(
+        models.UserTopic.user_id == user_id,
+        models.UserTopic.topic_id == topic_id,
+    )
+    result = await db.execute(stmt)
+    link = result.scalars().first()
+
+    if link is None:
+        link = models.UserTopic(user_id=user_id, topic_id=topic_id, proficiency=proficiency)
+        db.add(link)
+    else:
+        link.proficiency = proficiency
+        db.add(link)
+
+    await db.commit()
+    return link

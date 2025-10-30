@@ -25,6 +25,12 @@ class TopicType(str, Enum):
     keyword = "keyword"
 
 
+class ProficiencyLevel(int, Enum):
+    beginner = 0
+    intermediate = 1
+    advanced = 2
+
+
 # ==========================================================
 # 사용자(User) 스키마
 # ==========================================================
@@ -219,9 +225,26 @@ class UserTopicLink(BaseModel):
     user_id: UUID
     topic_id: UUID
     created_at: datetime
+    proficiency: ProficiencyLevel = ProficiencyLevel.beginner
 
     class Config:
         from_attributes = True
+
+
+class SelectTopicRequest(BaseModel):
+    topic_id: UUID
+    proficiency: ProficiencyLevel
+
+
+class SelectTopicResponse(BaseModel):
+    user_id: UUID
+    topic_id: UUID
+    proficiency: ProficiencyLevel
+
+
+class PreferredTopic(BaseModel):
+    topic_id: UUID
+    name: str
 
 
 # ==========================================================

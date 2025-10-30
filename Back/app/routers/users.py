@@ -10,7 +10,12 @@ router = APIRouter(
     tags=["Users"],
 )
 
-@router.get("/me", response_model=schemas.User)
+@router.get(
+    "/me",
+    response_model=schemas.User,
+    summary="내 프로필 조회",
+    description="현재 로그인한 사용자의 프로필 정보를 조회합니다.",
+)
 async def read_users_me(
     current_user=Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
@@ -31,7 +36,12 @@ async def read_users_me(
     )
 
 
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="회원 탈퇴",
+    description="현재 로그인한 사용자의 계정을 삭제합니다.",
+)
 async def delete_users_me(
     current_user=Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
@@ -61,7 +71,12 @@ def _serialize_preference(pref) -> schemas.NotificationPreference:
     )
 
 
-@router.get("/me/notification-preference", response_model=schemas.NotificationPreference)
+@router.get(
+    "/me/notification-preference",
+    response_model=schemas.NotificationPreference,
+    summary="내 알림 설정 조회",
+    description="현재 로그인한 사용자의 알림 수신 설정을 조회합니다.",
+)
 async def get_notification_preference(
     current_user=Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
@@ -70,7 +85,12 @@ async def get_notification_preference(
     return _serialize_preference(pref)
 
 
-@router.put("/me/notification-preference", response_model=schemas.NotificationPreference)
+@router.put(
+    "/me/notification-preference",
+    response_model=schemas.NotificationPreference,
+    summary="내 알림 설정 수정",
+    description="현재 로그인한 사용자의 알림 수신 설정을 업데이트합니다.",
+)
 async def update_notification_preference(
     payload: schemas.NotificationPreferenceUpdate,
     current_user=Depends(auth.get_current_user),

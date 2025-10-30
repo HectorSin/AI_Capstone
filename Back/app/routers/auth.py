@@ -35,7 +35,13 @@ def _resolve_nickname(
     return base
 
 
-@router.post("/register/local", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register/local",
+    response_model=schemas.User,
+    status_code=status.HTTP_201_CREATED,
+    summary="로컬 회원가입",
+    description="이메일/비밀번호로 신규 회원을 생성합니다. 닉네임과 비밀번호 정책을 검증합니다.",
+)
 async def register_local_user(
     payload: schemas.LocalRegisterRequest,
     db: AsyncSession = Depends(auth.get_db),
@@ -74,7 +80,12 @@ async def register_local_user(
     )
 
 
-@router.post("/login/local", response_model=schemas.Token)
+@router.post(
+    "/login/local",
+    response_model=schemas.Token,
+    summary="로컬 로그인",
+    description="이메일/비밀번호로 로그인하여 액세스 토큰을 발급받습니다.",
+)
 async def login_local(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(auth.get_db),
@@ -90,7 +101,12 @@ async def login_local(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/login/google", response_model=schemas.Token)
+@router.post(
+    "/login/google",
+    response_model=schemas.Token,
+    summary="구글 소셜 로그인",
+    description="구글 ID 토큰으로 로그인하거나 최초 로그인 시 자동 회원가입 후 토큰을 발급합니다.",
+)
 async def login_google(
     payload: schemas.GoogleLoginRequest,
     db: AsyncSession = Depends(auth.get_db),
@@ -132,7 +148,12 @@ async def login_google(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/login/kakao", response_model=schemas.Token)
+@router.post(
+    "/login/kakao",
+    response_model=schemas.Token,
+    summary="카카오 소셜 로그인",
+    description="카카오 액세스 토큰으로 로그인하거나 최초 로그인 시 자동 회원가입 후 토큰을 발급합니다.",
+)
 async def login_kakao(
     payload: schemas.KakaoLoginRequest,
     db: AsyncSession = Depends(auth.get_db),
@@ -175,7 +196,12 @@ async def login_kakao(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/check-email", response_model=schemas.AvailabilityResponse)
+@router.get(
+    "/check-email",
+    response_model=schemas.AvailabilityResponse,
+    summary="이메일 사용 가능 여부 확인",
+    description="입력한 이메일이 이미 사용 중인지 확인합니다.",
+)
 async def check_email_availability(
     email: EmailStr = Query(..., description="검증할 이메일 주소"),
     db: AsyncSession = Depends(auth.get_db),
@@ -184,7 +210,12 @@ async def check_email_availability(
     return {"available": existing is None}
 
 
-@router.get("/check-nickname", response_model=schemas.AvailabilityResponse)
+@router.get(
+    "/check-nickname",
+    response_model=schemas.AvailabilityResponse,
+    summary="닉네임 사용 가능 여부 확인",
+    description="입력한 닉네임이 이미 사용 중인지 확인합니다.",
+)
 async def check_nickname_availability(
     nickname: str = Query(..., min_length=1, description="검증할 닉네임"),
     db: AsyncSession = Depends(auth.get_db),
