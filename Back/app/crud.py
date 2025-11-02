@@ -381,3 +381,41 @@ async def upsert_user_topic(
 
     await db.commit()
     return link
+
+
+# ==========================================================
+# Podcast Archive helpers
+# ==========================================================
+async def list_user_podcasts(
+    db: AsyncSession,
+    user_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> List[models.Podcast]:
+    """
+    사용자가 구독한 토픽의 팟캐스트 목록을 조회합니다.
+    """
+    # 사용자가 구독한 토픽 ID 목록 가져오기
+    user_topic_stmt = select(models.UserTopic.topic_id).where(
+        models.UserTopic.user_id == user_id
+    )
+    user_topic_result = await db.execute(user_topic_stmt)
+    topic_ids = [row[0] for row in user_topic_result.all()]
+    
+    if not topic_ids:
+        return []
+    
+    # 해당 토픽들의 아티클에 연결된 팟캐스트 조회
+    stmt = (
+        select(models.Podcast)
+        .join(models.Article, models.Podcast.article_id == models.Article.id)
+        .where(models.Article.topic_id.in_(topic_ids))
+        .options(
+            selectinload(models.Podcast.article).selectinload(models.Article.topic),
+        )
+        .order_by(models.Podcast.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().unique())

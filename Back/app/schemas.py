@@ -341,6 +341,23 @@ class JobStatusUpdate(BaseModel):
 
 
 # ==========================================================
+# Podcast Archive 스키마
+# ==========================================================
+class ArchiveItem(BaseModel):
+    """아카이브 아이템 스키마"""
+    id: UUID
+    date: date
+    keywords: List[str]
+    duration: Optional[int] = None
+    audio_uri: str
+    title: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================================
 # Forward reference 초기화
 # ==========================================================
 try:

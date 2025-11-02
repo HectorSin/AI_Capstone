@@ -69,6 +69,9 @@ const DEFAULT_HOUR = 7;
 const DEFAULT_MINUTE = 0;
 const DEFAULT_WEEKDAY_INDICES = [0, 1, 2, 3, 4];
 
+// 개발 모드: 로그인 우회 (true로 설정하면 로그인 없이 바로 접근 가능)
+const SKIP_AUTH = true;
+
 type AuthProviderProps = {
   children: ReactNode;
 };
@@ -335,11 +338,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     (async () => {
       try {
-        const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-        if (storedToken) {
-          setToken(storedToken);
-          await fetchProfile(storedToken);
-          await fetchAndStorePreference(storedToken);
+        if (SKIP_AUTH) {
+          // 개발 모드: 더미 토큰과 유저 정보 설정
+          const dummyToken = 'dev-skip-auth-token';
+          const dummyUser: AuthenticatedUser = {
+            id: 'dev-user-id',
+            email: 'dev@example.com',
+            nickname: '개발자',
+            plan: 'free',
+            createdAt: new Date().toISOString(),
+          };
+          setToken(dummyToken);
+          setUser(dummyUser);
+          console.log('[Auth] Development mode: Skipping authentication');
+        } else {
+          const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+          if (storedToken) {
+            setToken(storedToken);
+            await fetchProfile(storedToken);
+            await fetchAndStorePreference(storedToken);
+          }
         }
       } catch (error) {
         console.warn('[Auth] failed to hydrate token', error);

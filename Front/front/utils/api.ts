@@ -80,3 +80,44 @@ export async function updateNotificationPreference(
 
   return response.json();
 }
+
+export type ArchiveItem = {
+  id: string;
+  date: string;
+  keywords: string[];
+  duration: number | null;
+  audio_uri: string;
+  title: string;
+  created_at: string;
+};
+
+export async function fetchArchive(token: string): Promise<ArchiveItem[]> {
+  const response = await fetch(`${API_BASE_URL}/podcasts/archive`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch archive: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function downloadPodcast(token: string, podcastId: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/podcasts/${podcastId}/download`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download podcast: ${response.status}`);
+  }
+
+  return response.blob();
+}

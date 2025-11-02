@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import engine, Base
 from app.database.redis_client import redis_client
 from app.config import settings
-from app.routers import users, auth, cache, topics, ai_jobs
+from app.routers import users, auth, cache, topics, ai_jobs, podcasts
 import logging
 
 # 로깅 설정
@@ -87,6 +87,12 @@ app.include_router(
     ai_jobs.router,
     prefix="/ai_jobs",
     tags=["AI Jobs"],
+)
+
+# podcasts 라우터 포함
+app.include_router(
+    podcasts.router,
+    tags=["Podcasts"],
 )
 
 @app.get("/")
