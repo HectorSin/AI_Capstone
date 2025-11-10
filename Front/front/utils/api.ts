@@ -5,21 +5,27 @@ export async function checkAvailability(
   value: string,
   signal?: AbortSignal
 ): Promise<boolean> {
-  const url = new URL(`/auth/${endpoint}`, API_BASE_URL);
   const paramName = endpoint === 'check-email' ? 'email' : 'nickname';
-  url.searchParams.set(paramName, value);
+  const url = `${API_BASE_URL}/auth/${endpoint}?${paramName}=${encodeURIComponent(value)}`;
 
-  const response = await fetch(url.toString(), {
+  console.log('[API] checkAvailability:', { endpoint, value, url });
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: { Accept: 'application/json' },
     signal,
   });
 
+  console.log('[API] checkAvailability response:', response.status);
+
   if (!response.ok) {
+    const text = await response.text();
+    console.error(`[API] Failed to check ${endpoint}:`, response.status, text);
     throw new Error(`Failed to check ${endpoint}: ${response.status}`);
   }
 
   const data = await response.json();
+  console.log('[API] checkAvailability data:', data);
   return Boolean(data?.available);
 }
 
