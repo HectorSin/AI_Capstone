@@ -20,15 +20,15 @@ class SocialProviderType(str, Enum):
     none = "none"
 
 
+class DifficultyLevel(str, Enum):
+    beginner = "beginner"  # 하 (초급)
+    intermediate = "intermediate"  # 중 (중급)
+    advanced = "advanced"  # 상 (고급)
+
+
 class TopicType(str, Enum):
     company = "company"
     keyword = "keyword"
-
-
-class ProficiencyLevel(int, Enum):
-    beginner = 0
-    intermediate = 1
-    advanced = 2
 
 
 # ==========================================================
@@ -38,6 +38,7 @@ class UserBase(BaseModel):
     email: EmailStr
     nickname: str
     plan: PlanType = PlanType.free
+    difficulty_level: DifficultyLevel = DifficultyLevel.intermediate
     social_provider: SocialProviderType = SocialProviderType.none
     social_id: Optional[str] = None
     notification_time: Optional[Dict[str, Any]] = None
@@ -50,6 +51,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     nickname: Optional[str] = None
     plan: Optional[PlanType] = None
+    difficulty_level: Optional[DifficultyLevel] = None
     social_provider: Optional[SocialProviderType] = None
     social_id: Optional[str] = None
     notification_time: Optional[Dict[str, Any]] = None
@@ -59,6 +61,8 @@ class LocalRegisterRequest(BaseModel):
     email: EmailStr
     nickname: str
     password: constr(min_length=8, max_length=32)
+    difficulty_level: Optional[DifficultyLevel] = DifficultyLevel.intermediate
+    topic_ids: List[UUID] = Field(default_factory=list, description="선택한 토픽 ID 목록")
 
 
 class LocalLoginRequest(BaseModel):
@@ -225,7 +229,6 @@ class UserTopicLink(BaseModel):
     user_id: UUID
     topic_id: UUID
     created_at: datetime
-    proficiency: ProficiencyLevel = ProficiencyLevel.beginner
 
     class Config:
         from_attributes = True
@@ -233,13 +236,11 @@ class UserTopicLink(BaseModel):
 
 class SelectTopicRequest(BaseModel):
     topic_id: UUID
-    proficiency: ProficiencyLevel
 
 
 class SelectTopicResponse(BaseModel):
     user_id: UUID
     topic_id: UUID
-    proficiency: ProficiencyLevel
 
 
 class PreferredTopic(BaseModel):

@@ -17,6 +17,8 @@ type Credentials = {
 
 type RegisterPayload = Credentials & {
   nickname: string;
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
+  topic_ids?: string[];
 };
 
 type AuthenticatedUser = {
@@ -246,7 +248,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const signUp = useCallback(
-    async ({ email, password, nickname }: RegisterPayload) => {
+    async ({ email, password, nickname, difficulty_level, topic_ids }: RegisterPayload) => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/register/local`, {
           method: 'POST',
@@ -254,7 +256,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: JSON.stringify({ email, password, nickname }),
+          body: JSON.stringify({
+            email,
+            password,
+            nickname,
+            difficulty_level: difficulty_level || 'intermediate',
+            topic_ids: topic_ids || [],
+          }),
         });
 
         if (!response.ok) {

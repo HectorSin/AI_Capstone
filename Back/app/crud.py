@@ -95,6 +95,7 @@ async def create_local_user(
     email: str,
     nickname: str,
     password_hash: str,
+    difficulty_level: models.DifficultyLevel = models.DifficultyLevel.intermediate,
 ) -> models.User:
     preference = models.NotificationPreference(
         allowed=False,
@@ -108,6 +109,7 @@ async def create_local_user(
         email=email,
         nickname=nickname,
         plan=models.PlanType.free,
+        difficulty_level=difficulty_level,
         social_provider=models.SocialProviderType.none,
         social_id=None,
         password_hash=password_hash,
@@ -227,6 +229,22 @@ async def update_notification_preference(
     return preference
 
 
+async def update_user(
+    db: AsyncSession,
+    user: models.User,
+    update_data: dict,
+) -> models.User:
+    """사용자 정보 업데이트"""
+    for key, value in update_data.items():
+        if value is not None and hasattr(user, key):
+            setattr(user, key, value)
+
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 async def delete_user(db: AsyncSession, user: models.User) -> None:
     await db.delete(user)
     await db.commit()
@@ -261,7 +279,7 @@ async def create_topic_for_user(
             )
         )
 
-    db.add(models.UserTopic(user_id=user_id, topic_id=topic_obj.id, proficiency=0))
+    db.add(models.UserTopic(user_id=user_id, topic_id=topic_obj.id))
     await db.commit()
 
     await db.refresh(
@@ -357,7 +375,6 @@ async def upsert_user_topic(
     *,
     user_id: UUID,
     topic_id: UUID,
-    proficiency: int,
 ) -> models.UserTopic:
     # 토픽 존재 확인
     topic = await get_topic_by_id(db, topic_id)
@@ -373,11 +390,9 @@ async def upsert_user_topic(
     link = result.scalars().first()
 
     if link is None:
-        link = models.UserTopic(user_id=user_id, topic_id=topic_id, proficiency=proficiency)
+        link = models.UserTopic(user_id=user_id, topic_id=topic_id)
         db.add(link)
-    else:
-        link.proficiency = proficiency
-        db.add(link)
+    # 이미 존재하는 경우는 업데이트할 필드가 없으므로 그대로 반환
 
     await db.commit()
     return link

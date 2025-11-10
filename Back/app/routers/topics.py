@@ -60,8 +60,8 @@ async def get_topic(
 @router.post(
     "/select",
     response_model=schemas.SelectTopicResponse,
-    summary="토픽 선택 및 숙련도 설정",
-    description="로그인한 사용자가 특정 토픽을 선택하고 숙련도(0:초급, 1:중급, 2:고급)를 설정합니다.",
+    summary="토픽 선택",
+    description="로그인한 사용자가 특정 토픽을 선택합니다.",
 )
 async def select_topic(
     payload: schemas.SelectTopicRequest,
@@ -73,7 +73,6 @@ async def select_topic(
             db,
             user_id=current_user.id,
             topic_id=payload.topic_id,
-            proficiency=int(payload.proficiency.value if hasattr(payload.proficiency, "value") else int(payload.proficiency)),
         )
     except ValueError as e:
         if str(e) == "topic_not_found":
@@ -83,7 +82,6 @@ async def select_topic(
     return schemas.SelectTopicResponse(
         user_id=current_user.id,
         topic_id=payload.topic_id,
-        proficiency=payload.proficiency,
     )
 
 
