@@ -5,6 +5,9 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { useAuth } from '@/providers/AuthProvider';
 import { checkAvailability } from '@/utils/api';
 
+// 개발 모드: 비밀번호 검증 완화 (true로 설정하면 최소 4자만 입력하면 됨)
+const DEV_MODE_WEAK_PASSWORD = true;
+
 export default function RegisterScreen() {
   const { signUp } = useAuth();
   const router = useRouter();
@@ -29,6 +32,13 @@ export default function RegisterScreen() {
 
   const isPasswordStrong = useMemo(() => {
     if (!password) return false;
+    
+    // 개발 모드: 최소 4자만 입력하면 통과
+    if (DEV_MODE_WEAK_PASSWORD) {
+      return password.length >= 4;
+    }
+    
+    // 프로덕션 모드: 강력한 비밀번호 검증
     const hasLetter = /[A-Za-z]/.test(password);
     const hasNumber = /\d/.test(password);
     return password.length >= 8 && password.length <= 32 && hasLetter && hasNumber;
@@ -115,7 +125,11 @@ export default function RegisterScreen() {
     }
 
     if (!isPasswordStrong) {
-      setPasswordError('비밀번호는 8~32자이며, 영문과 숫자를 포함해야 합니다.');
+      if (DEV_MODE_WEAK_PASSWORD) {
+        setPasswordError('비밀번호는 최소 4자 이상 입력해주세요.');
+      } else {
+        setPasswordError('비밀번호는 8~32자이며, 영문과 숫자를 포함해야 합니다.');
+      }
     } else {
       setPasswordError(null);
     }
@@ -231,6 +245,8 @@ export default function RegisterScreen() {
           onChangeText={setPassword}
           placeholder="비밀번호"
           secureTextEntry
+          textContentType="none"
+          autoComplete="off"
           style={styles.input}
         />
         {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
@@ -240,6 +256,8 @@ export default function RegisterScreen() {
           onChangeText={setConfirmPassword}
           placeholder="비밀번호 확인"
           secureTextEntry
+          textContentType="none"
+          autoComplete="off"
           style={styles.input}
         />
         {confirmError && <Text style={styles.errorText}>{confirmError}</Text>}
