@@ -3,19 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
-import { checkAvailability } from '@/utils/api';
+import { checkAvailability, API_BASE_URL } from '@/utils/api';
 
-// 더미 토픽 데이터
-const DUMMY_TOPICS = [
-  { id: 'topic-1', name: 'Python', description: 'Python 프로그래밍 언어' },
-  { id: 'topic-2', name: 'JavaScript', description: 'JavaScript 프로그래밍 언어' },
-  { id: 'topic-3', name: 'React', description: 'React 프레임워크' },
-  { id: 'topic-4', name: 'Node.js', description: 'Node.js 백엔드' },
-  { id: 'topic-5', name: 'TypeScript', description: 'TypeScript 프로그래밍' },
-  { id: 'topic-6', name: 'Docker', description: '컨테이너 기술' },
-  { id: 'topic-7', name: 'AWS', description: '클라우드 서비스' },
-  { id: 'topic-8', name: 'Database', description: '데이터베이스 기술' },
-];
+type Topic = {
+  id: string;
+  name: string;
+  summary: string;
+};
 
 type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 
@@ -37,6 +31,8 @@ export default function RegisterScreen() {
 
   // Step 3: 토픽
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -160,6 +156,39 @@ export default function RegisterScreen() {
     }
   }, [password, confirmPassword]);
 
+  // 토픽 목록 가져오기
+  useEffect(() => {
+    const fetchTopics = async () => {
+      setIsLoadingTopics(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/topics`, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch topics');
+        }
+
+        const data = await response.json();
+        setTopics(data.map((topic: any) => ({
+          id: topic.id,
+          name: topic.name,
+          summary: topic.summary || topic.name,
+        })));
+      } catch (error) {
+        console.warn('Failed to fetch topics:', error);
+        Alert.alert('안내', '토픽 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoadingTopics(false);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
   const canProceedToStep2 = useMemo(() => {
     return (
       !!email &&
@@ -196,7 +225,7 @@ export default function RegisterScreen() {
   }, [difficultyLevel]);
 
   const canSubmit = useMemo(() => {
-    return selectedTopicIds.length >= 2;
+    return selectedTopicIds.length >= 1;
   }, [selectedTopicIds]);
 
   const handleNextToStep2 = () => {
@@ -232,7 +261,7 @@ export default function RegisterScreen() {
 
   const handleSubmit = async () => {
     if (!canSubmit) {
-      Alert.alert('안내', '토픽을 최소 2개 이상 선택해주세요.');
+      Alert.alert('안내', '토픽을 최소 1개 이상 선택해주세요.');
       return;
     }
 
@@ -399,24 +428,30 @@ export default function RegisterScreen() {
         <View>
           <Text style={styles.title}>관심 토픽 선택</Text>
           <Text style={styles.subtitle}>
-            관심 있는 토픽을 최소 2개 이상 선택해주세요. (3/3) {'\n'}
+            관심 있는 토픽을 최소 1개 이상 선택해주세요. (3/3) {'\n'}
             선택됨: {selectedTopicIds.length}개
           </Text>
 
           <View style={styles.form}>
-            {DUMMY_TOPICS.map((topic) => {
-              const isSelected = selectedTopicIds.includes(topic.id);
-              return (
-                <Pressable
-                  key={topic.id}
-                  style={[styles.topicCard, isSelected && styles.topicCardSelected]}
-                  onPress={() => toggleTopic(topic.id)}
-                >
-                  <Text style={[styles.topicTitle, isSelected && styles.topicTitleSelected]}>{topic.name}</Text>
-                  <Text style={styles.topicDescription}>{topic.description}</Text>
-                </Pressable>
-              );
-            })}
+            {isLoadingTopics ? (
+              <Text style={styles.helperText}>토픽 목록을 불러오는 중...</Text>
+            ) : topics.length === 0 ? (
+              <Text style={styles.errorText}>토픽 목록을 불러올 수 없습니다.</Text>
+            ) : (
+              topics.map((topic) => {
+                const isSelected = selectedTopicIds.includes(topic.id);
+                return (
+                  <Pressable
+                    key={topic.id}
+                    style={[styles.topicCard, isSelected && styles.topicCardSelected]}
+                    onPress={() => toggleTopic(topic.id)}
+                  >
+                    <Text style={[styles.topicTitle, isSelected && styles.topicTitleSelected]}>{topic.name}</Text>
+                    <Text style={styles.topicDescription}>{topic.summary}</Text>
+                  </Pressable>
+                );
+              })
+            )}
 
             <View style={styles.buttonRow}>
               <Pressable style={[styles.button, styles.buttonSecondary]} onPress={handleBack}>
