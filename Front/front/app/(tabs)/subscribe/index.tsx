@@ -4,18 +4,9 @@ import { useRouter } from 'expo-router';
 
 import { FeedCard } from '@/components/FeedCard';
 import feedItemsData from '@/test_data/feedItems.json';
+import type { FeedItem } from '@/types';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
-
-type FeedItem = {
-  id: string;
-  title: string;
-  date: string;
-  summary: string;
-  content: string;
-  imageUri: string;
-  keyword: string;
-};
 
 type FeedSection = {
   title: string;

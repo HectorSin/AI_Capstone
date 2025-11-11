@@ -1,32 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, View, Pressable } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
-
-type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-
-const DIFFICULTY_OPTIONS: {
-  value: DifficultyLevel;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'beginner',
-    label: '초급 (하)',
-    description: '기초부터 차근차근 배우고 싶어요',
-  },
-  {
-    value: 'intermediate',
-    label: '중급 (중)',
-    description: '기본 지식이 있고, 심화 내용을 원해요',
-  },
-  {
-    value: 'advanced',
-    label: '고급 (상)',
-    description: '전문적이고 깊이 있는 내용을 원해요',
-  },
-];
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { DIFFICULTY_OPTIONS } from '@/constants';
+import type { DifficultyLevel } from '@/types';
 
 export default function DifficultySettingScreen() {
   const router = useRouter();
@@ -103,31 +82,15 @@ export default function DifficultySettingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 헤더 바 */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.backText}>뒤로</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>난이도 설정</Text>
-        <Pressable
-          disabled={!isDirty || isUpdating}
-          onPress={handleSave}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.headerButton,
-            (!isDirty || isUpdating) && styles.headerButtonDisabled,
-            pressed && isDirty && !isUpdating && styles.buttonPressed,
-          ]}
-        >
-          <Text style={[styles.saveText, (!isDirty || isUpdating) && styles.saveTextDisabled]}>
-            {isUpdating ? '저장 중' : '저장'}
-          </Text>
-        </Pressable>
-      </View>
+      <NavigationHeader
+        title="난이도 설정"
+        onBack={() => router.back()}
+        rightButton={{
+          text: isUpdating ? '저장 중' : '저장',
+          onPress: handleSave,
+          disabled: !isDirty || isUpdating,
+        }}
+      />
 
       {/* 컨텐츠 */}
       <View style={styles.content}>
@@ -179,43 +142,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#6b7280',
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-  },
-  headerButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  headerButtonDisabled: {
-    opacity: 0.4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  backText: {
-    fontSize: 14,
-    color: '#2563eb',
-  },
-  saveText: {
-    fontSize: 14,
-    color: '#2563eb',
-    fontWeight: '600',
-  },
-  saveTextDisabled: {
-    color: '#9ca3af',
-  },
-  buttonPressed: {
-    opacity: 0.5,
   },
   content: {
     paddingHorizontal: 16,

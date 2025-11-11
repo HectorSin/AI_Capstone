@@ -4,16 +4,7 @@ import { useRouter } from 'expo-router';
 import { FeedCard } from '@/components/FeedCard';
 import { ServerConnectivityBanner } from '@/components/ServerConnectivityBanner';
 import feedItemsData from '@/test_data/feedItems.json';
-
-type FeedItem = {
-  id: string;
-  title: string;
-  date: string;
-  summary: string;
-  content: string;
-  imageUri: string;
-  keyword: string;
-};
+import type { FeedItem } from '@/types';
 
 type FeedSection = {
   title: string;

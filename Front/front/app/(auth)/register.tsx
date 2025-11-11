@@ -4,14 +4,9 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 
 import { useAuth } from '@/providers/AuthProvider';
 import { checkAvailability, API_BASE_URL } from '@/utils/api';
-
-type Topic = {
-  id: string;
-  name: string;
-  summary: string;
-};
-
-type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { DIFFICULTY_OPTIONS } from '@/constants';
+import type { DifficultyLevel, Topic } from '@/types';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
@@ -322,18 +317,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* 헤더 바 */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={handleHeaderBack}
-          hitSlop={8}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.backText}>뒤로</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>회원가입</Text>
-        <View style={styles.headerButton} />
-      </View>
+      <NavigationHeader title="회원가입" onBack={handleHeaderBack} />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Step 1: 기본 정보 */}
@@ -415,47 +399,25 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>선호하는 학습 난이도를 선택해주세요. (2/3)</Text>
 
           <View style={styles.form}>
-            <Pressable
-              style={[styles.difficultyButton, difficultyLevel === 'beginner' && styles.difficultyButtonSelected]}
-              onPress={() => setDifficultyLevel('beginner')}
-            >
-              <View style={styles.difficultyContent}>
-                <Text style={[styles.difficultyLabel, difficultyLevel === 'beginner' && styles.difficultyLabelSelected]}>
-                  초급 (하)
-                </Text>
-                <Text style={[styles.difficultyDescription, difficultyLevel === 'beginner' && styles.difficultyDescriptionSelected]}>
-                  기초부터 차근차근 배우고 싶어요
-                </Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              style={[styles.difficultyButton, difficultyLevel === 'intermediate' && styles.difficultyButtonSelected]}
-              onPress={() => setDifficultyLevel('intermediate')}
-            >
-              <View style={styles.difficultyContent}>
-                <Text style={[styles.difficultyLabel, difficultyLevel === 'intermediate' && styles.difficultyLabelSelected]}>
-                  중급 (중)
-                </Text>
-                <Text style={[styles.difficultyDescription, difficultyLevel === 'intermediate' && styles.difficultyDescriptionSelected]}>
-                  기본 지식이 있고, 심화 내용을 원해요
-                </Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              style={[styles.difficultyButton, difficultyLevel === 'advanced' && styles.difficultyButtonSelected]}
-              onPress={() => setDifficultyLevel('advanced')}
-            >
-              <View style={styles.difficultyContent}>
-                <Text style={[styles.difficultyLabel, difficultyLevel === 'advanced' && styles.difficultyLabelSelected]}>
-                  고급 (상)
-                </Text>
-                <Text style={[styles.difficultyDescription, difficultyLevel === 'advanced' && styles.difficultyDescriptionSelected]}>
-                  전문적이고 깊이 있는 내용을 원해요
-                </Text>
-              </View>
-            </Pressable>
+            {DIFFICULTY_OPTIONS.map((option) => {
+              const isSelected = difficultyLevel === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[styles.difficultyButton, isSelected && styles.difficultyButtonSelected]}
+                  onPress={() => setDifficultyLevel(option.value)}
+                >
+                  <View style={styles.difficultyContent}>
+                    <Text style={[styles.difficultyLabel, isSelected && styles.difficultyLabelSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.difficultyDescription, isSelected && styles.difficultyDescriptionSelected]}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
 
             <View style={styles.buttonRow}>
               <Pressable style={[styles.button, styles.buttonSecondary]} onPress={handleBack}>
@@ -527,33 +489,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f9fafb',
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-  },
-  headerButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 50,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  backText: {
-    fontSize: 14,
-    color: '#2563eb',
-  },
-  buttonPressed: {
-    opacity: 0.5,
   },
   container: {
     flex: 1,

@@ -1,19 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Share, StyleSheet, Text, Pressable, SafeAreaView, View } from 'react-native';
+import { Share, StyleSheet, SafeAreaView, View } from 'react-native';
 
 import { ArticleDetail } from '@/components/ArticleDetail';
+import { NavigationHeader } from '@/components/NavigationHeader';
 import feedItemsData from '@/test_data/feedItems.json';
-
-type FeedItem = {
-  id: string;
-  title: string;
-  date: string;
-  summary: string;
-  content: string;
-  imageUri: string;
-  keyword: string;
-};
+import type { FeedItem } from '@/types';
 
 const feedItems = feedItemsData as FeedItem[];
 
@@ -48,22 +40,14 @@ export default function ArticleScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.backText}>뒤로</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleShare}
-          hitSlop={8}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.shareText}>공유</Text>
-        </Pressable>
-      </View>
+      <NavigationHeader
+        onBack={() => router.back()}
+        rightButton={{
+          text: '공유',
+          onPress: handleShare,
+          variant: 'secondary',
+        }}
+      />
       <View style={styles.content}>
         <ArticleDetail
           title={feedItem.title}
@@ -88,30 +72,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#ffffff',
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
-  headerButton: {
-    alignSelf: 'flex-start',
-  },
-  buttonPressed: {
-    opacity: 0.5,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  shareText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2563eb',
   },
   content: {
     flex: 1,

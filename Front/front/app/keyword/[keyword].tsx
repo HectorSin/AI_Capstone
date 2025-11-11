@@ -13,16 +13,7 @@ import {
 
 import { FeedCard } from '@/components/FeedCard';
 import feedItemsData from '@/test_data/feedItems.json';
-
-type FeedItem = {
-  id: string;
-  title: string;
-  date: string;
-  summary: string;
-  content: string;
-  imageUri: string;
-  keyword: string;
-};
+import type { FeedItem } from '@/types';
 
 const feedItems = feedItemsData as FeedItem[];
 
