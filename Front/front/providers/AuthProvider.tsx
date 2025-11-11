@@ -26,6 +26,7 @@ type AuthenticatedUser = {
   email: string;
   nickname: string;
   plan: string;
+  difficulty_level?: string;
   createdAt: string;
 };
 
@@ -62,6 +63,7 @@ type AuthContextValue = {
   refreshProfile: () => Promise<void>;
   refreshNotificationPreference: () => Promise<void>;
   updateNotificationPreference: (input: NotificationPreferenceInput) => Promise<boolean>;
+  updateDifficulty: (difficulty: 'beginner' | 'intermediate' | 'advanced') => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -122,6 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         email: data.email,
         nickname: data.nickname,
         plan: data.plan,
+        difficulty_level: data.difficulty_level,
         createdAt: data.created_at ?? data.createdAt,
       });
     } catch (error) {
@@ -354,6 +357,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [token]
   );
 
+  const updateDifficulty = useCallback(
+    async (difficulty: 'beginner' | 'intermediate' | 'advanced') => {
+      if (!token) {
+        return false;
+      }
+
+      try {
+        console.log('[Auth] Updating difficulty to:', difficulty);
+
+        const response = await fetch(`${API_BASE_URL}/users/me`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            difficulty_level: difficulty,
+          }),
+        });
+
+        console.log('[Auth] Update difficulty response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn('[Auth] updateDifficulty failed:', response.status, errorText);
+          return false;
+        }
+
+        const data = await response.json();
+        console.log('[Auth] Difficulty updated successfully:', data.difficulty_level);
+
+        // 프로필 새로고침
+        await fetchProfile(token);
+        return true;
+      } catch (error) {
+        console.warn('[Auth] updateDifficulty error', error);
+        return false;
+      }
+    },
+    [fetchProfile, token]
+  );
+
   useEffect(() => {
     (async () => {
       try {
@@ -384,6 +430,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshProfile,
       refreshNotificationPreference,
       updateNotificationPreference,
+      updateDifficulty,
     }),
     [
       token,
@@ -396,6 +443,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshProfile,
       refreshNotificationPreference,
       updateNotificationPreference,
+      updateDifficulty,
     ]
   );
 

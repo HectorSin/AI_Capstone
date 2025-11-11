@@ -48,6 +48,7 @@ export default function ProfileScreen() {
 
   const menuItems: MenuItem[] = [
     { label: '알림 설정', onPress: () => router.push('/(tabs)/profile/notifications') },
+    { label: '난이도 설정', onPress: () => router.push('/(tabs)/profile/difficulty') },
     { label: '로그아웃', onPress: handleSignOut },
     { label: '회원탈퇴', onPress: handleDeleteAccount },
   ];
