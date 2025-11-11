@@ -21,23 +21,24 @@ async def create_tables():
 async def seed_initial_topics():
     """서버 시작 시 기본 토픽 데이터를 생성합니다."""
     initial_topics = [
-        {"name": "GOOGLE", "summary": "구글"},
-        {"name": "AMAZON", "summary": "아마존"},
-        {"name": "OPENAI", "summary": "오픈AI"},
-        {"name": "META", "summary": "메타"},
-        {"name": "ANTHROPIC", "summary": "앤트로픽"},
-        {"name": "PERPLEXITY", "summary": "퍼플렉시티"},
-        {"name": "GROK", "summary": "그록"},
-        {"name": "MICROSOFT", "summary": "마이크로소프트"},
+        {"name": "GOOGLE", "summary": "구글 - 검색 엔진, 클라우드, AI 기술 선도 기업"},
+        {"name": "AMAZON", "summary": "아마존 - 전자상거래, AWS 클라우드 서비스"},
+        {"name": "OPENAI", "summary": "오픈AI - ChatGPT, GPT 모델 개발"},
+        {"name": "META", "summary": "메타 - Facebook, Instagram, VR/AR 기술"},
+        {"name": "ANTHROPIC", "summary": "앤트로픽 - Claude AI 개발"},
+        {"name": "PERPLEXITY", "summary": "퍼플렉시티 - AI 기반 검색 엔진"},
+        {"name": "TESLA", "summary": "테슬라 - 전기차, 자율주행, 청정에너지"},
+        {"name": "MICROSOFT", "summary": "마이크로소프트 - Windows, Azure, Office 제품군"},
     ]
 
     async with AsyncSessionLocal() as db:
         try:
-            for topic_data in initial_topics:
-                # 이미 존재하는지 확인
-                existing_topics = await crud.list_all_topics(db)
-                existing_names = {t.name for t in existing_topics}
+            # 기존 토픽 목록을 한 번만 조회
+            existing_topics = await crud.list_all_topics(db)
+            existing_names = {t.name for t in existing_topics}
 
+            created_count = 0
+            for topic_data in initial_topics:
                 if topic_data["name"] not in existing_names:
                     topic_create = schemas.TopicCreate(
                         name=topic_data["name"],
@@ -49,11 +50,12 @@ async def seed_initial_topics():
                     )
                     await crud.create_topic(db, topic_create)
                     logger.info(f"토픽 생성: {topic_data['name']}")
+                    created_count += 1
+                else:
+                    logger.debug(f"토픽 이미 존재: {topic_data['name']}")
 
-            await db.commit()
-            logger.info("초기 토픽 데이터 생성 완료")
+            logger.info(f"초기 토픽 데이터 생성 완료 (새로 생성: {created_count}개, 기존: {len(existing_names)}개)")
         except Exception as e:
-            await db.rollback()
             logger.error(f"초기 토픽 데이터 생성 실패: {e}")
 
 # FastAPI 앱 생성

@@ -77,6 +77,9 @@ async def register_local_user(
             if topic:
                 await crud.upsert_user_topic(db, user_id=user.id, topic_id=topic_id)
 
+        # user 객체를 refresh하여 detached 상태 해결
+        await db.refresh(user)
+
     except IntegrityError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User could not be created due to a conflict.")
 

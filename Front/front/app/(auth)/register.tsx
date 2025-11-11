@@ -161,7 +161,7 @@ export default function RegisterScreen() {
     const fetchTopics = async () => {
       setIsLoadingTopics(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/topics`, {
+        const response = await fetch(`${API_BASE_URL}/topics/`, {
           method: 'GET',
           headers: {
             Accept: 'application/json',
@@ -173,6 +173,7 @@ export default function RegisterScreen() {
         }
 
         const data = await response.json();
+        console.log('[Register] Fetched topics:', data);
         setTopics(data.map((topic: any) => ({
           id: topic.id,
           name: topic.name,
