@@ -136,7 +136,7 @@ export default function NotificationSettingsScreen() {
     setDayPreset(preset);
   }, [notificationPreference]);
 
-  const scheduleEnabled = timeSettingEnabled;
+  const scheduleEnabled = allowNotifications && timeSettingEnabled;
   const scheduleActive = allowNotifications && timeSettingEnabled;
   const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
   const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -292,6 +292,7 @@ export default function NotificationSettingsScreen() {
           <Switch
             value={timeSettingEnabled}
             onValueChange={toggleTimeSetting}
+            disabled={!allowNotifications}
           />
         </View>
         <View style={[styles.scheduleSection, !scheduleEnabled && styles.disabledRow]}>
