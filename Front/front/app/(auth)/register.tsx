@@ -1,17 +1,34 @@
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
-import { checkAvailability } from '@/utils/api';
+import { checkAvailability, API_BASE_URL } from '@/utils/api';
+import { NavigationHeader } from '@/components/NavigationHeader';
+import { DIFFICULTY_OPTIONS } from '@/constants';
+import type { DifficultyLevel, Topic } from '@/types';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
   const router = useRouter();
+
+  // 단계 관리
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // Step 1: 기본 정보
   const [email, setEmail] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Step 2: 난이도
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>('intermediate');
+
+  // Step 3: 토픽
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -134,7 +151,41 @@ export default function RegisterScreen() {
     }
   }, [password, confirmPassword]);
 
-  const canSubmit = useMemo(() => {
+  // 토픽 목록 가져오기
+  useEffect(() => {
+    const fetchTopics = async () => {
+      setIsLoadingTopics(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/topics/`, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch topics');
+        }
+
+        const data = await response.json();
+        console.log('[Register] Fetched topics:', data);
+        setTopics(data.map((topic: any) => ({
+          id: topic.id,
+          name: topic.name,
+          summary: topic.summary || topic.name,
+        })));
+      } catch (error) {
+        console.warn('Failed to fetch topics:', error);
+        Alert.alert('안내', '토픽 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoadingTopics(false);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
+  const canProceedToStep2 = useMemo(() => {
     return (
       !!email &&
       !!nickname &&
@@ -165,17 +216,81 @@ export default function RegisterScreen() {
     confirmError,
   ]);
 
-  const handleSubmit = async () => {
-    if (!canSubmit) {
+  const canProceedToStep3 = useMemo(() => {
+    return !!difficultyLevel;
+  }, [difficultyLevel]);
+
+  const canSubmit = useMemo(() => {
+    return selectedTopicIds.length >= 1;
+  }, [selectedTopicIds]);
+
+  const handleNextToStep2 = () => {
+    if (!canProceedToStep2) {
       Alert.alert('안내', '입력값을 다시 확인해주세요.');
       return;
     }
+    setStep(2);
+  };
+
+  const handleNextToStep3 = () => {
+    if (!canProceedToStep3) {
+      Alert.alert('안내', '난이도를 선택해주세요.');
+      return;
+    }
+    setStep(3);
+  };
+
+  const handleBack = () => {
+    if (step === 2) setStep(1);
+    else if (step === 3) setStep(2);
+  };
+
+  const handleHeaderBack = () => {
+    if (step === 1) {
+      router.back(); // 로그인 페이지로
+    } else {
+      handleBack(); // 이전 step으로
+    }
+  };
+
+  const toggleTopic = (topicId: string) => {
+    setSelectedTopicIds((prev) => {
+      if (prev.includes(topicId)) {
+        return prev.filter((id) => id !== topicId);
+      } else {
+        return [...prev, topicId];
+      }
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit) {
+      Alert.alert('안내', '토픽을 최소 1개 이상 선택해주세요.');
+      return;
+    }
+
+    console.log('[Register] Starting registration:', {
+      email: email.trim(),
+      nickname: nickname.trim(),
+      difficulty_level: difficultyLevel,
+      topic_ids: selectedTopicIds,
+      topic_count: selectedTopicIds.length,
+    });
 
     setIsSubmitting(true);
     try {
-      const success = await signUp({ email: email.trim(), password, nickname: nickname.trim() });
+      const success = await signUp({
+        email: email.trim(),
+        password,
+        nickname: nickname.trim(),
+        difficulty_level: difficultyLevel,
+        topic_ids: selectedTopicIds,
+      });
+
+      console.log('[Register] signUp result:', success);
+
       if (success) {
-        Alert.alert('안내', '회원가입이 완료되었습니다. 로그인해주세요.', [
+        Alert.alert('성공', '회원가입이 완료되었습니다. 로그인해주세요.', [
           {
             text: '확인',
             onPress: () => router.back(),
@@ -184,9 +299,16 @@ export default function RegisterScreen() {
         return;
       }
 
-      Alert.alert('안내', '회원가입에 실패했습니다. 다시 시도해주세요.');
+      // 디버깅: 실패 시 더 자세한 정보 표시
+      Alert.alert(
+        '회원가입 실패',
+        '회원가입 처리 중 오류가 발생했습니다.\n\n' +
+        '이메일과 닉네임이 중복되지 않았는지 확인해주세요.\n\n' +
+        '계속 실패한다면 해당 이메일로 로그인을 시도해보세요. (실제로는 성공했을 수 있습니다)',
+        [{ text: '확인' }]
+      );
     } catch (error) {
-      console.warn('signUp failed', error);
+      console.warn('[Register] signUp failed', error);
       Alert.alert('안내', '회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);
@@ -194,82 +316,188 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>새 계정 만들기</Text>
-      <Text style={styles.subtitle}>몇 가지 정보만 입력하면 바로 사용할 수 있어요.</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <NavigationHeader title="회원가입" onBack={handleHeaderBack} />
 
-      <View style={styles.form}>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="이메일"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        {emailStatus === 'checking' && <Text style={styles.helperText}>이메일 중복 확인 중...</Text>}
-        {emailError && <Text style={styles.errorText}>{emailError}</Text>}
-        {!emailError && emailStatus === 'available' && email && (
-          <Text style={styles.successText}>사용 가능한 이메일입니다.</Text>
-        )}
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Step 1: 기본 정보 */}
+        {step === 1 && (
+          <View>
+            <Text style={styles.title}>새 계정 만들기</Text>
+            <Text style={styles.subtitle}>기본 정보를 입력해주세요. (1/3)</Text>
 
-        <TextInput
-          value={nickname}
-          onChangeText={setNickname}
-          placeholder="닉네임"
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        {nicknameStatus === 'checking' && <Text style={styles.helperText}>닉네임 중복 확인 중...</Text>}
-        {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
-        {!nicknameError && nicknameStatus === 'available' && nickname && (
-          <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
-        )}
+          <View style={styles.form}>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="이메일"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            {emailStatus === 'checking' && <Text style={styles.helperText}>이메일 중복 확인 중...</Text>}
+            {emailError && <Text style={styles.errorText}>{emailError}</Text>}
+            {!emailError && emailStatus === 'available' && email && (
+              <Text style={styles.successText}>사용 가능한 이메일입니다.</Text>
+            )}
 
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="비밀번호"
-          secureTextEntry
-          style={styles.input}
-        />
-        {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            <TextInput
+              value={nickname}
+              onChangeText={setNickname}
+              placeholder="닉네임"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            {nicknameStatus === 'checking' && <Text style={styles.helperText}>닉네임 중복 확인 중...</Text>}
+            {nicknameError && <Text style={styles.errorText}>{nicknameError}</Text>}
+            {!nicknameError && nicknameStatus === 'available' && nickname && (
+              <Text style={styles.successText}>사용 가능한 닉네임입니다.</Text>
+            )}
 
-        <TextInput
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="비밀번호 확인"
-          secureTextEntry
-          style={styles.input}
-        />
-        {confirmError && <Text style={styles.errorText}>{confirmError}</Text>}
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="비밀번호"
+              secureTextEntry
+              style={styles.input}
+            />
+            {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
-        <Pressable
-          style={[styles.button, (!canSubmit || isSubmitting) && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
-        >
-          <Text style={styles.buttonText}>{isSubmitting ? '가입 중...' : '회원가입'}</Text>
-        </Pressable>
-      </View>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="비밀번호 확인"
+              secureTextEntry
+              style={styles.input}
+            />
+            {confirmError && <Text style={styles.errorText}>{confirmError}</Text>}
 
-      <Text style={styles.footerText}>
-        이미 계정이 있다면{' '}
-        <Link href="/(auth)/login" asChild>
-          <Pressable>
-            <Text style={styles.link}>로그인</Text>
-          </Pressable>
-        </Link>
-      </Text>
-    </View>
+            <Pressable
+              style={[styles.button, !canProceedToStep2 && styles.buttonDisabled]}
+              onPress={handleNextToStep2}
+              disabled={!canProceedToStep2}
+            >
+              <Text style={styles.buttonText}>다음</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.footerText}>
+            이미 계정이 있다면{' '}
+            <Link href="/(auth)/login" asChild>
+              <Pressable>
+                <Text style={styles.link}>로그인</Text>
+              </Pressable>
+            </Link>
+          </Text>
+        </View>
+      )}
+
+      {/* Step 2: 난이도 선택 */}
+      {step === 2 && (
+        <View>
+          <Text style={styles.title}>학습 난이도 선택</Text>
+          <Text style={styles.subtitle}>선호하는 학습 난이도를 선택해주세요. (2/3)</Text>
+
+          <View style={styles.form}>
+            {DIFFICULTY_OPTIONS.map((option) => {
+              const isSelected = difficultyLevel === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[styles.difficultyButton, isSelected && styles.difficultyButtonSelected]}
+                  onPress={() => setDifficultyLevel(option.value)}
+                >
+                  <View style={styles.difficultyContent}>
+                    <Text style={[styles.difficultyLabel, isSelected && styles.difficultyLabelSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.difficultyDescription, isSelected && styles.difficultyDescriptionSelected]}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+
+            <View style={styles.buttonRow}>
+              <Pressable style={[styles.button, styles.buttonSecondary]} onPress={handleBack}>
+                <Text style={styles.buttonTextSecondary}>이전</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.button, styles.buttonPrimary, !canProceedToStep3 && styles.buttonDisabled]}
+                onPress={handleNextToStep3}
+                disabled={!canProceedToStep3}
+              >
+                <Text style={styles.buttonText}>다음</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Step 3: 토픽 선택 */}
+      {step === 3 && (
+        <View>
+          <Text style={styles.title}>관심 토픽 선택</Text>
+          <Text style={styles.subtitle}>
+            관심 있는 토픽을 최소 1개 이상 선택해주세요. (3/3) {'\n'}
+            선택됨: {selectedTopicIds.length}개
+          </Text>
+
+          <View style={styles.form}>
+            {isLoadingTopics ? (
+              <Text style={styles.helperText}>토픽 목록을 불러오는 중...</Text>
+            ) : topics.length === 0 ? (
+              <Text style={styles.errorText}>토픽 목록을 불러올 수 없습니다.</Text>
+            ) : (
+              topics.map((topic) => {
+                const isSelected = selectedTopicIds.includes(topic.id);
+                return (
+                  <Pressable
+                    key={topic.id}
+                    style={[styles.topicCard, isSelected && styles.topicCardSelected]}
+                    onPress={() => toggleTopic(topic.id)}
+                  >
+                    <Text style={[styles.topicTitle, isSelected && styles.topicTitleSelected]}>{topic.name}</Text>
+                    <Text style={styles.topicDescription}>{topic.summary}</Text>
+                  </Pressable>
+                );
+              })
+            )}
+
+            <View style={styles.buttonRow}>
+              <Pressable style={[styles.button, styles.buttonSecondary]} onPress={handleBack}>
+                <Text style={styles.buttonTextSecondary}>이전</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.button, styles.buttonPrimary, (!canSubmit || isSubmitting) && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+              >
+                <Text style={styles.buttonText}>{isSubmitting ? '가입 중...' : '회원가입'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
   container: {
     flex: 1,
-    paddingTop: 80,
+    backgroundColor: '#fff',
+  },
+  contentContainer: {
+    paddingTop: 40,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 28,
@@ -309,8 +537,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#22c55e',
+    backgroundColor: '#2563eb',
     marginTop: 12,
+  },
+  buttonPrimary: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+  },
+  buttonSecondary: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -320,6 +558,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  buttonTextSecondary: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
   footerText: {
     marginTop: 24,
     fontSize: 14,
@@ -328,5 +576,59 @@ const styles = StyleSheet.create({
   link: {
     color: '#2563eb',
     fontWeight: '600',
+  },
+  difficultyButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+  },
+  difficultyButtonSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
+  },
+  difficultyContent: {
+    gap: 4,
+  },
+  difficultyLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  difficultyLabelSelected: {
+    color: '#1d4ed8',
+  },
+  difficultyDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  difficultyDescriptionSelected: {
+    color: '#1e40af',
+  },
+  topicCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  topicCardSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
+  },
+  topicTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#374151',
+  },
+  topicTitleSelected: {
+    color: '#1d4ed8',
+  },
+  topicDescription: {
+    fontSize: 13,
+    color: '#6b7280',
   },
 });

@@ -19,6 +19,11 @@ class SocialProviderType(enum.Enum):
     kakao = "kakao"
     none = "none"
 
+class DifficultyLevel(enum.Enum):
+    beginner = "beginner"  # 하 (초급)
+    intermediate = "intermediate"  # 중 (중급)
+    advanced = "advanced"  # 상 (고급)
+
 class TopicType(enum.Enum):
     company = "company"
     keyword = "keyword"
@@ -34,6 +39,7 @@ class User(Base):
     email = Column(String(255), unique=True)
     nickname = Column(String(100), unique=True, nullable=False)
     plan = Column(SQLEnum(PlanType, name="plan_type"), nullable=False, server_default="free")
+    difficulty_level = Column(SQLEnum(DifficultyLevel, name="difficulty_level"), nullable=False, server_default="intermediate")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     social_provider = Column(SQLEnum(SocialProviderType, name="social_provider_type"), server_default="none")
     social_id = Column(String(255))
@@ -83,11 +89,6 @@ class UserTopic(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    proficiency = Column(Integer, nullable=False, server_default=text("0"))
-
-    __table_args__ = (
-        CheckConstraint("proficiency IN (0, 1, 2)", name="ck_user_topic_proficiency"),
-    )
 
     user = relationship("User", back_populates="topics")
     topic = relationship("Topic", back_populates="users")

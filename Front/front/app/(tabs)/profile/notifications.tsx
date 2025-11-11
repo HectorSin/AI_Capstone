@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/providers/AuthProvider';
+import { NavigationHeader } from '@/components/NavigationHeader';
 
 type TimePreference = {
   period: '오전' | '오후';
@@ -135,7 +136,7 @@ export default function NotificationSettingsScreen() {
     setDayPreset(preset);
   }, [notificationPreference]);
 
-  const scheduleEnabled = timeSettingEnabled;
+  const scheduleEnabled = allowNotifications && timeSettingEnabled;
   const scheduleActive = allowNotifications && timeSettingEnabled;
   const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
   const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -272,24 +273,15 @@ export default function NotificationSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerBar}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}>
-          <Text style={styles.backText}>뒤로</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>알림 설정</Text>
-        <Pressable
-          disabled={!isDirty || isSaving}
-          onPress={handleSave}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.headerButton,
-            (!isDirty || isSaving) && styles.headerButtonDisabled,
-            pressed && isDirty && !isSaving && styles.buttonPressed,
-          ]}
-        >
-          <Text style={[styles.saveText, (!isDirty || isSaving) && styles.saveTextDisabled]}>{isSaving ? '저장 중' : '저장'}</Text>
-        </Pressable>
-      </View>
+      <NavigationHeader
+        title="알림 설정"
+        onBack={() => router.back()}
+        rightButton={{
+          text: isSaving ? '저장 중' : '저장',
+          onPress: handleSave,
+          disabled: !isDirty || isSaving,
+        }}
+      />
       <View style={styles.content}>
         <View style={styles.row}>
           <Text style={styles.label}>알림 허용</Text>
@@ -300,6 +292,7 @@ export default function NotificationSettingsScreen() {
           <Switch
             value={timeSettingEnabled}
             onValueChange={toggleTimeSetting}
+            disabled={!allowNotifications}
           />
         </View>
         <View style={[styles.scheduleSection, !scheduleEnabled && styles.disabledRow]}>
@@ -449,43 +442,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
-  },
-  headerButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  headerButtonDisabled: {
-    opacity: 0.4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  backText: {
-    fontSize: 14,
-    color: '#2563eb',
-  },
-  saveText: {
-    fontSize: 14,
-    color: '#2563eb',
-    fontWeight: '600',
-  },
-  saveTextDisabled: {
-    color: '#9ca3af',
-  },
-  buttonPressed: {
-    opacity: 0.5,
   },
   content: {
     paddingHorizontal: 16,

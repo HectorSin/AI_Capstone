@@ -21,7 +21,7 @@ export default function LoginScreen() {
     try {
       const success = await signIn({ email, password });
       if (success) {
-        router.replace('/(tabs)' as any);
+        // AuthLayout의 useEffect에서 자동으로 /(tabs)로 리다이렉션됨
         return;
       }
 

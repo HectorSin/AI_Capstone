@@ -40,7 +40,7 @@ def _resolve_nickname(
     response_model=schemas.User,
     status_code=status.HTTP_201_CREATED,
     summary="로컬 회원가입",
-    description="이메일/비밀번호로 신규 회원을 생성합니다. 닉네임과 비밀번호 정책을 검증합니다.",
+    description="이메일/비밀번호로 신규 회원을 생성합니다. 닉네임과 비밀번호 정책을 검증하고, 난이도 및 토픽을 설정합니다.",
 )
 async def register_local_user(
     payload: schemas.LocalRegisterRequest,
@@ -57,13 +57,46 @@ async def register_local_user(
     _validate_password_strength(payload.password)
 
     password_hash = auth.hash_password(payload.password)
+
+    # 난이도 변환
+    difficulty_level = models.DifficultyLevel[payload.difficulty_level.name]
+
     try:
         user = await crud.create_local_user(
             db,
             email=payload.email,
             nickname=payload.nickname,
             password_hash=password_hash,
+            difficulty_level=difficulty_level,
         )
+
+        # user.id를 미리 저장 (detached 상태 방지)
+        user_id = user.id
+
+        # 토픽 연결 (최적화: 한 번에 처리)
+        for topic_id in payload.topic_ids:
+            # 토픽 존재 여부 확인
+            topic = await crud.get_topic_by_id(db, topic_id)
+            if topic:
+                # 중복 체크
+                from sqlalchemy import select
+                stmt = select(models.UserTopic).where(
+                    models.UserTopic.user_id == user_id,
+                    models.UserTopic.topic_id == topic_id,
+                )
+                result = await db.execute(stmt)
+                existing_link = result.scalars().first()
+
+                if not existing_link:
+                    user_topic = models.UserTopic(user_id=user_id, topic_id=topic_id)
+                    db.add(user_topic)
+
+        # 모든 토픽 연결을 한 번에 commit
+        await db.commit()
+
+        # user 객체를 refresh하여 최신 상태로 업데이트
+        await db.refresh(user)
+
     except IntegrityError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User could not be created due to a conflict.")
 
@@ -72,6 +105,7 @@ async def register_local_user(
         email=user.email,
         nickname=user.nickname,
         plan=schemas.PlanType(user.plan.value),
+        difficulty_level=schemas.DifficultyLevel(user.difficulty_level.value),
         social_provider=schemas.SocialProviderType(user.social_provider.value),
         social_id=user.social_id,
         notification_time=user.notification_time,

@@ -10,7 +10,16 @@ type MenuItem = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { signOut, deleteAccount } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 가입`;
+    } catch {
+      return dateString;
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
@@ -20,8 +29,7 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          // 상태 업데이트로 탭 레이아웃에서 자동 리디렉션되지만, 즉시 이동을 보장하기 위해 처리
-          router.replace('/(auth)/login' as any);
+          // TabsLayout의 Redirect에서 자동으로 /(auth)/login으로 리다이렉션됨
         },
       },
     ]);
@@ -37,7 +45,7 @@ export default function ProfileScreen() {
           const success = await deleteAccount();
           if (success) {
             Alert.alert('안내', '계정이 삭제되었습니다.');
-            router.replace('/(auth)/login' as any);
+            // TabsLayout의 Redirect에서 자동으로 /(auth)/login으로 리다이렉션됨
             return;
           }
           Alert.alert('안내', '계정 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -47,13 +55,25 @@ export default function ProfileScreen() {
   };
 
   const menuItems: MenuItem[] = [
+    { label: '구독 관리', onPress: () => router.push('/(tabs)/profile/subscriptions') },
     { label: '알림 설정', onPress: () => router.push('/(tabs)/profile/notifications') },
+    { label: '난이도 설정', onPress: () => router.push('/(tabs)/profile/difficulty') },
     { label: '로그아웃', onPress: handleSignOut },
     { label: '회원탈퇴', onPress: handleDeleteAccount },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 사용자 정보 헤더 */}
+      <View style={styles.userInfoSection}>
+        <Text style={styles.greeting}>
+          {user?.nickname || '사용자'}님 안녕하세요!
+        </Text>
+        <Text style={styles.email}>{user?.email || ''}</Text>
+        <Text style={styles.joinDate}>{user?.createdAt ? formatDate(user.createdAt) : ''}</Text>
+      </View>
+
+      {/* 메뉴 리스트 */}
       <View style={styles.listWrapper}>
         {menuItems.map((item) => (
           <TouchableOpacity
@@ -74,6 +94,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  userInfoSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#fafafa',
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  email: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  joinDate: {
+    fontSize: 13,
+    color: '#9ca3af',
   },
   listWrapper: {
     paddingVertical: 16,
