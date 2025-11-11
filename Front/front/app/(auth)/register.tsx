@@ -1,6 +1,6 @@
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
 import { checkAvailability, API_BASE_URL } from '@/utils/api';
@@ -250,6 +250,14 @@ export default function RegisterScreen() {
     else if (step === 3) setStep(2);
   };
 
+  const handleHeaderBack = () => {
+    if (step === 1) {
+      router.back(); // 로그인 페이지로
+    } else {
+      handleBack(); // 이전 step으로
+    }
+  };
+
   const toggleTopic = (topicId: string) => {
     setSelectedTopicIds((prev) => {
       if (prev.includes(topicId)) {
@@ -313,12 +321,26 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Step 1: 기본 정보 */}
-      {step === 1 && (
-        <View>
-          <Text style={styles.title}>새 계정 만들기</Text>
-          <Text style={styles.subtitle}>기본 정보를 입력해주세요. (1/3)</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* 헤더 바 */}
+      <View style={styles.headerBar}>
+        <Pressable
+          onPress={handleHeaderBack}
+          hitSlop={8}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
+        >
+          <Text style={styles.backText}>뒤로</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>회원가입</Text>
+        <View style={styles.headerButton} />
+      </View>
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Step 1: 기본 정보 */}
+        {step === 1 && (
+          <View>
+            <Text style={styles.title}>새 계정 만들기</Text>
+            <Text style={styles.subtitle}>기본 정보를 입력해주세요. (1/3)</Text>
 
           <View style={styles.form}>
             <TextInput
@@ -394,35 +416,45 @@ export default function RegisterScreen() {
 
           <View style={styles.form}>
             <Pressable
-              style={[styles.optionCard, difficultyLevel === 'beginner' && styles.optionCardSelected]}
+              style={[styles.difficultyButton, difficultyLevel === 'beginner' && styles.difficultyButtonSelected]}
               onPress={() => setDifficultyLevel('beginner')}
             >
-              <Text style={[styles.optionTitle, difficultyLevel === 'beginner' && styles.optionTitleSelected]}>
-                초급 (하)
-              </Text>
-              <Text style={styles.optionDescription}>기초부터 차근차근 배우고 싶어요</Text>
+              <View style={styles.difficultyContent}>
+                <Text style={[styles.difficultyLabel, difficultyLevel === 'beginner' && styles.difficultyLabelSelected]}>
+                  초급 (하)
+                </Text>
+                <Text style={[styles.difficultyDescription, difficultyLevel === 'beginner' && styles.difficultyDescriptionSelected]}>
+                  기초부터 차근차근 배우고 싶어요
+                </Text>
+              </View>
             </Pressable>
 
             <Pressable
-              style={[styles.optionCard, difficultyLevel === 'intermediate' && styles.optionCardSelected]}
+              style={[styles.difficultyButton, difficultyLevel === 'intermediate' && styles.difficultyButtonSelected]}
               onPress={() => setDifficultyLevel('intermediate')}
             >
-              <Text
-                style={[styles.optionTitle, difficultyLevel === 'intermediate' && styles.optionTitleSelected]}
-              >
-                중급 (중)
-              </Text>
-              <Text style={styles.optionDescription}>기본 지식이 있고, 심화 내용을 원해요</Text>
+              <View style={styles.difficultyContent}>
+                <Text style={[styles.difficultyLabel, difficultyLevel === 'intermediate' && styles.difficultyLabelSelected]}>
+                  중급 (중)
+                </Text>
+                <Text style={[styles.difficultyDescription, difficultyLevel === 'intermediate' && styles.difficultyDescriptionSelected]}>
+                  기본 지식이 있고, 심화 내용을 원해요
+                </Text>
+              </View>
             </Pressable>
 
             <Pressable
-              style={[styles.optionCard, difficultyLevel === 'advanced' && styles.optionCardSelected]}
+              style={[styles.difficultyButton, difficultyLevel === 'advanced' && styles.difficultyButtonSelected]}
               onPress={() => setDifficultyLevel('advanced')}
             >
-              <Text style={[styles.optionTitle, difficultyLevel === 'advanced' && styles.optionTitleSelected]}>
-                고급 (상)
-              </Text>
-              <Text style={styles.optionDescription}>전문적이고 깊이 있는 내용을 원해요</Text>
+              <View style={styles.difficultyContent}>
+                <Text style={[styles.difficultyLabel, difficultyLevel === 'advanced' && styles.difficultyLabelSelected]}>
+                  고급 (상)
+                </Text>
+                <Text style={[styles.difficultyDescription, difficultyLevel === 'advanced' && styles.difficultyDescriptionSelected]}>
+                  전문적이고 깊이 있는 내용을 원해요
+                </Text>
+              </View>
             </Pressable>
 
             <View style={styles.buttonRow}>
@@ -487,16 +519,48 @@ export default function RegisterScreen() {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  headerButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 50,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  backText: {
+    fontSize: 14,
+    color: '#2563eb',
+  },
+  buttonPressed: {
+    opacity: 0.5,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   contentContainer: {
-    paddingTop: 80,
+    paddingTop: 40,
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
@@ -538,12 +602,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#22c55e',
+    backgroundColor: '#2563eb',
     marginTop: 12,
   },
   buttonPrimary: {
     flex: 1,
-    backgroundColor: '#22c55e',
+    backgroundColor: '#2563eb',
   },
   buttonSecondary: {
     flex: 1,
@@ -578,29 +642,35 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     fontWeight: '600',
   },
-  optionCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
+  difficultyButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
   },
-  optionCardSelected: {
-    borderColor: '#22c55e',
-    backgroundColor: '#f0fdf4',
+  difficultyButtonSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
   },
-  optionTitle: {
-    fontSize: 18,
+  difficultyContent: {
+    gap: 4,
+  },
+  difficultyLabel: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
-    color: '#374151',
+    color: '#1f2937',
   },
-  optionTitleSelected: {
-    color: '#22c55e',
+  difficultyLabelSelected: {
+    color: '#1d4ed8',
   },
-  optionDescription: {
+  difficultyDescription: {
     fontSize: 14,
     color: '#6b7280',
+  },
+  difficultyDescriptionSelected: {
+    color: '#1e40af',
   },
   topicCard: {
     padding: 16,
@@ -610,8 +680,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   topicCardSelected: {
-    borderColor: '#22c55e',
-    backgroundColor: '#f0fdf4',
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
   },
   topicTitle: {
     fontSize: 16,
@@ -620,7 +690,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   topicTitleSelected: {
-    color: '#22c55e',
+    color: '#1d4ed8',
   },
   topicDescription: {
     fontSize: 13,

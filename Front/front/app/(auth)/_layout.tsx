@@ -14,9 +14,18 @@ export default function AuthLayout() {
   }, [isSignedIn, router]);
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen name="login" options={{ title: '로그인' }} />
-      <Stack.Screen name="register" options={{ title: '회원가입' }} />
+      <Stack.Screen
+        name="register"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

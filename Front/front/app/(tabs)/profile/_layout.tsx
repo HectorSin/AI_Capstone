@@ -10,6 +10,7 @@ export default function ProfileStackLayout() {
     >
       <Stack.Screen name="index" options={{ headerTitle: '프로필' }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="difficulty" options={{ headerShown: false }} />
     </Stack>
   );
 }

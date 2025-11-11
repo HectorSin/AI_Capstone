@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
@@ -33,6 +33,7 @@ export default function DifficultySettingScreen() {
   const { user, updateDifficulty, refreshProfile } = useAuth();
 
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>('intermediate');
+  const [initialDifficulty, setInitialDifficulty] = useState<DifficultyLevel>('intermediate');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,7 +43,9 @@ export default function DifficultySettingScreen() {
       try {
         await refreshProfile();
         if (user?.difficulty_level) {
-          setSelectedDifficulty(user.difficulty_level as DifficultyLevel);
+          const level = user.difficulty_level as DifficultyLevel;
+          setSelectedDifficulty(level);
+          setInitialDifficulty(level);
         }
       } catch (error) {
         console.warn('[Difficulty] Failed to load user profile', error);
@@ -54,14 +57,17 @@ export default function DifficultySettingScreen() {
     loadCurrentDifficulty();
   }, []);
 
+  const isDirty = useMemo(() => {
+    return selectedDifficulty !== initialDifficulty;
+  }, [selectedDifficulty, initialDifficulty]);
+
   const handleSave = async () => {
     if (!selectedDifficulty) {
       Alert.alert('안내', '난이도를 선택해주세요.');
       return;
     }
 
-    // 변경사항이 없으면 저장하지 않음
-    if (user?.difficulty_level === selectedDifficulty) {
+    if (!isDirty) {
       Alert.alert('안내', '변경사항이 없습니다.');
       return;
     }
@@ -71,16 +77,11 @@ export default function DifficultySettingScreen() {
       const success = await updateDifficulty(selectedDifficulty);
 
       if (success) {
-        Alert.alert('성공', '난이도 설정이 변경되었습니다.', [
-          {
-            text: '확인',
-            onPress: () => router.back(),
-          },
-        ]);
-        return;
+        Alert.alert('성공', '난이도 설정이 변경되었습니다.');
+        setInitialDifficulty(selectedDifficulty);
+      } else {
+        Alert.alert('안내', '난이도 설정 변경에 실패했습니다. 다시 시도해주세요.');
       }
-
-      Alert.alert('안내', '난이도 설정 변경에 실패했습니다. 다시 시도해주세요.');
     } catch (error) {
       console.warn('[Difficulty] Update failed', error);
       Alert.alert('안내', '난이도 설정 변경 중 문제가 발생했습니다.');
@@ -93,7 +94,7 @@ export default function DifficultySettingScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>불러오는 중...</Text>
         </View>
       </SafeAreaView>
@@ -102,48 +103,62 @@ export default function DifficultySettingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 헤더 바 */}
+      <View style={styles.headerBar}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.buttonPressed]}
+        >
+          <Text style={styles.backText}>뒤로</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>난이도 설정</Text>
+        <Pressable
+          disabled={!isDirty || isUpdating}
+          onPress={handleSave}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.headerButton,
+            (!isDirty || isUpdating) && styles.headerButtonDisabled,
+            pressed && isDirty && !isUpdating && styles.buttonPressed,
+          ]}
+        >
+          <Text style={[styles.saveText, (!isDirty || isUpdating) && styles.saveTextDisabled]}>
+            {isUpdating ? '저장 중' : '저장'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* 컨텐츠 */}
       <View style={styles.content}>
-        <Text style={styles.title}>학습 난이도 설정</Text>
-        <Text style={styles.subtitle}>선호하는 학습 난이도를 선택해주세요.</Text>
-
-        <View style={styles.optionsContainer}>
-          {DIFFICULTY_OPTIONS.map((option) => {
-            const isSelected = selectedDifficulty === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                style={[styles.optionCard, isSelected && styles.optionCardSelected]}
-                onPress={() => setSelectedDifficulty(option.value)}
-              >
-                <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-                  {option.label}
-                </Text>
-                <Text style={styles.optionDescription}>{option.description}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={[styles.button, styles.buttonSecondary]}
-            onPress={() => router.back()}
-            disabled={isUpdating}
-          >
-            <Text style={styles.buttonTextSecondary}>취소</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.button, styles.buttonPrimary, isUpdating && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={isUpdating}
-          >
-            {isUpdating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>저장</Text>
-            )}
-          </Pressable>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>학습 난이도</Text>
+          <Text style={styles.sectionDescription}>선호하는 학습 난이도를 선택해주세요.</Text>
+          <View style={styles.optionsContainer}>
+            {DIFFICULTY_OPTIONS.map((option) => {
+              const isSelected = selectedDifficulty === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setSelectedDifficulty(option.value)}
+                  style={({ pressed }) => [
+                    styles.optionButton,
+                    isSelected && styles.optionButtonSelected,
+                    pressed && styles.optionButtonPressed,
+                  ]}
+                >
+                  <View style={styles.optionContent}>
+                    <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.optionDescription, isSelected && styles.optionDescriptionSelected]}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -153,7 +168,7 @@ export default function DifficultySettingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   loadingContainer: {
     flex: 1,
@@ -165,82 +180,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 40,
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#111827',
+  headerButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 32,
+  headerButtonDisabled: {
+    opacity: 0.4,
   },
-  optionsContainer: {
-    flex: 1,
-    gap: 12,
-  },
-  optionCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
-  },
-  optionCardSelected: {
-    borderColor: '#22c55e',
-    backgroundColor: '#f0fdf4',
-  },
-  optionTitle: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
-    color: '#374151',
+    color: '#111827',
   },
-  optionTitleSelected: {
-    color: '#22c55e',
+  backText: {
+    fontSize: 14,
+    color: '#2563eb',
+  },
+  saveText: {
+    fontSize: 14,
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  saveTextDisabled: {
+    color: '#9ca3af',
+  },
+  buttonPressed: {
+    opacity: 0.5,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+  section: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    gap: 12,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  optionsContainer: {
+    gap: 12,
+  },
+  optionButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+  },
+  optionButtonSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#dbeafe',
+  },
+  optionButtonPressed: {
+    opacity: 0.7,
+  },
+  optionContent: {
+    gap: 4,
+  },
+  optionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  optionLabelSelected: {
+    color: '#1d4ed8',
   },
   optionDescription: {
     fontSize: 14,
     color: '#6b7280',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  button: {
-    flex: 1,
-    height: 52,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonPrimary: {
-    backgroundColor: '#22c55e',
-  },
-  buttonSecondary: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonTextSecondary: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '600',
+  optionDescriptionSelected: {
+    color: '#1e40af',
   },
 });
