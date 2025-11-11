@@ -12,6 +12,17 @@ from sqlalchemy.orm import selectinload
 
 from app.database import models
 from app import schemas
+from app.constants import (
+    DEFAULT_NOTIFICATION_HOUR,
+    DEFAULT_NOTIFICATION_MINUTE,
+    DEFAULT_NOTIFICATION_DAYS,
+    DEFAULT_NOTIFICATION_ALLOWED,
+    DEFAULT_NOTIFICATION_TIME_ENABLED,
+    DEFAULT_NOTIFICATION_PROMPTED,
+    MAX_NICKNAME_LENGTH,
+    MAX_NICKNAME_SUFFIX_ATTEMPTS,
+    FALLBACK_NICKNAME_HEX_LENGTH,
+)
 
 
 # ==========================================================
@@ -47,6 +58,18 @@ async def create_user(db: AsyncSession, user: schemas.UserCreate) -> models.User
 # ==========================================================
 # Helper utilities
 # ==========================================================
+def _create_default_notification_preference(user_id: Optional[UUID] = None) -> models.NotificationPreference:
+    """기본 알림 설정 객체를 생성합니다."""
+    return models.NotificationPreference(
+        user_id=user_id,
+        allowed=DEFAULT_NOTIFICATION_ALLOWED,
+        time_enabled=DEFAULT_NOTIFICATION_TIME_ENABLED,
+        send_time=time(hour=DEFAULT_NOTIFICATION_HOUR, minute=DEFAULT_NOTIFICATION_MINUTE),
+        days_of_week=DEFAULT_NOTIFICATION_DAYS.copy(),
+        prompted=DEFAULT_NOTIFICATION_PROMPTED,
+    )
+
+
 def _sanitize_nickname(nickname: str) -> str:
     candidate = re.sub(r"\s+", "_", nickname.strip())
     candidate = re.sub(r"[^A-Za-z0-9_.-]", "", candidate)
@@ -54,10 +77,10 @@ def _sanitize_nickname(nickname: str) -> str:
 
 
 async def generate_unique_nickname(db: AsyncSession, desired_nickname: str) -> str:
-    base = _sanitize_nickname(desired_nickname)[:30]
+    base = _sanitize_nickname(desired_nickname)[:MAX_NICKNAME_LENGTH]
     suffix = 0
 
-    while suffix < 100:
+    while suffix < MAX_NICKNAME_SUFFIX_ATTEMPTS:
         candidate = base if suffix == 0 else f"{base}_{suffix}"
         stmt = select(models.User.id).where(models.User.nickname == candidate)
         result = await db.execute(stmt)
@@ -66,7 +89,7 @@ async def generate_unique_nickname(db: AsyncSession, desired_nickname: str) -> s
         suffix += 1
 
     # 최종 fallback - 충돌이 계속되면 랜덤 닉네임 사용
-    return f"user_{secrets.token_hex(6)}"
+    return f"user_{secrets.token_hex(FALLBACK_NICKNAME_HEX_LENGTH)}"
 
 
 async def get_user_by_nickname(db: AsyncSession, nickname: str) -> Optional[models.User]:
@@ -97,13 +120,7 @@ async def create_local_user(
     password_hash: str,
     difficulty_level: models.DifficultyLevel = models.DifficultyLevel.intermediate,
 ) -> models.User:
-    preference = models.NotificationPreference(
-        allowed=False,
-        time_enabled=False,
-        send_time=time(hour=7, minute=0),
-        days_of_week=[0, 1, 2, 3, 4],
-        prompted=False,
-    )
+    preference = _create_default_notification_preference()
 
     user = models.User(
         email=email,
@@ -123,7 +140,6 @@ async def create_local_user(
         raise exc
 
     await db.refresh(user)
-    await db.refresh(user)
     return user
 
 
@@ -135,13 +151,7 @@ async def create_social_user(
     provider: models.SocialProviderType,
     social_id: str,
 ) -> models.User:
-    preference = models.NotificationPreference(
-        allowed=False,
-        time_enabled=False,
-        send_time=time(hour=7, minute=0),
-        days_of_week=[0, 1, 2, 3, 4],
-        prompted=False,
-    )
+    preference = _create_default_notification_preference()
 
     user = models.User(
         email=email,
@@ -193,14 +203,7 @@ async def ensure_notification_preference(
     if preference:
         return preference
 
-    preference = models.NotificationPreference(
-        user_id=user_id,
-        allowed=False,
-        time_enabled=False,
-        send_time=time(hour=7, minute=0),
-        days_of_week=[0, 1, 2, 3, 4],
-        prompted=False,
-    )
+    preference = _create_default_notification_preference(user_id=user_id)
     db.add(preference)
     await db.commit()
     await db.refresh(preference)
