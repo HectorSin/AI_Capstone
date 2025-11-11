@@ -32,13 +32,20 @@ async def seed_initial_topics():
     ]
 
     async with AsyncSessionLocal() as db:
+        # 기존 토픽 목록을 한 번만 조회
         try:
-            # 기존 토픽 목록을 한 번만 조회
             existing_topics = await crud.list_all_topics(db)
             existing_names = {t.name for t in existing_topics}
+        except Exception as e:
+            logger.error(f"기존 토픽 목록 조회 실패: {e}")
+            existing_names = set()
 
-            created_count = 0
-            for topic_data in initial_topics:
+        created_count = 0
+        failed_count = 0
+
+        # 각 토픽을 개별적으로 처리 (하나가 실패해도 나머지는 계속 시도)
+        for topic_data in initial_topics:
+            try:
                 if topic_data["name"] not in existing_names:
                     topic_create = schemas.TopicCreate(
                         name=topic_data["name"],
@@ -49,14 +56,16 @@ async def seed_initial_topics():
                         sources=[]
                     )
                     await crud.create_topic(db, topic_create)
-                    logger.info(f"토픽 생성: {topic_data['name']}")
+                    logger.info(f"✓ 토픽 생성 성공: {topic_data['name']}")
                     created_count += 1
+                    existing_names.add(topic_data["name"])  # 생성된 토픽을 set에 추가
                 else:
-                    logger.debug(f"토픽 이미 존재: {topic_data['name']}")
+                    logger.debug(f"○ 토픽 이미 존재: {topic_data['name']}")
+            except Exception as e:
+                logger.error(f"✗ 토픽 생성 실패: {topic_data['name']} - {e}")
+                failed_count += 1
 
-            logger.info(f"초기 토픽 데이터 생성 완료 (새로 생성: {created_count}개, 기존: {len(existing_names)}개)")
-        except Exception as e:
-            logger.error(f"초기 토픽 데이터 생성 실패: {e}")
+        logger.info(f"초기 토픽 데이터 생성 완료 (새로 생성: {created_count}개, 실패: {failed_count}개, 기존: {len(existing_names) - created_count}개)")
 
 # FastAPI 앱 생성
 app = FastAPI(
