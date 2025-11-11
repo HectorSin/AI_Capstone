@@ -70,14 +70,31 @@ async def register_local_user(
             difficulty_level=difficulty_level,
         )
 
-        # 토픽 연결
+        # user.id를 미리 저장 (detached 상태 방지)
+        user_id = user.id
+
+        # 토픽 연결 (최적화: 한 번에 처리)
         for topic_id in payload.topic_ids:
             # 토픽 존재 여부 확인
             topic = await crud.get_topic_by_id(db, topic_id)
             if topic:
-                await crud.upsert_user_topic(db, user_id=user.id, topic_id=topic_id)
+                # 중복 체크
+                from sqlalchemy import select
+                stmt = select(models.UserTopic).where(
+                    models.UserTopic.user_id == user_id,
+                    models.UserTopic.topic_id == topic_id,
+                )
+                result = await db.execute(stmt)
+                existing_link = result.scalars().first()
 
-        # user 객체를 refresh하여 detached 상태 해결
+                if not existing_link:
+                    user_topic = models.UserTopic(user_id=user_id, topic_id=topic_id)
+                    db.add(user_topic)
+
+        # 모든 토픽 연결을 한 번에 commit
+        await db.commit()
+
+        # user 객체를 refresh하여 최신 상태로 업데이트
         await db.refresh(user)
 
     except IntegrityError:

@@ -266,6 +266,14 @@ export default function RegisterScreen() {
       return;
     }
 
+    console.log('[Register] Starting registration:', {
+      email: email.trim(),
+      nickname: nickname.trim(),
+      difficulty_level: difficultyLevel,
+      topic_ids: selectedTopicIds,
+      topic_count: selectedTopicIds.length,
+    });
+
     setIsSubmitting(true);
     try {
       const success = await signUp({
@@ -276,8 +284,10 @@ export default function RegisterScreen() {
         topic_ids: selectedTopicIds,
       });
 
+      console.log('[Register] signUp result:', success);
+
       if (success) {
-        Alert.alert('안내', '회원가입이 완료되었습니다. 로그인해주세요.', [
+        Alert.alert('성공', '회원가입이 완료되었습니다. 로그인해주세요.', [
           {
             text: '확인',
             onPress: () => router.back(),
@@ -286,9 +296,16 @@ export default function RegisterScreen() {
         return;
       }
 
-      Alert.alert('안내', '회원가입에 실패했습니다. 다시 시도해주세요.');
+      // 디버깅: 실패 시 더 자세한 정보 표시
+      Alert.alert(
+        '회원가입 실패',
+        '회원가입 처리 중 오류가 발생했습니다.\n\n' +
+        '이메일과 닉네임이 중복되지 않았는지 확인해주세요.\n\n' +
+        '계속 실패한다면 해당 이메일로 로그인을 시도해보세요. (실제로는 성공했을 수 있습니다)',
+        [{ text: '확인' }]
+      );
     } catch (error) {
-      console.warn('signUp failed', error);
+      console.warn('[Register] signUp failed', error);
       Alert.alert('안내', '회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsSubmitting(false);

@@ -250,26 +250,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signUp = useCallback(
     async ({ email, password, nickname, difficulty_level, topic_ids }: RegisterPayload) => {
       try {
+        const payload = {
+          email,
+          password,
+          nickname,
+          difficulty_level: difficulty_level || 'intermediate',
+          topic_ids: topic_ids || [],
+        };
+
+        console.log('[Auth] signUp request:', {
+          url: `${API_BASE_URL}/auth/register/local`,
+          payload: { ...payload, password: '***' },
+        });
+
         const response = await fetch(`${API_BASE_URL}/auth/register/local`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: JSON.stringify({
-            email,
-            password,
-            nickname,
-            difficulty_level: difficulty_level || 'intermediate',
-            topic_ids: topic_ids || [],
-          }),
+          body: JSON.stringify(payload),
         });
 
+        console.log('[Auth] signUp response status:', response.status);
+        console.log('[Auth] signUp response.ok:', response.ok);
+
         if (!response.ok) {
-          console.warn('[Auth] signUp failed', response.status, await response.text());
+          const errorText = await response.text();
+          console.warn('[Auth] signUp failed - status:', response.status, 'error:', errorText);
           return false;
         }
 
+        console.log('[Auth] Parsing response as JSON...');
+        const data = await response.json();
+        console.log('[Auth] signUp SUCCESS - user created:', { id: data.id, email: data.email });
         return true;
       } catch (error) {
         console.warn('[Auth] signUp error', error);
