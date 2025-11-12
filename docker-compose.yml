@@ -8,6 +8,7 @@ services:
     build:
       context: ./Back
       dockerfile: Dockerfile
+    image: zamtol/capstone-backend:1.0.1
     container_name: capstone_backend
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://capstone_user:capstone_password@postgres:5432/capstone_db}
@@ -93,6 +94,7 @@ services:
     build:
       context: ./Admin
       dockerfile: Dockerfile
+    image: zamtol/capstone-admin:1.0.1
     container_name: capstone_admin_frontend
     ports:
       - "8001:80"
