@@ -29,7 +29,7 @@ services:
       - "8000:8000"
     volumes:
       - ./Back/app:/app/app
-      - /home/smart/database:/app/database
+      - ./database:/app/database
       - ./AI:/app/ai_modules  # AI 모듈 마운트
       - ./podcasts:/app/podcasts  # 팟캐스트 데이터 저장용 볼륨
     depends_on:
