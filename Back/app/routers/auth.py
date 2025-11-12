@@ -136,6 +136,58 @@ async def login_local(
 
 
 @router.post(
+    "/login/admin",
+    response_model=schemas.Token,
+    summary="관리자 로그인",
+    description="관리자 이메일/비밀번호로 로그인하여 액세스 토큰을 발급받습니다.",
+)
+async def login_admin(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(auth.get_db),
+):
+    admin_user = await crud.get_admin_user_by_email(db, email=form_data.username)
+    if not admin_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password.")
+
+    if not auth.verify_password(form_data.password, admin_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password.")
+
+    access_token = auth.create_access_token(subject=str(admin_user.id))
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post(
+    "/register/admin",
+    response_model=schemas.AdminUserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="관리자 회원가입",
+    description="이메일/비밀번호로 신규 관리자 계정을 생성합니다. 생성된 계정은 'guest' 역할을 가지며, DB에서 수동으로 권한을 변경해야 합니다.",
+)
+async def register_admin(
+    payload: schemas.AdminRegisterRequest,
+    db: AsyncSession = Depends(auth.get_db),
+):
+    existing_admin = await crud.get_admin_user_by_email(db, email=payload.email)
+    if existing_admin:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered.")
+
+    _validate_password_strength(payload.password)
+
+    password_hash = auth.hash_password(payload.password)
+
+    try:
+        admin_user = await crud.create_admin_user(
+            db,
+            email=payload.email,
+            password_hash=password_hash,
+        )
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Admin user could not be created due to a conflict.")
+
+    return admin_user
+
+
+@router.post(
     "/login/google",
     response_model=schemas.Token,
     summary="구글 소셜 로그인",

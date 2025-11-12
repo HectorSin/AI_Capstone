@@ -342,6 +342,24 @@ class JobStatusUpdate(BaseModel):
 
 
 # ==========================================================
+# 관리자(Admin) 스키마
+# ==========================================================
+class AdminRegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class AdminUserResponse(BaseModel):
+    id: UUID
+    email: EmailStr
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================================
 # Forward reference 초기화
 # ==========================================================
 try:

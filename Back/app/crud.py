@@ -34,8 +34,20 @@ async def get_user_by_email(db: AsyncSession, email: str) -> Optional[models.Use
     return result.scalars().first()
 
 
+async def get_admin_user_by_email(db: AsyncSession, email: str) -> Optional[models.AdminUser]:
+    stmt = select(models.AdminUser).where(models.AdminUser.email == email)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
 async def get_user_by_id(db: AsyncSession, user_id: UUID) -> Optional[models.User]:
     stmt = select(models.User).where(models.User.id == user_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_admin_user_by_id(db: AsyncSession, admin_user_id: UUID) -> Optional[models.AdminUser]:
+    stmt = select(models.AdminUser).where(models.AdminUser.id == admin_user_id)
     result = await db.execute(stmt)
     return result.scalars().first()
 
@@ -171,6 +183,22 @@ async def create_social_user(
 
     await db.refresh(user)
     return user
+
+
+async def create_admin_user(db: AsyncSession, email: str, password_hash: str) -> models.AdminUser:
+    admin_user = models.AdminUser(
+        email=email,
+        password_hash=password_hash,
+    )
+    db.add(admin_user)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise exc
+
+    await db.refresh(admin_user)
+    return admin_user
 
 
 async def update_user_password(

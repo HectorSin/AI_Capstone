@@ -37,6 +37,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/local")
+oauth2_admin_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/admin")
 
 KAKAO_USERINFO_ENDPOINT = "https://kapi.kakao.com/v2/user/me"
 
@@ -125,6 +126,34 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_current_admin_user(
+    token: str = Depends(oauth2_admin_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate admin credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        subject = payload.get("sub")
+        if subject is None:
+            raise credentials_exception
+        admin_user_id = UUID(str(subject))
+    except (JWTError, ValueError):
+        raise credentials_exception
+
+    admin_user = await crud.get_admin_user_by_id(db, admin_user_id=admin_user_id)
+    if admin_user is None:
+        raise credentials_exception
+    
+    if admin_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+        
+    return admin_user
 
 
 # ==========================================================

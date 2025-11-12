@@ -1,6 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const errorElement = document.getElementById('login-error');
+    const successMessage = document.getElementById('success-message');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('registered')) {
+        successMessage.textContent = 'Registration successful! Please log in.';
+        successMessage.style.display = 'block';
+    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -11,12 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch('/auth/login/local', {
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const response = await fetch('/auth/login/admin', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: JSON.stringify({ email, password }),
+                    body: formData.toString(),
                 });
 
                 if (!response.ok) {

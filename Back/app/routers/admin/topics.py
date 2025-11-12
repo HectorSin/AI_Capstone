@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database.models import Topic, Article
-from app.schemas import Topic as TopicSchema, Article as ArticleSchema, User
-from app.auth import get_current_user
+from app.schemas import Topic as TopicSchema, Article as ArticleSchema
+from app.auth import get_current_admin_user
+from app.database import models
 from typing import List, Optional
 from uuid import UUID
 
@@ -15,7 +16,7 @@ async def get_topics_list(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_admin_user: models.AdminUser = Depends(get_current_admin_user)
 ):
     query = db.query(Topic)
     if name:
@@ -28,7 +29,7 @@ async def get_topics_list(
 async def get_topic_details(
     topic_id: UUID, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_admin_user: models.AdminUser = Depends(get_current_admin_user)
 ):
     topic = db.query(Topic).filter(Topic.id == topic_id).first()
     if not topic:

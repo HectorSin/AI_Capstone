@@ -198,3 +198,18 @@ class NotificationPreference(Base):
             f"<NotificationPreference(user_id={self.user_id}, allowed={self.allowed}, "
             f"time_enabled={self.time_enabled}, send_time={self.send_time})>"
         )
+
+# ==========================================================
+# AdminUser 테이블
+# ==========================================================
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(Text, nullable=False)
+    role = Column(String(50), nullable=False, server_default='guest')
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    def __repr__(self):
+        return f"<AdminUser(id={self.id}, email={self.email}, role={self.role})>"
