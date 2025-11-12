@@ -325,7 +325,10 @@ class PodcastService:
             self._save_metadata(podcast_id, metadata)
             
             audio = await self.clova.generate_podcast_audio(
-                script=script.get("data", {}).get("content", "")
+                script=script.get("data", {}),
+                output_dir=self._get_podcast_directory(podcast_id),
+                filename=f"04_audio.mp3",
+                speaker_voices={"man": "jinho", "woman": "nara"}
             )
             # 오류 가드: 오디오 생성 실패 시 중단
             if isinstance(audio, dict) and audio.get("error"):
