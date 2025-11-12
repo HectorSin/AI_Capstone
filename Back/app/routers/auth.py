@@ -152,6 +152,9 @@ async def login_admin(
     if not auth.verify_password(form_data.password, admin_user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password.")
 
+    if admin_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not an administrator.")
+
     access_token = auth.create_access_token(subject=str(admin_user.id))
     return {"access_token": access_token, "token_type": "bearer"}
 
