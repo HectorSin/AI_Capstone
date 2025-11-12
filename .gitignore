@@ -249,3 +249,7 @@ redis_data/
 
 # podcasts
 podcasts/
+
+TECHSPECH_PLAN.md
+PLAN.md
+.claude/

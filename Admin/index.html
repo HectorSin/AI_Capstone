@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podcast Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Podcast Admin Dashboard</h1>
+        <button onclick="logout()" style="position: absolute; top: 1rem; right: 1rem;">Logout</button>
+    </header>
+    <main>
+        <nav>
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#topics">Topics</a></li>
+            </ul>
+        </nav>
+        <section id="content">
+            <!-- Content will be loaded here by JavaScript -->
+        </section>
+    </main>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

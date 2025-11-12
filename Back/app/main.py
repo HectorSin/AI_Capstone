@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import engine, Base, AsyncSessionLocal
 from app.database.redis_client import redis_client
 from app.config import settings
 from app.database import models  # 모델 import 추가 - 테이블 생성을 위해 필요
 from app.routers import users, auth, cache, topics, ai_jobs
+from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics
 from app import crud, schemas
 import logging
 
@@ -110,39 +111,24 @@ async def on_shutdown():
     logger.info("애플리케이션 종료 중...")
     logger.info("애플리케이션 종료 완료")
 
-# users.py에 정의된 API들을 메인 앱에 포함
-app.include_router(
-    users.router,
-    prefix="/users", # URL 경로 앞에 /users 를 붙여줌
-    tags=["Users"],   # API 문서에서 'users' 그룹으로 묶어줌
-)
+# API 라우터 포함
+# ==========================================================
+# 기존 라우터
+app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(cache.router, prefix="/cache", tags=["Cache & Redis"])
+app.include_router(topics.router, tags=["Topics"])
+app.include_router(ai_jobs.router, prefix="/ai_jobs", tags=["AI Jobs"])
 
-# auth 라우터 포함
-app.include_router(
-    auth.router,
-    prefix="/auth",
-    tags=["Authentication"],
-)
+# 관리자 페이지용 API 라우터
+# ----------------------------------------------------------
+admin_router = APIRouter()
+admin_router.include_router(admin_dashboard.router, prefix="/dashboard", tags=["Admin Dashboard"])
+admin_router.include_router(admin_topics.router, prefix="/topics", tags=["Admin Topics"])
 
-# cache 라우터 포함
-app.include_router(
-    cache.router,
-    prefix="/cache",
-    tags=["Cache & Redis"],
-)
+app.include_router(admin_router, prefix="/api/v1/admin")
+# ==========================================================
 
-# topics 라우터 포함
-app.include_router(
-    topics.router,
-    tags=["Topics"],
-)
-
-# ai_jobs 라우터 포함
-app.include_router(
-    ai_jobs.router,
-    prefix="/ai_jobs",
-    tags=["AI Jobs"],
-)
 
 @app.get("/")
 def read_root():

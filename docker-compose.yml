@@ -86,10 +86,25 @@ services:
       retries: 10
       start_period: 5s
 
+  # ===========================================
+  # Admin Frontend (Nginx)
+  # ===========================================
+  admin-frontend:
+    build:
+      context: ./Admin
+      dockerfile: Dockerfile
+    container_name: capstone_admin_frontend
+    ports:
+      - "8001:80"
+    depends_on:
+      - backend
+    networks:
+      - capstone_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
-  # airflow_postgres_data:
 
 networks:
   capstone_network:
