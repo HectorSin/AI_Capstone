@@ -327,10 +327,7 @@ async def list_topics_for_user(db: AsyncSession, user_id: UUID) -> List[models.T
         .where(models.UserTopic.user_id == user_id)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
             selectinload(models.Topic.users),
         )
         .order_by(models.Topic.created_at.desc())
@@ -345,10 +342,7 @@ async def get_topic_by_id(db: AsyncSession, topic_id: UUID) -> Optional[models.T
         .where(models.Topic.id == topic_id)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
         )
     )
     result = await db.execute(stmt)
@@ -387,10 +381,7 @@ async def list_all_topics(db: AsyncSession) -> List[models.Topic]:
         select(models.Topic)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
         )
         .order_by(models.Topic.created_at.desc())
     )

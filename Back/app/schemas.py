@@ -192,8 +192,6 @@ class Article(ArticleBase):
     id: UUID
     topic_id: UUID
     created_at: datetime
-    podcast_script: Optional[PodcastScript] = None
-    podcast: Optional[Podcast] = None
 
     class Config:
         from_attributes = True
