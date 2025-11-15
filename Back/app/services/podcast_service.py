@@ -5,7 +5,7 @@ Perplexity, Gemini, Clova를 통합하여 팟캐스트를 생성합니다.
 import logging
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 from datetime import datetime
 import threading
@@ -16,6 +16,7 @@ from app.services.ai import (
     ClovaService,
     AIServiceConfig
 )
+from app.services.crawler_service import WebCrawlerService
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -384,7 +385,7 @@ class PodcastService:
     async def validate_all_services(self) -> Dict[str, bool]:
         """
         모든 AI 서비스의 설정 유효성을 검증합니다.
-        
+
         Returns:
             각 서비스의 유효성 검증 결과
         """
@@ -393,6 +394,229 @@ class PodcastService:
             "gemini": await self.gemini.validate_config(),
             "clova": await self.clova.validate_config()
         }
+
+    async def create_podcasts_for_topic(
+        self,
+        topic: str,
+        keywords: list = None,
+        processed_urls: set = None
+    ) -> List[Dict[str, Any]]:
+        """
+        토픽에 대해 여러 개의 팟캐스트 생성 (각 기사마다 난이도별로)
+
+        Args:
+            topic: 팟캐스트 주제
+            keywords: 관련 키워드 목록
+            processed_urls: 이미 처리된 URL 목록 (중복 방지용)
+
+        Returns:
+            List of article data:
+            [
+                {
+                    'title': str,
+                    'date': str,
+                    'source_url': str,
+                    'status': 'completed' | 'failed',
+                    'crawled_data': {...},
+                    'article_data': {...},
+                    'script_data': {...},
+                    'audio_data': {...},
+                    'storage_path': str,
+                    'error_message': str | None
+                },
+                ...
+            ]
+        """
+        results = []
+        processed_urls = processed_urls or set()
+
+        try:
+            # 1. Perplexity로 링크 수집
+            logger.info(f"토픽 '{topic}'에 대한 기사 크롤링 시작")
+            crawled_links = await self.perplexity.crawl_topic(topic, keywords)
+
+            if isinstance(crawled_links, dict) and crawled_links.get("error"):
+                logger.error(f"Perplexity 크롤링 실패: {crawled_links}")
+                return []
+
+            articles = crawled_links.get("data", {}).get("articles", [])
+            logger.info(f"Perplexity에서 {len(articles)}개 기사 링크 수집")
+
+            if not articles:
+                logger.warning("크롤링된 기사가 없습니다")
+                return []
+
+            # 2. 각 기사마다 독립적으로 처리
+            crawler = WebCrawlerService()
+
+            for idx, article_meta in enumerate(articles):
+                news_url = article_meta.get('news_url', '')
+                article_title = article_meta.get('title', 'Untitled')
+                article_date = article_meta.get('date', datetime.now().strftime('%Y-%m-%d'))
+
+                # 2-1. 중복 URL 체크
+                if news_url in processed_urls:
+                    logger.info(f"중복 URL 건너뛰기: {news_url}")
+                    continue
+
+                if not news_url:
+                    logger.warning(f"Article {idx}: URL이 없습니다")
+                    continue
+
+                processed_urls.add(news_url)
+
+                try:
+                    # 2-2. storage_path 설정
+                    storage_path = os.path.join(self.base_storage_path, topic, f"article_{idx}")
+                    os.makedirs(storage_path, exist_ok=True)
+                    logger.info(f"Article {idx} 처리 시작: {article_title[:50]}...")
+
+                    # 2-3. BeautifulSoup으로 전체 원문 크롤링
+                    crawled = await crawler.crawl_article(news_url)
+
+                    if not crawled['success']:
+                        logger.error(f"Article {idx} 크롤링 실패: {crawled['error']}")
+                        results.append({
+                            'title': article_title,
+                            'date': article_date,
+                            'source_url': news_url,
+                            'status': 'failed',
+                            'error_message': f"크롤링 실패: {crawled['error']}",
+                            'crawled_data': None,
+                            'article_data': None,
+                            'script_data': None,
+                            'audio_data': None,
+                            'storage_path': storage_path
+                        })
+                        continue
+
+                    # 크롤링 데이터 저장
+                    with open(os.path.join(storage_path, "crawled_data.json"), 'w', encoding='utf-8') as f:
+                        json.dump(crawled, f, ensure_ascii=False, indent=2)
+
+                    # 2-4. Gemini로 난이도별 원문 요약 (1번의 호출로 3개 난이도)
+                    logger.info(f"Article {idx}: 난이도별 문서 생성 중...")
+                    article_data = await self.gemini.generate_articles_all_difficulties(
+                        title=article_title,
+                        raw_content=crawled['content']
+                    )
+
+                    if isinstance(article_data, dict) and article_data.get("error"):
+                        logger.error(f"Article {idx} 문서 생성 실패: {article_data}")
+                        results.append({
+                            'title': article_title,
+                            'date': article_date,
+                            'source_url': news_url,
+                            'status': 'failed',
+                            'error_message': f"문서 생성 실패: {article_data.get('error')}",
+                            'crawled_data': crawled,
+                            'article_data': None,
+                            'script_data': None,
+                            'audio_data': None,
+                            'storage_path': storage_path
+                        })
+                        continue
+
+                    # 문서 데이터 저장
+                    with open(os.path.join(storage_path, "article_data.json"), 'w', encoding='utf-8') as f:
+                        json.dump(article_data, f, ensure_ascii=False, indent=2)
+
+                    # 2-5. Gemini로 난이도별 대본 생성 (1번의 호출로 3개 난이도)
+                    logger.info(f"Article {idx}: 난이도별 대본 생성 중...")
+                    script_data = await self.gemini.generate_scripts_all_difficulties(
+                        article_title=article_title,
+                        article_data=article_data
+                    )
+
+                    if isinstance(script_data, dict) and script_data.get("error"):
+                        logger.error(f"Article {idx} 대본 생성 실패: {script_data}")
+                        results.append({
+                            'title': article_title,
+                            'date': article_date,
+                            'source_url': news_url,
+                            'status': 'failed',
+                            'error_message': f"대본 생성 실패: {script_data.get('error')}",
+                            'crawled_data': crawled,
+                            'article_data': article_data,
+                            'script_data': None,
+                            'audio_data': None,
+                            'storage_path': storage_path
+                        })
+                        continue
+
+                    # 대본 데이터 저장
+                    with open(os.path.join(storage_path, "script_data.json"), 'w', encoding='utf-8') as f:
+                        json.dump(script_data, f, ensure_ascii=False, indent=2)
+
+                    # 2-6. Clova로 난이도별 TTS 생성 (3개)
+                    logger.info(f"Article {idx}: 난이도별 TTS 생성 중...")
+                    audio_data = {}
+
+                    for difficulty in ['beginner', 'intermediate', 'advanced']:
+                        script_for_difficulty = script_data.get(difficulty, {})
+
+                        if not script_for_difficulty:
+                            logger.warning(f"Article {idx}: {difficulty} 대본이 없습니다")
+                            continue
+
+                        audio_result = await self.clova.generate_podcast_audio(
+                            script=script_for_difficulty,
+                            output_dir=storage_path,
+                            filename=f"{difficulty}.mp3",
+                            speaker_voices={"man": "jinho", "woman": "nara"}
+                        )
+
+                        if isinstance(audio_result, dict) and not audio_result.get("error"):
+                            audio_data[difficulty] = audio_result.get('data', {})
+                        else:
+                            logger.error(f"Article {idx} {difficulty} TTS 생성 실패: {audio_result}")
+
+                    # 오디오 데이터 저장
+                    with open(os.path.join(storage_path, "audio_data.json"), 'w', encoding='utf-8') as f:
+                        json.dump(audio_data, f, ensure_ascii=False, indent=2)
+
+                    # 2-7. 결과 저장
+                    results.append({
+                        'title': article_title,
+                        'date': article_date,
+                        'source_url': news_url,
+                        'status': 'completed',
+                        'crawled_data': {
+                            'url': crawled['url'],
+                            'title': crawled['title'],
+                            'content': crawled['content'],
+                            'content_length': crawled['content_length']
+                        },
+                        'article_data': article_data,
+                        'script_data': script_data,
+                        'audio_data': audio_data,
+                        'storage_path': storage_path,
+                        'error_message': None
+                    })
+
+                    logger.info(f"Article {idx} 처리 완료: {article_title[:50]}...")
+
+                except Exception as e:
+                    logger.error(f"Article {idx} 처리 중 오류: {e}", exc_info=True)
+                    results.append({
+                        'title': article_title,
+                        'date': article_date,
+                        'source_url': news_url,
+                        'status': 'failed',
+                        'error_message': str(e),
+                        'crawled_data': None,
+                        'article_data': None,
+                        'script_data': None,
+                        'audio_data': None,
+                        'storage_path': storage_path if 'storage_path' in locals() else None
+                    })
+
+            logger.info(f"토픽 '{topic}' 처리 완료: 총 {len(results)}개 (성공: {sum(1 for r in results if r['status'] == 'completed')}개)")
+            return results
+
+        except Exception as e:
+            logger.error(f"create_podcasts_for_topic 실패: {e}", exc_info=True)
+            return results
 
 
 # 전역 인스턴스
