@@ -17,6 +17,36 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+@router.get("/debug/perplexity", summary="Perplexity API 직접 테스트")
+async def test_perplexity_direct():
+    """Perplexity API를 직접 호출하여 테스트합니다."""
+    from app.services.podcast_service import podcast_service
+    from app.config import settings
+
+    # API 키 확인
+    api_key_status = "OK" if settings.perplexity_api_key and len(settings.perplexity_api_key) > 10 else "MISSING"
+
+    try:
+        # Perplexity 직접 호출
+        result = await podcast_service.perplexity.crawl_topic("GOOGLE", ["AI"])
+
+        return {
+            "api_key_status": api_key_status,
+            "api_key_prefix": settings.perplexity_api_key[:10] if settings.perplexity_api_key else None,
+            "perplexity_result_type": str(type(result)),
+            "perplexity_result_keys": list(result.keys()) if isinstance(result, dict) else None,
+            "has_error": result.get("error") if isinstance(result, dict) else None,
+            "has_data": "data" in result if isinstance(result, dict) else None,
+            "data_type": str(type(result.get("data"))) if isinstance(result, dict) and "data" in result else None,
+            "full_result": result
+        }
+    except Exception as e:
+        return {
+            "api_key_status": api_key_status,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
 # AI 팟캐스트 생성
 # 1. 팟캐스트 생성 요청 POST -> perplexity 활용 데이터 크롤링 -> Gemini 활용 문서 생성 -> Gemini 활용 대본 생성 -> Clova 활용 TTS 생성 -> 팟캐스트 생성 완료
 
