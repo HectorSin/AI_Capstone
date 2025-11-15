@@ -18,33 +18,65 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/debug/perplexity", summary="Perplexity API 직접 테스트")
-async def test_perplexity_direct():
+async def test_perplexity_direct(topic: str = "GOOGLE"):
     """Perplexity API를 직접 호출하여 테스트합니다."""
     from app.services.podcast_service import podcast_service
     from app.config import settings
+    import httpx
 
     # API 키 확인
     api_key_status = "OK" if settings.perplexity_api_key and len(settings.perplexity_api_key) > 10 else "MISSING"
 
     try:
-        # Perplexity 직접 호출
-        result = await podcast_service.perplexity.crawl_topic("GOOGLE", ["AI"])
+        # 1. Perplexity 직접 호출
+        result = await podcast_service.perplexity.crawl_topic(topic, ["AI"])
+
+        # 2. 원본 Perplexity API 호출 (파싱 없이)
+        from app.services.ai.config_manager import ConfigManager, CompanyInfoManager, PromptManager
+        config_manager = ConfigManager()
+        company_manager = CompanyInfoManager(config_manager)
+        prompt_manager = PromptManager(config_manager)
+
+        company_info = company_manager.get_company_info(topic)
+        source_preferences = company_manager.get_source_preferences()
+        prompt = prompt_manager.create_tech_news_prompt(topic, company_info, source_preferences)
+
+        payload = {
+            "model": "sonar",
+            "messages": [{"role": "user", "content": prompt}],
+            "search_domain_filter": company_info["sources"],
+            "search_recency_filter": "week",
+            "return_citations": True,
+            "max_tokens": 4000
+        }
+
+        headers = {
+            "Authorization": f"Bearer {settings.perplexity_api_key}",
+            "Content-Type": "application/json"
+        }
+
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            raw_response = await client.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers=headers,
+                json=payload
+            )
+            raw_content = raw_response.json()["choices"][0]['message']['content']
 
         return {
             "api_key_status": api_key_status,
             "api_key_prefix": settings.perplexity_api_key[:10] if settings.perplexity_api_key else None,
-            "perplexity_result_type": str(type(result)),
-            "perplexity_result_keys": list(result.keys()) if isinstance(result, dict) else None,
-            "has_error": result.get("error") if isinstance(result, dict) else None,
-            "has_data": "data" in result if isinstance(result, dict) else None,
-            "data_type": str(type(result.get("data"))) if isinstance(result, dict) and "data" in result else None,
-            "full_result": result
+            "parsed_result": result,
+            "raw_perplexity_response": raw_content[:2000],  # 처음 2000자
+            "prompt_preview": prompt[:500]  # 프롬프트 미리보기
         }
     except Exception as e:
+        import traceback
         return {
             "api_key_status": api_key_status,
             "error": str(e),
-            "error_type": type(e).__name__
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
         }
 
 # AI 팟캐스트 생성
