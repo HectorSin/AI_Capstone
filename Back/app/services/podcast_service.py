@@ -465,92 +465,147 @@ class PodcastService:
 
                 processed_urls.add(news_url)
 
+                # 초기 변수 설정
+                storage_path = None
+                crawled = None
+                article_data = None
+                script_data = None
+                audio_data = {}
+                error_message = None
+                article_status = 'processing'
+
                 try:
-                    # 2-2. storage_path 설정
+                    # 2-2. storage_path 설정 및 디렉토리 생성
                     storage_path = os.path.join(self.base_storage_path, topic, f"article_{idx}")
                     os.makedirs(storage_path, exist_ok=True)
                     logger.info(f"Article {idx} 처리 시작: {article_title[:50]}...")
 
+                    # 메타데이터 생성 및 저장 (기존 create_podcast 방식)
+                    metadata = {
+                        "article_id": f"article_{idx}",
+                        "topic": topic,
+                        "title": article_title,
+                        "date": article_date,
+                        "source_url": news_url,
+                        "created_at": datetime.now().isoformat(),
+                        "status": "processing",
+                        "steps": {
+                            "crawling": {"status": "pending", "started_at": None, "completed_at": None},
+                            "article_generation": {"status": "pending", "started_at": None, "completed_at": None},
+                            "script_generation": {"status": "pending", "started_at": None, "completed_at": None},
+                            "audio_generation": {"status": "pending", "started_at": None, "completed_at": None}
+                        }
+                    }
+
+                    # 메타데이터 파일 저장
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     # 2-3. BeautifulSoup으로 전체 원문 크롤링
+                    logger.info(f"Article {idx}: Step 1 - 크롤링 시작")
+                    metadata["steps"]["crawling"]["status"] = "running"
+                    metadata["steps"]["crawling"]["started_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     crawled = await crawler.crawl_article(news_url)
+
+                    # 크롤링 데이터 저장 (성공/실패 여부와 관계없이 저장)
+                    with open(os.path.join(storage_path, "01_crawled_data.json"), 'w', encoding='utf-8') as f:
+                        json.dump(crawled, f, ensure_ascii=False, indent=2)
 
                     if not crawled['success']:
                         logger.error(f"Article {idx} 크롤링 실패: {crawled['error']}")
-                        results.append({
-                            'title': article_title,
-                            'date': article_date,
-                            'source_url': news_url,
-                            'status': 'failed',
-                            'error_message': f"크롤링 실패: {crawled['error']}",
-                            'crawled_data': None,
-                            'article_data': None,
-                            'script_data': None,
-                            'audio_data': None,
-                            'storage_path': storage_path
-                        })
-                        continue
+                        metadata["steps"]["crawling"]["status"] = "failed"
+                        metadata["steps"]["crawling"]["completed_at"] = datetime.now().isoformat()
+                        metadata["status"] = "failed"
+                        metadata["error"] = f"크롤링 실패: {crawled['error']}"
+                        with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                            json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-                    # 크롤링 데이터 저장
-                    with open(os.path.join(storage_path, "crawled_data.json"), 'w', encoding='utf-8') as f:
-                        json.dump(crawled, f, ensure_ascii=False, indent=2)
+                        error_message = f"크롤링 실패: {crawled['error']}"
+                        article_status = 'failed'
+                        raise Exception(error_message)
+
+                    metadata["steps"]["crawling"]["status"] = "completed"
+                    metadata["steps"]["crawling"]["completed_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
                     # 2-4. Gemini로 난이도별 원문 요약 (1번의 호출로 3개 난이도)
-                    logger.info(f"Article {idx}: 난이도별 문서 생성 중...")
+                    logger.info(f"Article {idx}: Step 2 - 난이도별 문서 생성 중...")
+                    metadata["steps"]["article_generation"]["status"] = "running"
+                    metadata["steps"]["article_generation"]["started_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     article_data = await self.gemini.generate_articles_all_difficulties(
                         title=article_title,
                         raw_content=crawled['content']
                     )
 
-                    if isinstance(article_data, dict) and article_data.get("error"):
-                        logger.error(f"Article {idx} 문서 생성 실패: {article_data}")
-                        results.append({
-                            'title': article_title,
-                            'date': article_date,
-                            'source_url': news_url,
-                            'status': 'failed',
-                            'error_message': f"문서 생성 실패: {article_data.get('error')}",
-                            'crawled_data': crawled,
-                            'article_data': None,
-                            'script_data': None,
-                            'audio_data': None,
-                            'storage_path': storage_path
-                        })
-                        continue
-
-                    # 문서 데이터 저장
-                    with open(os.path.join(storage_path, "article_data.json"), 'w', encoding='utf-8') as f:
+                    # 문서 데이터 저장 (성공/실패 여부와 관계없이 저장)
+                    with open(os.path.join(storage_path, "02_article_data.json"), 'w', encoding='utf-8') as f:
                         json.dump(article_data, f, ensure_ascii=False, indent=2)
 
+                    if isinstance(article_data, dict) and article_data.get("error"):
+                        logger.error(f"Article {idx} 문서 생성 실패: {article_data}")
+                        metadata["steps"]["article_generation"]["status"] = "failed"
+                        metadata["steps"]["article_generation"]["completed_at"] = datetime.now().isoformat()
+                        metadata["status"] = "failed"
+                        metadata["error"] = f"문서 생성 실패: {article_data.get('error')}"
+                        with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+                        error_message = f"문서 생성 실패: {article_data.get('error')}"
+                        article_status = 'failed'
+                        raise Exception(error_message)
+
+                    metadata["steps"]["article_generation"]["status"] = "completed"
+                    metadata["steps"]["article_generation"]["completed_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     # 2-5. Gemini로 난이도별 대본 생성 (1번의 호출로 3개 난이도)
-                    logger.info(f"Article {idx}: 난이도별 대본 생성 중...")
+                    logger.info(f"Article {idx}: Step 3 - 난이도별 대본 생성 중...")
+                    metadata["steps"]["script_generation"]["status"] = "running"
+                    metadata["steps"]["script_generation"]["started_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     script_data = await self.gemini.generate_scripts_all_difficulties(
                         article_title=article_title,
                         article_data=article_data
                     )
 
-                    if isinstance(script_data, dict) and script_data.get("error"):
-                        logger.error(f"Article {idx} 대본 생성 실패: {script_data}")
-                        results.append({
-                            'title': article_title,
-                            'date': article_date,
-                            'source_url': news_url,
-                            'status': 'failed',
-                            'error_message': f"대본 생성 실패: {script_data.get('error')}",
-                            'crawled_data': crawled,
-                            'article_data': article_data,
-                            'script_data': None,
-                            'audio_data': None,
-                            'storage_path': storage_path
-                        })
-                        continue
-
-                    # 대본 데이터 저장
-                    with open(os.path.join(storage_path, "script_data.json"), 'w', encoding='utf-8') as f:
+                    # 대본 데이터 저장 (성공/실패 여부와 관계없이 저장)
+                    with open(os.path.join(storage_path, "03_script_data.json"), 'w', encoding='utf-8') as f:
                         json.dump(script_data, f, ensure_ascii=False, indent=2)
 
+                    if isinstance(script_data, dict) and script_data.get("error"):
+                        logger.error(f"Article {idx} 대본 생성 실패: {script_data}")
+                        metadata["steps"]["script_generation"]["status"] = "failed"
+                        metadata["steps"]["script_generation"]["completed_at"] = datetime.now().isoformat()
+                        metadata["status"] = "failed"
+                        metadata["error"] = f"대본 생성 실패: {script_data.get('error')}"
+                        with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+                        error_message = f"대본 생성 실패: {script_data.get('error')}"
+                        article_status = 'failed'
+                        raise Exception(error_message)
+
+                    metadata["steps"]["script_generation"]["status"] = "completed"
+                    metadata["steps"]["script_generation"]["completed_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
                     # 2-6. Clova로 난이도별 TTS 생성 (3개)
-                    logger.info(f"Article {idx}: 난이도별 TTS 생성 중...")
-                    audio_data = {}
+                    logger.info(f"Article {idx}: Step 4 - 난이도별 TTS 생성 중...")
+                    metadata["steps"]["audio_generation"]["status"] = "running"
+                    metadata["steps"]["audio_generation"]["started_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
                     for difficulty in ['beginner', 'intermediate', 'advanced']:
                         script_for_difficulty = script_data.get(difficulty, {})
@@ -568,48 +623,64 @@ class PodcastService:
 
                         if isinstance(audio_result, dict) and not audio_result.get("error"):
                             audio_data[difficulty] = audio_result.get('data', {})
+                            logger.info(f"Article {idx}: {difficulty} TTS 생성 완료")
                         else:
                             logger.error(f"Article {idx} {difficulty} TTS 생성 실패: {audio_result}")
 
-                    # 오디오 데이터 저장
-                    with open(os.path.join(storage_path, "audio_data.json"), 'w', encoding='utf-8') as f:
+                    # 오디오 데이터 저장 (일부 실패해도 성공한 것은 저장)
+                    with open(os.path.join(storage_path, "04_audio_data.json"), 'w', encoding='utf-8') as f:
                         json.dump(audio_data, f, ensure_ascii=False, indent=2)
 
-                    # 2-7. 결과 저장
-                    results.append({
-                        'title': article_title,
-                        'date': article_date,
-                        'source_url': news_url,
-                        'status': 'completed',
-                        'crawled_data': {
-                            'url': crawled['url'],
-                            'title': crawled['title'],
-                            'content': crawled['content'],
-                            'content_length': crawled['content_length']
-                        },
-                        'article_data': article_data,
-                        'script_data': script_data,
-                        'audio_data': audio_data,
-                        'storage_path': storage_path,
-                        'error_message': None
-                    })
+                    metadata["steps"]["audio_generation"]["status"] = "completed"
+                    metadata["steps"]["audio_generation"]["completed_at"] = datetime.now().isoformat()
+                    metadata["status"] = "completed"
+                    metadata["completed_at"] = datetime.now().isoformat()
+                    with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
+                    article_status = 'completed'
                     logger.info(f"Article {idx} 처리 완료: {article_title[:50]}...")
+
 
                 except Exception as e:
                     logger.error(f"Article {idx} 처리 중 오류: {e}", exc_info=True)
-                    results.append({
-                        'title': article_title,
-                        'date': article_date,
-                        'source_url': news_url,
-                        'status': 'failed',
-                        'error_message': str(e),
-                        'crawled_data': None,
-                        'article_data': None,
-                        'script_data': None,
-                        'audio_data': None,
-                        'storage_path': storage_path if 'storage_path' in locals() else None
-                    })
+
+                    # 예외 발생 시에도 메타데이터 업데이트 (실패 상태로)
+                    if storage_path and os.path.exists(storage_path):
+                        try:
+                            metadata_path = os.path.join(storage_path, "00_metadata.json")
+                            if os.path.exists(metadata_path):
+                                with open(metadata_path, 'r', encoding='utf-8') as f:
+                                    metadata = json.load(f)
+                                metadata["status"] = "failed"
+                                metadata["error"] = str(e)
+                                metadata["failed_at"] = datetime.now().isoformat()
+                                with open(metadata_path, 'w', encoding='utf-8') as f:
+                                    json.dump(metadata, f, ensure_ascii=False, indent=2)
+                        except Exception as meta_error:
+                            logger.error(f"메타데이터 업데이트 실패: {meta_error}")
+
+                    article_status = 'failed'
+                    error_message = str(e)
+
+                # 2-7. 결과 저장 (성공/실패 여부와 관계없이)
+                results.append({
+                    'title': article_title,
+                    'date': article_date,
+                    'source_url': news_url,
+                    'status': article_status,
+                    'crawled_data': {
+                        'url': crawled['url'],
+                        'title': crawled['title'],
+                        'content': crawled['content'],
+                        'content_length': crawled['content_length']
+                    } if crawled and crawled.get('success') else None,
+                    'article_data': article_data if article_data and not article_data.get('error') else None,
+                    'script_data': script_data if script_data and not script_data.get('error') else None,
+                    'audio_data': audio_data if audio_data else {},
+                    'storage_path': storage_path,
+                    'error_message': error_message
+                })
 
             logger.info(f"토픽 '{topic}' 처리 완료: 총 {len(results)}개 (성공: {sum(1 for r in results if r['status'] == 'completed')}개)")
             return results
