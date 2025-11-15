@@ -219,12 +219,22 @@ class GeminiService(AIService):
             resp = await self.chat_model.ainvoke(prompt)
             text = resp.content if hasattr(resp, "content") else str(resp)
 
+            # JSON 마크다운 블록 제거
+            if text.startswith("```json"):
+                text = text.replace("```json", "").replace("```", "").strip()
+            elif text.startswith("```"):
+                text = text.replace("```", "").strip()
+
             # JSON 파싱
             data = json.loads(text)
 
             logger.info(f"난이도별 문서 생성 완료: {title}")
             return data
 
+        except json.JSONDecodeError as e:
+            logger.error(f"난이도별 문서 JSON 파싱 실패: {e}")
+            logger.error(f"응답 내용: {text[:500]}")
+            return {"error": f"JSON 파싱 실패: {str(e)}"}
         except Exception as e:
             logger.error(f"난이도별 문서 생성 실패: {e}")
             return {"error": f"난이도별 문서 생성 실패: {str(e)}"}
@@ -304,12 +314,22 @@ class GeminiService(AIService):
             resp = await self.chat_model.ainvoke(prompt)
             text = resp.content if hasattr(resp, "content") else str(resp)
 
+            # JSON 마크다운 블록 제거
+            if text.startswith("```json"):
+                text = text.replace("```json", "").replace("```", "").strip()
+            elif text.startswith("```"):
+                text = text.replace("```", "").strip()
+
             # JSON 파싱
             data = json.loads(text)
 
             logger.info(f"난이도별 대본 생성 완료: {article_title}")
             return data
 
+        except json.JSONDecodeError as e:
+            logger.error(f"난이도별 대본 JSON 파싱 실패: {e}")
+            logger.error(f"응답 내용: {text[:500]}")
+            return {"error": f"JSON 파싱 실패: {str(e)}"}
         except Exception as e:
             logger.error(f"난이도별 대본 생성 실패: {e}")
             return {"error": f"난이도별 대본 생성 실패: {str(e)}"}

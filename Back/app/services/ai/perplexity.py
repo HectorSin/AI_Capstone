@@ -186,10 +186,17 @@ class PerplexityService(AIService):
                                     }
                             except Exception:
                                 pass
+                            # Pydantic 객체를 딕셔너리로 변환
+                            if hasattr(parsed_data, 'model_dump'):
+                                data_dict = parsed_data.model_dump()
+                            elif hasattr(parsed_data, 'dict'):
+                                data_dict = parsed_data.dict()
+                            else:
+                                data_dict = parsed_data
                             return {
                                 "service": "perplexity",
                                 "status": "success",
-                                "data": parsed_data
+                                "data": data_dict
                             }
                         except Exception as e:
                             logger.error(f"LangChain JSON 파싱 실패: {e}")
