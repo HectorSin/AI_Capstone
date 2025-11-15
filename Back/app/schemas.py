@@ -151,50 +151,62 @@ class TopicSource(TopicSourceBase):
         from_attributes = True
 
 
-class PodcastScriptBase(BaseModel):
-    data: Dict[str, Any]
-
-
-class PodcastBase(BaseModel):
-    audio_uri: str
-    duration: Optional[int] = None
-
-
 class ArticleBase(BaseModel):
     title: str
-    summary: str
-    content: str
-    source_url: Optional[HttpUrl] = None
     date: date
-    json_data: Optional[Dict[str, Any]] = None
-
-
-class PodcastScript(PodcastScriptBase):
-    id: UUID
-    article_id: UUID
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class Podcast(PodcastBase):
-    id: UUID
-    article_id: UUID
-    script_id: Optional[UUID] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+    source_url: Optional[str] = None
 
 
 class Article(ArticleBase):
     id: UUID
     topic_id: UUID
+    status: str
+    crawled_data: Optional[Dict[str, Any]] = None
+    article_data: Optional[Dict[str, Any]] = None
+    script_data: Optional[Dict[str, Any]] = None
+    audio_data: Optional[Dict[str, Any]] = None
+    storage_path: Optional[str] = None
+    error_message: Optional[str] = None
+    processing_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class DifficultyAudioInfo(BaseModel):
+    """난이도별 오디오 정보"""
+    audio_file: Optional[str] = None
+    duration: Optional[int] = None
+
+
+class ArticlePodcastResponse(BaseModel):
+    """개별 팟캐스트(Article) 정보"""
+    article_id: UUID
+    title: str
+    date: str
+    source_url: Optional[str]
+    status: str
+    # 난이도별 오디오 정보
+    audio_beginner: Optional[DifficultyAudioInfo] = None
+    audio_intermediate: Optional[DifficultyAudioInfo] = None
+    audio_advanced: Optional[DifficultyAudioInfo] = None
+    error_message: Optional[str] = None
+
+
+class PodcastBatchCreateResponse(BaseModel):
+    """여러 팟캐스트 생성 응답"""
+    topic: str
+    topic_id: UUID
+    keywords: List[str]
+    total_crawled: int
+    successful: int
+    failed: int
+    processing: int
+    articles: List[ArticlePodcastResponse]
+    created_at: str
 
 
 class TopicCreate(TopicBase):
