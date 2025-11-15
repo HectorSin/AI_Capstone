@@ -98,7 +98,7 @@ class PromptManager:
         prompt = f"""
         You are a technology news curator and translator specializing in cutting-edge tech developments.
 
-        Find ALL AVAILABLE latest technology-focused news about "{category}" from recent sources (within 24 hours). Collect as many relevant articles as possible without any numerical limit.
+        Find ALL AVAILABLE latest technology-focused news about "{category}" from recent sources (within the past week). Collect as many relevant articles as possible without any numerical limit.
 
         CONTENT FOCUS:
         • Technical breakthroughs: new AI models, research papers, product launches, API releases

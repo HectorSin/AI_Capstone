@@ -435,12 +435,21 @@ class PodcastService:
             logger.info(f"토픽 '{topic}'에 대한 기사 크롤링 시작")
             crawled_links = await self.perplexity.crawl_topic(topic, keywords)
 
+            logger.info(f"Perplexity 응답 타입: {type(crawled_links)}")
+            logger.info(f"Perplexity 응답 keys: {crawled_links.keys() if isinstance(crawled_links, dict) else 'Not a dict'}")
+
             if isinstance(crawled_links, dict) and crawled_links.get("error"):
                 logger.error(f"Perplexity 크롤링 실패: {crawled_links}")
                 return []
 
-            articles = crawled_links.get("data", {}).get("articles", [])
+            data = crawled_links.get("data", {})
+            logger.info(f"data 타입: {type(data)}, data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
+
+            articles = data.get("articles", []) if isinstance(data, dict) else []
             logger.info(f"Perplexity에서 {len(articles)}개 기사 링크 수집")
+
+            if articles and len(articles) > 0:
+                logger.info(f"첫 번째 기사 샘플: {articles[0] if articles else 'None'}")
 
             if not articles:
                 logger.warning("크롤링된 기사가 없습니다")
