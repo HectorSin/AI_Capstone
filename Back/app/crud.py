@@ -534,3 +534,54 @@ async def get_articles_by_topic(
 
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_article_by_id(
+    db: AsyncSession,
+    article_id: UUID
+) -> Optional[models.Article]:
+    """
+    Article ID로 개별 Article 조회 (Article 상세 페이지용)
+
+    Args:
+        db: Database session
+        article_id: Article UUID
+
+    Returns:
+        Article 또는 None
+    """
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.id == article_id)
+    )
+
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_topic_by_name(
+    db: AsyncSession,
+    topic_name: str
+) -> Optional[models.Topic]:
+    """
+    Topic 이름으로 Topic 조회 (Keyword 페이지용)
+
+    Args:
+        db: Database session
+        topic_name: Topic 이름 (예: "GOOGLE", "META")
+
+    Returns:
+        Topic 또는 None
+    """
+    stmt = (
+        select(models.Topic)
+        .where(models.Topic.name == topic_name)
+        .options(
+            selectinload(models.Topic.sources),
+            selectinload(models.Topic.articles),
+        )
+    )
+
+    result = await db.execute(stmt)
+    return result.scalars().first()

@@ -1,13 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Share, StyleSheet, SafeAreaView, View } from 'react-native';
+import { Share, StyleSheet, SafeAreaView, View, ActivityIndicator, Text } from 'react-native';
 
 import { ArticleDetail } from '@/components/ArticleDetail';
 import { NavigationHeader } from '@/components/NavigationHeader';
-import feedItemsData from '@/test_data/feedItems.json';
+import { getArticleById } from '@/utils/api';
 import type { FeedItem } from '@/types';
-
-const feedItems = feedItemsData as FeedItem[];
 
 const FALLBACK_ITEM: FeedItem = {
   id: 'fallback',
@@ -23,10 +21,38 @@ const FALLBACK_ITEM: FeedItem = {
 export default function ArticleScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const [feedItem, setFeedItem] = useState<FeedItem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const feedItem = useMemo(() => feedItems.find((item) => item.id === id) ?? FALLBACK_ITEM, [id]);
+  useEffect(() => {
+    const loadArticle = async () => {
+      if (!id) {
+        setFeedItem(FALLBACK_ITEM);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        const article = await getArticleById(id);
+        setFeedItem(article);
+      } catch (err) {
+        console.error('[Article] Failed to load article:', err);
+        setError(err instanceof Error ? err.message : 'Article을 불러올 수 없습니다');
+        setFeedItem(FALLBACK_ITEM);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadArticle();
+  }, [id]);
 
   const handleShare = useCallback(async () => {
+    if (!feedItem) return;
+
     try {
       const shareMessage = `${feedItem.title}\n\n${feedItem.summary || ''}\n\n${feedItem.content}`.trim();
       await Share.share({
@@ -37,6 +63,36 @@ export default function ArticleScreen() {
       console.warn('Share failed', error);
     }
   }, [feedItem]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <NavigationHeader
+          onBack={() => router.back()}
+          rightButton={{
+            text: '공유',
+            onPress: handleShare,
+            variant: 'secondary',
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Article을 불러오는 중...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!feedItem) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <NavigationHeader onBack={() => router.back()} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Article을 찾을 수 없습니다</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -75,5 +131,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#6b7280',
   },
 });

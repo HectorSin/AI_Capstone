@@ -2,10 +2,11 @@
 Article 피드 API 라우터
 프론트엔드 FeedItem 구조와 호환되는 API 제공
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from uuid import UUID
 
 from app.database.database import get_db
 from app.auth import get_current_user
@@ -113,3 +114,36 @@ async def get_subscribed_articles(
         limit=limit,
         has_more=(skip + len(feed_items)) < total
     )
+
+
+@router.get(
+    "/{article_id}",
+    response_model=schemas.ArticleFeedItem,
+    summary="Article 상세 조회"
+)
+async def get_article_detail(
+    article_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Article ID로 개별 Article 조회 (Article 상세 페이지용)
+
+    - 인증 불필요
+    - Topic 정보 포함
+    - 404 에러 처리
+    """
+    article = await crud.get_article_by_id(db=db, article_id=article_id)
+
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found"
+        )
+
+    if not article.topic:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Article topic not found"
+        )
+
+    return schemas.ArticleFeedItem.from_article(article, article.topic)

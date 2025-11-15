@@ -86,3 +86,102 @@ export async function updateNotificationPreference(
 
   return response.json();
 }
+
+// ============================================================
+// Article Feed API (Phase 5 - 프론트엔드 연동)
+// ============================================================
+
+import type { FeedItem } from '@/types';
+
+export type ArticleFeedResponse = {
+  items: FeedItem[];
+  total: number;
+  skip: number;
+  limit: number;
+  has_more: boolean;
+};
+
+/**
+ * Home 피드 조회 (전체 Article)
+ */
+export async function getArticleFeed(skip: number = 0, limit: number = 20): Promise<ArticleFeedResponse> {
+  const response = await fetch(`${API_BASE_URL}/articles/feed?skip=${skip}&limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch article feed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Subscribe 피드 조회 (구독 토픽의 Article)
+ * @param token - 인증 토큰 (필수)
+ */
+export async function getSubscribedArticles(
+  token: string,
+  skip: number = 0,
+  limit: number = 20
+): Promise<ArticleFeedResponse> {
+  const response = await fetch(`${API_BASE_URL}/articles/subscribed?skip=${skip}&limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subscribed articles: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Article 상세 조회
+ */
+export async function getArticleById(articleId: string): Promise<FeedItem> {
+  const response = await fetch(`${API_BASE_URL}/articles/${articleId}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch article: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Keyword(Topic) 기반 Article 조회
+ */
+export async function getArticlesByKeyword(
+  keyword: string,
+  skip: number = 0,
+  limit: number = 20
+): Promise<ArticleFeedResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/topics/by-name/${encodeURIComponent(keyword)}/articles?skip=${skip}&limit=${limit}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch articles by keyword: ${response.status}`);
+  }
+
+  return response.json();
+}

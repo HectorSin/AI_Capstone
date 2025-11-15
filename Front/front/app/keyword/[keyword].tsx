@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   FlatList,
@@ -9,30 +9,51 @@ import {
   StyleSheet,
   Text,
   View,
+  ActivityIndicator,
 } from 'react-native';
 
 import { FeedCard } from '@/components/FeedCard';
-import feedItemsData from '@/test_data/feedItems.json';
+import { getArticlesByKeyword } from '@/utils/api';
 import type { FeedItem } from '@/types';
 
-const feedItems = feedItemsData as FeedItem[];
-
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
 
 export default function KeywordScreen() {
   const { keyword } = useLocalSearchParams<{ keyword?: string }>();
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(false);
+  const [keywordItems, setKeywordItems] = useState<FeedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const keywordText = typeof keyword === 'string' ? keyword : 'Unknown';
 
-  const keywordItems = useMemo(
-    () => feedItems.filter((item) => item.keyword === keywordText),
-    [keywordText]
-  );
-
   const leadItem = keywordItems[0];
   const avatarSource = { uri: leadItem?.imageUri ?? DEFAULT_AVATAR };
+
+  const loadArticles = useCallback(async () => {
+    if (!keywordText) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await getArticlesByKeyword(keywordText, 0, 50);
+      setKeywordItems(response.items);
+    } catch (err) {
+      console.error('[Keyword] Failed to load articles:', err);
+      setError(err instanceof Error ? err.message : 'Article을 불러올 수 없습니다');
+      setKeywordItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [keywordText]);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
 
   const handleFollowToggle = () => {
     setIsFollowing((prev) => !prev);
@@ -52,6 +73,30 @@ export default function KeywordScreen() {
     />
   );
 
+  const renderHeader = () => (
+    <View style={styles.heroContainer}>
+      <Image source={avatarSource} style={styles.avatar} />
+      <Text style={styles.keywordText}>{keywordText}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgeRow}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>AI</Text>
+        </View>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Trend</Text>
+        </View>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Insights</Text>
+        </View>
+      </ScrollView>
+      <Pressable
+        onPress={handleFollowToggle}
+        style={({ pressed }) => [styles.followButton, pressed && styles.followButtonPressed]}
+      >
+        <Text style={styles.followText}>{isFollowing ? 'Following' : 'Follow'}</Text>
+      </Pressable>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.headerBar}>
@@ -68,37 +113,30 @@ export default function KeywordScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={
-          <View style={styles.heroContainer}>
-            <Image source={avatarSource} style={styles.avatar} />
-            <Text style={styles.keywordText}>{keywordText}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.badgeRow}
-            >
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>AI</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Trend</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Insights</Text>
-              </View>
-            </ScrollView>
-            <Pressable
-              onPress={handleFollowToggle}
-              style={({ pressed }) => [styles.followButton, pressed && styles.followButtonPressed]}
-            >
-              <Text style={styles.followText}>{isFollowing ? 'Following' : 'Follow'}</Text>
-            </Pressable>
-          </View>
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#2563eb" />
+              <Text style={styles.loadingText}>Article을 불러오는 중...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorTitle}>Article을 불러올 수 없습니다</Text>
+              <Text style={styles.errorMessage}>{error}</Text>
+              <Text style={styles.errorHint} onPress={loadArticles}>
+                다시 시도
+              </Text>
+            </View>
+          ) : (
+            renderHeader()
+          )
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>아직 콘텐츠가 없어요</Text>
-            <Text style={styles.emptyBody}>곧 {keywordText} 관련 새로운 업데이트가 올라올 예정이에요.</Text>
-          </View>
+          !isLoading && !error ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>아직 콘텐츠가 없어요</Text>
+              <Text style={styles.emptyBody}>곧 {keywordText} 관련 새로운 업데이트가 올라올 예정이에요.</Text>
+            </View>
+          ) : null
         }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -194,5 +232,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 64,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  errorHint: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
+    marginTop: 8,
   },
 });
