@@ -376,11 +376,7 @@ try:
     User.model_rebuild()
     Topic.model_rebuild()
     Article.model_rebuild()
-    Podcast.model_rebuild()
-    PodcastScript.model_rebuild()
 except AttributeError:
     User.update_forward_refs()
     Topic.update_forward_refs()
     Article.update_forward_refs()
-    Podcast.update_forward_refs()
-    PodcastScript.update_forward_refs()
