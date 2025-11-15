@@ -125,15 +125,20 @@ class PerplexityService(AIService):
     async def crawl_topic(self, topic: str, keywords: list = None) -> Dict[str, Any]:
         """
         특정 토픽에 대한 정보를 크롤링합니다.
-        
+
         Args:
             topic: 크롤링할 토픽
             keywords: 관련 키워드 목록
-        
+
         Returns:
             크롤링된 정보
         """
         logger.info(f"토픽 크롤링 시작: {topic}")
+
+        # API 키 확인
+        if not self.api_key or len(self.api_key) < 10:
+            logger.error(f"Perplexity API 키가 유효하지 않음: {self.api_key[:10] if self.api_key else 'None'}...")
+            return {"error": "Perplexity API 키가 설정되지 않았거나 유효하지 않습니다."}
         
         try:
             # 설정 관리자를 통해 회사 정보와 프롬프트 생성
@@ -172,19 +177,26 @@ class PerplexityService(AIService):
                         response_data = response.json()
                         content = response_data["choices"][0]['message']['content']
 
+                        logger.info(f"Perplexity 원본 응답 (처음 500자): {content[:500]}")
+
                         # LangChain JSON Output Parser 사용
                         try:
                             parsed_data = self.json_parser.parse(content)
+                            logger.info(f"파싱 성공, 타입: {type(parsed_data)}")
                             # 기사 비어있음 처리
                             try:
-                                if not parsed_data or len(parsed_data.articles) == 0:
+                                article_count = len(parsed_data.articles) if hasattr(parsed_data, 'articles') else 0
+                                logger.info(f"파싱된 기사 개수: {article_count}")
+                                if not parsed_data or article_count == 0:
+                                    logger.warning("크롤링 결과에 기사가 없음")
                                     return {
                                         "error": "NO_ARTICLES",
                                         "details": {
                                             "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
                                         },
                                     }
-                            except Exception:
+                            except Exception as check_error:
+                                logger.error(f"기사 개수 확인 중 오류: {check_error}")
                                 pass
                             # Pydantic 객체를 딕셔너리로 변환
                             if hasattr(parsed_data, 'model_dump'):
@@ -200,13 +212,18 @@ class PerplexityService(AIService):
                             }
                         except Exception as e:
                             logger.error(f"LangChain JSON 파싱 실패: {e}")
+                            logger.error(f"파싱 실패한 원본 내용 (처음 1000자): {content[:1000]}")
                             # 폴백: 수동 파싱 시도
                             try:
+                                logger.info("폴백 파싱 시도 중...")
                                 if content.startswith("```json"):
                                     content = content.replace("```json", "").replace("```", "").strip()
+                                    logger.info("JSON 마크다운 블록 제거")
 
                                 raw_data = json.loads(content)
+                                logger.info(f"JSON 파싱 성공, keys: {raw_data.keys()}")
                                 news_data = NewsData(**raw_data)
+                                logger.info(f"Pydantic 변환 성공, 기사 개수: {len(news_data.articles)}")
                                 if len(news_data.articles) == 0:
                                     return {
                                         "error": "NO_ARTICLES",
