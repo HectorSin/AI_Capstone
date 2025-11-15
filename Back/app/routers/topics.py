@@ -97,3 +97,60 @@ async def get_preferred_topics(
 ):
     topics = await crud.list_topics_for_user(db=db, user_id=user_id)
     return [schemas.PreferredTopic(topic_id=t.id, name=t.name) for t in topics]
+
+
+@router.get(
+    "/{topic_id}/articles",
+    response_model=schemas.ArticleFeedResponse,
+    summary="특정 토픽의 Article 목록"
+)
+async def get_topic_articles(
+    topic_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+    db: AsyncSession = Depends(auth.get_db),
+):
+    """
+    특정 토픽의 Article 목록 조회 (Topic Profile용)
+
+    - 인증 불필요
+    - 페이지네이션 지원
+    - 날짜 내림차순
+    """
+    from sqlalchemy import select, func
+    from app.database import models
+
+    # Topic 존재 여부 확인
+    topic = await crud.get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
+
+    # Article 조회
+    articles = await crud.get_articles_by_topic(
+        db=db,
+        topic_id=topic_id,
+        skip=skip,
+        limit=limit
+    )
+
+    # FeedItem으로 변환
+    feed_items = []
+    for article in articles:
+        if article.topic:
+            feed_item = schemas.ArticleFeedItem.from_article(article, article.topic)
+            feed_items.append(feed_item)
+
+    # 전체 개수
+    total_stmt = select(func.count(models.Article.id)).where(
+        models.Article.topic_id == topic_id
+    )
+    total_result = await db.execute(total_stmt)
+    total = total_result.scalar() or 0
+
+    return schemas.ArticleFeedResponse(
+        items=feed_items,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + len(feed_items)) < total
+    )

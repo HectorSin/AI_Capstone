@@ -209,6 +209,58 @@ class PodcastBatchCreateResponse(BaseModel):
     created_at: str
 
 
+# ==========================================================
+# Article 피드 API 스키마 (Phase 5)
+# ==========================================================
+class ArticleFeedItem(BaseModel):
+    """프론트엔드 FeedItem 타입과 호환되는 응답"""
+    id: UUID
+    title: str
+    date: str  # "2024. 03. 20" 형식
+    summary: str
+    content: str
+    imageUri: str  # topic.image_uri
+    keyword: str   # topic.name
+
+    @classmethod
+    def from_article(cls, article, topic) -> "ArticleFeedItem":
+        """Article + Topic 모델에서 FeedItem 생성"""
+        # date를 "YYYY. MM. DD" 형식으로 변환
+        formatted_date = article.date.strftime("%Y. %m. %d")
+
+        # article_data JSONB에서 피드용 공통 summary 추출
+        feed_summary = ""
+        article_content = ""
+
+        if article.article_data:
+            feed_summary = article.article_data.get("summary", "")
+            # 본문은 중급 난이도 content 사용
+            intermediate_data = article.article_data.get("intermediate", {})
+            article_content = intermediate_data.get("content", "") if isinstance(intermediate_data, dict) else ""
+
+        return cls(
+            id=article.id,
+            title=article.title,
+            date=formatted_date,
+            summary=feed_summary,
+            content=article_content,
+            imageUri=topic.image_uri,
+            keyword=topic.name
+        )
+
+
+class ArticleFeedResponse(BaseModel):
+    """페이지네이션이 포함된 피드 응답"""
+    items: List[ArticleFeedItem]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool
+
+    class Config:
+        from_attributes = True
+
+
 class TopicCreate(TopicBase):
     sources: List[TopicSourceCreate] = Field(default_factory=list)
 

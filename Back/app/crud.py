@@ -418,3 +418,119 @@ async def upsert_user_topic(
 
     await db.commit()
     return link
+
+
+# ==========================================================
+# Article helpers (Phase 5 - Feed API)
+# ==========================================================
+async def get_all_articles(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 20,
+    order_by_date: bool = True
+) -> List[models.Article]:
+    """
+    모든 Article을 조회 (페이지네이션 지원)
+
+    Args:
+        db: Database session
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+        order_by_date: True면 date DESC, False면 created_at DESC
+
+    Returns:
+        Article 목록
+    """
+    from sqlalchemy import desc
+
+    stmt = select(models.Article).options(
+        selectinload(models.Article.topic)
+    )
+
+    if order_by_date:
+        stmt = stmt.order_by(desc(models.Article.date))
+    else:
+        stmt = stmt.order_by(desc(models.Article.created_at))
+
+    stmt = stmt.offset(skip).limit(limit)
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_articles_by_user_topics(
+    db: AsyncSession,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20
+) -> List[models.Article]:
+    """
+    사용자가 구독한 토픽들의 Article 조회
+
+    Args:
+        db: Database session
+        user_id: 사용자 UUID
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+
+    Returns:
+        Article 목록 (날짜 내림차순)
+    """
+    from sqlalchemy import desc
+
+    # 사용자가 구독한 토픽 ID 목록 조회
+    user_topics_stmt = (
+        select(models.UserTopic.topic_id)
+        .where(models.UserTopic.user_id == user_id)
+    )
+    user_topics_result = await db.execute(user_topics_stmt)
+    topic_ids = [row[0] for row in user_topics_result.all()]
+
+    if not topic_ids:
+        return []
+
+    # 해당 토픽들의 Article 조회
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.topic_id.in_(topic_ids))
+        .order_by(desc(models.Article.date))
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_articles_by_topic(
+    db: AsyncSession,
+    topic_id: UUID,
+    skip: int = 0,
+    limit: int = 20
+) -> List[models.Article]:
+    """
+    특정 토픽의 Article 조회
+
+    Args:
+        db: Database session
+        topic_id: 토픽 UUID
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+
+    Returns:
+        Article 목록 (날짜 내림차순)
+    """
+    from sqlalchemy import desc
+
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.topic_id == topic_id)
+        .order_by(desc(models.Article.date))
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

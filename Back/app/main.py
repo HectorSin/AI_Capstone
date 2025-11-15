@@ -4,7 +4,7 @@ from app.database.database import engine, Base, AsyncSessionLocal
 from app.database.redis_client import redis_client
 from app.config import settings
 from app.database import models  # 모델 import 추가 - 테이블 생성을 위해 필요
-from app.routers import users, auth, cache, topics, ai_jobs
+from app.routers import users, auth, cache, topics, ai_jobs, articles
 from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics
 from app import crud, schemas
 import logging
@@ -119,6 +119,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(cache.router, prefix="/cache", tags=["Cache & Redis"])
 app.include_router(topics.router, tags=["Topics"])
 app.include_router(ai_jobs.router, prefix="/ai_jobs", tags=["AI Jobs"])
+app.include_router(articles.router, tags=["Articles"])  # Phase 5: Article 피드 API
 
 # 관리자 페이지용 API 라우터
 # ----------------------------------------------------------
