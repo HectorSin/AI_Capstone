@@ -9,7 +9,7 @@ type ServerConnectivityState = {
   checkConnection: () => Promise<void>;
 };
 
-const SERVER_URL = 'http://34.50.12.148:8000/';
+const SERVER_URL = 'http://35.216.97.52:8000/';
 const REQUEST_TIMEOUT_MS = 5000;
 
 const isServerReachable = (statusCode: number) => statusCode >= 200 && statusCode < 400;

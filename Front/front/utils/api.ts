@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://34.50.12.148:8000';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://35.216.97.52:8000';
 
 export async function checkAvailability(
   endpoint: 'check-email' | 'check-nickname',
