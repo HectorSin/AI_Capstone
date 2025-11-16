@@ -9,9 +9,6 @@ import asyncio
 from typing import Dict, Any, Optional, List
 import httpx
 from datetime import datetime
-from pydantic import BaseModel, ValidationError
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import PromptTemplate
 
 from .base import AIService, AIServiceConfig
 from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
@@ -19,18 +16,20 @@ from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
 logger = logging.getLogger(__name__)
 
 
-class Article(BaseModel):
-    """기사 데이터 모델 (Pydantic)"""
-    news_url: str
-    title: str
-    text: str
-    date: str
+class Article:
+    """기사 데이터 모델"""
+    def __init__(self, news_url: str, title: str, text: str, date: str):
+        self.news_url = news_url
+        self.title = title
+        self.text = text
+        self.date = date
 
 
-class NewsData(BaseModel):
-    """뉴스 데이터 모델 (Pydantic)"""
-    category: str
-    articles: List[Article]
+class NewsData:
+    """뉴스 데이터 모델"""
+    def __init__(self, category: str, articles: List[Article]):
+        self.category = category
+        self.articles = articles
 
 
 class PerplexityService(AIService):
@@ -41,14 +40,11 @@ class PerplexityService(AIService):
     def __init__(self, config: AIServiceConfig):
         super().__init__(config)
         self.api_key = config.api_key
-        
+
         # 설정 관리자 초기화
         self.config_manager = ConfigManager()
         self.company_manager = CompanyInfoManager(self.config_manager)
         self.prompt_manager = PromptManager(self.config_manager)
-        
-        # LangChain JSON Output Parser 초기화
-        self.json_parser = JsonOutputParser(pydantic_object=NewsData)
     
     async def validate_config(self) -> bool:
         """설정이 유효한지 검증합니다."""
@@ -179,110 +175,31 @@ class PerplexityService(AIService):
 
                         logger.info(f"Perplexity 원본 응답 (처음 500자): {content[:500]}")
 
-                        # JSON 마크다운 블록 제거
-                        if content.startswith("```json"):
-                            content = content.replace("```json", "").replace("```", "").strip()
-                            logger.info("JSON 마크다운 블록 제거")
-
-                        # 필드 매핑: Perplexity 응답을 우리 모델에 맞게 변환
+                        # JSON 파싱 시도
                         try:
+                            # JSON 마크다운 블록 제거
+                            if content.startswith("```json"):
+                                content = content.replace("```json", "").replace("```", "").strip()
+                                logger.info("JSON 마크다운 블록 제거")
+
                             raw_data = json.loads(content)
-                            logger.info(f"JSON 파싱 성공, keys: {raw_data.keys()}")
+                            logger.info(f"JSON 파싱 성공")
 
-                            # url -> news_url, content -> text 변환
-                            if "articles" in raw_data:
-                                for article in raw_data["articles"]:
-                                    if "url" in article and "news_url" not in article:
-                                        article["news_url"] = article.pop("url")
-                                    if "content" in article and "text" not in article:
-                                        article["text"] = article.pop("content")
-                                logger.info(f"필드 매핑 완료: url->news_url, content->text (기사 {len(raw_data['articles'])}개)")
+                            # 기사 개수 로깅
+                            article_count = len(raw_data.get("articles", []))
+                            logger.info(f"수집된 기사 개수: {article_count}")
 
-                            # 매핑된 데이터를 JSON 문자열로 변환
-                            mapped_content = json.dumps(raw_data)
+                            return {
+                                "service": "perplexity",
+                                "status": "success",
+                                "data": raw_data
+                            }
                         except json.JSONDecodeError as je:
                             logger.error(f"JSON 파싱 실패: {je}")
                             return {
                                 "error": "JSON 파싱 실패",
                                 "raw_content": content[:1000]
                             }
-
-                        # LangChain JSON Output Parser 사용
-                        try:
-                            parsed_data = self.json_parser.parse(mapped_content)
-                            logger.info(f"LangChain 파싱 성공, 타입: {type(parsed_data)}")
-                            # 기사 비어있음 처리
-                            try:
-                                article_count = len(parsed_data.articles) if hasattr(parsed_data, 'articles') else 0
-                                logger.info(f"파싱된 기사 개수: {article_count}")
-                                if not parsed_data or article_count == 0:
-                                    logger.warning("크롤링 결과에 기사가 없음")
-                                    return {
-                                        "error": "NO_ARTICLES",
-                                        "details": {
-                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
-                                        },
-                                    }
-                            except Exception as check_error:
-                                logger.error(f"기사 개수 확인 중 오류: {check_error}")
-                                pass
-                            # Pydantic 객체를 딕셔너리로 변환
-                            if hasattr(parsed_data, 'model_dump'):
-                                data_dict = parsed_data.model_dump()
-                            elif hasattr(parsed_data, 'dict'):
-                                data_dict = parsed_data.dict()
-                            else:
-                                data_dict = parsed_data
-                            return {
-                                "service": "perplexity",
-                                "status": "success",
-                                "data": data_dict
-                            }
-                        except Exception as e:
-                            logger.error(f"LangChain JSON 파싱 실패: {e}")
-                            logger.error(f"파싱 실패한 원본 내용 (처음 1000자): {content[:1000]}")
-                            # 폴백: 수동 파싱 시도
-                            try:
-                                logger.info("폴백 파싱 시도 중...")
-                                if content.startswith("```json"):
-                                    content = content.replace("```json", "").replace("```", "").strip()
-                                    logger.info("JSON 마크다운 블록 제거")
-
-                                raw_data = json.loads(content)
-                                logger.info(f"JSON 파싱 성공, keys: {raw_data.keys()}")
-
-                                # Perplexity 응답 필드명을 우리 모델에 맞게 변환
-                                # url -> news_url, content -> text
-                                if "articles" in raw_data:
-                                    for article in raw_data["articles"]:
-                                        if "url" in article and "news_url" not in article:
-                                            article["news_url"] = article.pop("url")
-                                        if "content" in article and "text" not in article:
-                                            article["text"] = article.pop("content")
-                                    logger.info(f"필드 매핑 완료: url->news_url, content->text")
-
-                                news_data = NewsData(**raw_data)
-                                logger.info(f"Pydantic 변환 성공, 기사 개수: {len(news_data.articles)}")
-                                if len(news_data.articles) == 0:
-                                    return {
-                                        "error": "NO_ARTICLES",
-                                        "details": {
-                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
-                                        },
-                                    }
-                                return {
-                                    "service": "perplexity",
-                                    "status": "success",
-                                    "data": news_data.model_dump()
-                                }
-                            except Exception as fallback_error:
-                                logger.error(f"폴백 파싱도 실패: {fallback_error}")
-                                return {
-                                    "error": "JSON 파싱 실패",
-                                    "raw_content": content,
-                                    "langchain_error": str(e),
-                                    "fallback_error": str(fallback_error)
-                                }
                 except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.HTTPStatusError) as e:
                     logger.warning(f"Perplexity 크롤링 시도 {attempt}/{max_retries} 실패: {type(e).__name__}: {e}")
                     if attempt == max_retries:
