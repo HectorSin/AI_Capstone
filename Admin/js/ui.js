@@ -98,45 +98,5 @@ function renderTopicDetails(topic) {
         <h3>Related Articles</h3>
         <div id="topic-articles-list">Loading related articles...</div>
     `;
-}
-
-function renderTopicArticles(articles) {
-    const articlesContainer = document.getElementById('topic-articles-list');
-    if (!articlesContainer) return;
-
-    if (!articles || articles.length === 0) {
-        articlesContainer.innerHTML = '<p>No articles found for this topic.</p>';
-        return;
-    }
-
-    const articleRows = articles.map(article => `
-        <tr>
-            <td>${article.title}</td>
-            <td>${article.status}</td>
-            <td>${article.date ? new Date(article.date).toLocaleDateString() : 'N/A'}</td>
-            <td>${new Date(article.created_at).toLocaleDateString()}</td>
-            <td>
-                ${article.source_url
-                    ? `<a href="${article.source_url}" target="_blank">Source</a>`
-                    : 'N/A'}
-            </td>
-        </tr>
-    `).join('');
-
-    articlesContainer.innerHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Article Date</th>
-                    <th>Created At</th>
-                    <th>Source</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${articleRows}
-            </tbody>
-        </table>
-    `;
+    // TODO: Fetch and render related articles for this topic
 }

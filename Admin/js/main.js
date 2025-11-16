@@ -25,10 +25,6 @@ window.loadTopicDetails = async (topicId) => {
     try {
         const topic = await fetchTopicDetails(topicId);
         renderTopicDetails(topic);
-
-        // Fetch and render articles for this topic
-        const articles = await fetchTopicArticles(topicId);
-        renderTopicArticles(articles);
     } catch (error) {
         console.error("Failed to load topic details:", error);
     }
