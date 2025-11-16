@@ -20,8 +20,11 @@ async def get_topics_list(
     db: AsyncSession = Depends(get_db),
     current_admin_user: models.AdminUser = Depends(get_current_admin_user)
 ):
-    # AsyncSession 비동기 쿼리로 수정
-    stmt = select(Topic).order_by(Topic.created_at.desc())
+    # AsyncSession 비동기 쿼리로 수정 (relationships 포함)
+    stmt = select(Topic).options(
+        selectinload(Topic.sources),
+        selectinload(Topic.articles)
+    ).order_by(Topic.created_at.desc())
     if name:
         stmt = stmt.where(Topic.name.ilike(f"%{name}%"))
 
@@ -36,8 +39,11 @@ async def get_topic_details(
     db: AsyncSession = Depends(get_db),
     current_admin_user: models.AdminUser = Depends(get_current_admin_user)
 ):
-    # AsyncSession 비동기 쿼리로 수정
-    stmt = select(Topic).where(Topic.id == topic_id)
+    # AsyncSession 비동기 쿼리로 수정 (relationships 포함)
+    stmt = select(Topic).options(
+        selectinload(Topic.sources),
+        selectinload(Topic.articles)
+    ).where(Topic.id == topic_id)
     result = await db.execute(stmt)
     topic = result.scalars().first()
 
