@@ -126,8 +126,26 @@ class PromptManager:
         • Verify that URLs lead to actual article content, not login pages or error pages
         • Prioritize open-access sources and free technical publications
 
-        OUTPUT:
-        Return ONLY valid JSON with Korean translations. No explanations or markdown.
+        OUTPUT FORMAT:
+        Return ONLY valid JSON. No explanations or markdown.
+
+        JSON Schema:
+        {{
+            "articles": [
+                {{
+                    "url": "article URL",
+                    "title": "기사 제목 (반드시 한글로 번역)",
+                    "text": "article content",
+                    "date": "YYYY-MM-DD"
+                }}
+            ]
+        }}
+
+        TRANSLATION REQUIREMENTS:
+        • "title" field MUST be in Korean (한글)
+        • Translate English titles to natural Korean
+        • Keep technical terms in English if commonly used (e.g., AI, API, GitHub)
+        • "text" field can remain in original language
 
         QUALITY STANDARDS:
         • Collect maximum number of relevant articles available
