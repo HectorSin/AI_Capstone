@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.database import get_db, AsyncSessionLocal
 from app.database import models
 from app import schemas
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_admin_user
 from app.services.topic_service import TopicService
 from app.config import settings
 
@@ -188,11 +188,14 @@ async def create_ai_podcast_test(
 async def create_ai_podcast(
     podcast_data: schemas.PodcastCreate,
     background_tasks: BackgroundTasks,
-    current_user: models.User = Depends(get_current_user),
+    # TODO: 테스트 후 관리자 인증 활성화
+    # current_admin: models.AdminUser = Depends(get_current_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     AI 팟캐스트를 생성합니다. (여러 기사를 각각 난이도별로 생성)
+
+    **임시**: 관리자 인증 비활성화 (테스트용)
 
     프로세스:
     1. Topic 찾기 또는 생성
