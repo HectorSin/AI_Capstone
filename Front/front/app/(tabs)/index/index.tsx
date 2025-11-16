@@ -1,4 +1,4 @@
-import { SectionList, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { SectionList, StyleSheet, Text, View, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 
@@ -16,11 +16,16 @@ export default function HomeScreen() {
   const router = useRouter();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadFeed = useCallback(async () => {
+  const loadFeed = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       const response = await getArticleFeed(0, 20);
       setFeedItems(response.items);
@@ -30,9 +35,17 @@ export default function HomeScreen() {
       // 에러 발생 시 빈 배열로 설정 (fallback)
       setFeedItems([]);
     } finally {
-      setIsLoading(false);
+      if (isRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    loadFeed(true);
+  }, [loadFeed]);
 
   useEffect(() => {
     loadFeed();
@@ -114,6 +127,14 @@ export default function HomeScreen() {
         stickySectionHeadersEnabled
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2563eb"
+            colors={['#2563eb']}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>아직 피드가 없습니다</Text>

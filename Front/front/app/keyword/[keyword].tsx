@@ -10,6 +10,7 @@ import {
   Text,
   View,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 
 import { FeedCard } from '@/components/FeedCard';
@@ -24,6 +25,7 @@ export default function KeywordScreen() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [keywordItems, setKeywordItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const keywordText = typeof keyword === 'string' ? keyword : 'Unknown';
@@ -31,14 +33,18 @@ export default function KeywordScreen() {
   const leadItem = keywordItems[0];
   const avatarSource = { uri: leadItem?.imageUri ?? DEFAULT_AVATAR };
 
-  const loadArticles = useCallback(async () => {
+  const loadArticles = useCallback(async (isRefresh = false) => {
     if (!keywordText) {
       setIsLoading(false);
       return;
     }
 
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       const response = await getArticlesByKeyword(keywordText, 0, 50);
       setKeywordItems(response.items);
@@ -47,9 +53,17 @@ export default function KeywordScreen() {
       setError(err instanceof Error ? err.message : 'Article을 불러올 수 없습니다');
       setKeywordItems([]);
     } finally {
-      setIsLoading(false);
+      if (isRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, [keywordText]);
+
+  const handleRefresh = useCallback(() => {
+    loadArticles(true);
+  }, [loadArticles]);
 
   useEffect(() => {
     loadArticles();
@@ -122,7 +136,7 @@ export default function KeywordScreen() {
             <View style={styles.errorContainer}>
               <Text style={styles.errorTitle}>Article을 불러올 수 없습니다</Text>
               <Text style={styles.errorMessage}>{error}</Text>
-              <Text style={styles.errorHint} onPress={loadArticles}>
+              <Text style={styles.errorHint} onPress={() => loadArticles()}>
                 다시 시도
               </Text>
             </View>
@@ -140,6 +154,14 @@ export default function KeywordScreen() {
         }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2563eb"
+            colors={['#2563eb']}
+          />
+        }
       />
     </SafeAreaView>
   );

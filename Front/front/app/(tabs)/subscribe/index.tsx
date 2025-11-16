@@ -1,4 +1,4 @@
-import { SectionList, StyleSheet, Text, View, Pressable, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { SectionList, StyleSheet, Text, View, Pressable, Image, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
@@ -31,6 +31,7 @@ export default function SubscribeScreen() {
   const [selectedKeyword, setSelectedKeyword] = useState<string>('전체');
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 키워드 옵션 생성 (피드 아이템에서 추출)
@@ -55,7 +56,7 @@ export default function SubscribeScreen() {
 
   const sections = useMemo(() => groupFeedByDate(filteredItems), [filteredItems]);
 
-  const loadFeed = useCallback(async () => {
+  const loadFeed = useCallback(async (isRefresh = false) => {
     if (!token) {
       setError('로그인이 필요합니다');
       setIsLoading(false);
@@ -63,7 +64,11 @@ export default function SubscribeScreen() {
     }
 
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
       const response = await getSubscribedArticles(token, 0, 100); // 충분한 개수 로드
       setFeedItems(response.items);
@@ -72,9 +77,17 @@ export default function SubscribeScreen() {
       setError(err instanceof Error ? err.message : '피드를 불러올 수 없습니다');
       setFeedItems([]);
     } finally {
-      setIsLoading(false);
+      if (isRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, [token]);
+
+  const handleRefresh = useCallback(() => {
+    loadFeed(true);
+  }, [loadFeed]);
 
   useEffect(() => {
     loadFeed();
@@ -182,6 +195,14 @@ export default function SubscribeScreen() {
         stickySectionHeadersEnabled
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2563eb"
+            colors={['#2563eb']}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>해당 키워드의 새 소식이 없어요</Text>
