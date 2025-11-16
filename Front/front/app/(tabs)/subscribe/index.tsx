@@ -28,31 +28,31 @@ const groupFeedByDate = (items: FeedItem[]): FeedSection[] =>
 export default function SubscribeScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const [selectedKeyword, setSelectedKeyword] = useState<string>('전체');
+  const [selectedTopic, setSelectedTopic] = useState<string>('전체');
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 키워드 옵션 생성 (피드 아이템에서 추출)
-  const keywordAvatars: Record<string, string> = useMemo(() => {
+  // 토픽 옵션 생성 (피드 아이템에서 추출)
+  const topicAvatars: Record<string, string> = useMemo(() => {
     return feedItems.reduce((acc, item) => {
-      if (!acc[item.keyword]) {
-        acc[item.keyword] = item.imageUri;
+      if (!acc[item.topic]) {
+        acc[item.topic] = item.imageUri;
       }
       return acc;
     }, {} as Record<string, string>);
   }, [feedItems]);
 
-  const keywordOptions = useMemo(() => ['전체', ...Object.keys(keywordAvatars)], [keywordAvatars]);
+  const topicOptions = useMemo(() => ['전체', ...Object.keys(topicAvatars)], [topicAvatars]);
 
-  // 키워드 필터링
+  // 토픽 필터링
   const filteredItems = useMemo(() => {
-    if (selectedKeyword === '전체') {
+    if (selectedTopic === '전체') {
       return feedItems;
     }
-    return feedItems.filter((item) => item.keyword === selectedKeyword);
-  }, [selectedKeyword, feedItems]);
+    return feedItems.filter((item) => item.topic === selectedTopic);
+  }, [selectedTopic, feedItems]);
 
   const sections = useMemo(() => groupFeedByDate(filteredItems), [filteredItems]);
 
@@ -93,34 +93,34 @@ export default function SubscribeScreen() {
     loadFeed();
   }, [loadFeed]);
 
-  const handleKeywordPress = (keyword: string) => {
-    setSelectedKeyword(keyword);
+  const handleTopicPress = (topic: string) => {
+    setSelectedTopic(topic);
   };
 
-  const handleNavigateKeyword = (keyword: string) => {
-    router.push({ pathname: '/keyword/[keyword]', params: { keyword } });
+  const handleNavigateTopic = (topic: string) => {
+    router.push({ pathname: '/topic/[topic]', params: { topic } });
   };
 
-  const renderKeywordHeader = useCallback(
+  const renderTopicHeader = useCallback(
     () => (
-      <View style={styles.keywordHeader}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.keywordRow}>
-          {keywordOptions.map((keyword) => {
-            const isActive = keyword === selectedKeyword;
-            const avatarUri = keyword === '전체' ? DEFAULT_AVATAR : keywordAvatars[keyword] ?? DEFAULT_AVATAR;
+      <View style={styles.topicHeader}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topicRow}>
+          {topicOptions.map((topic) => {
+            const isActive = topic === selectedTopic;
+            const avatarUri = topic === '전체' ? DEFAULT_AVATAR : topicAvatars[topic] ?? DEFAULT_AVATAR;
             return (
               <Pressable
-                key={keyword}
-                onPress={() => handleKeywordPress(keyword)}
+                key={topic}
+                onPress={() => handleTopicPress(topic)}
                 style={({ pressed }) => [
-                  styles.keywordRadio,
-                  isActive && styles.keywordRadioActive,
-                  pressed && styles.keywordRadioPressed,
+                  styles.topicRadio,
+                  isActive && styles.topicRadioActive,
+                  pressed && styles.topicRadioPressed,
                 ]}
               >
-                <Image source={{ uri: avatarUri }} style={[styles.keywordAvatar, isActive && styles.keywordAvatarActive]} />
-                <Text style={[styles.keywordLabel, isActive && styles.keywordLabelActive]} numberOfLines={1}>
-                  {keyword}
+                <Image source={{ uri: avatarUri }} style={[styles.topicAvatar, isActive && styles.topicAvatarActive]} />
+                <Text style={[styles.topicLabel, isActive && styles.topicLabelActive]} numberOfLines={1}>
+                  {topic}
                 </Text>
               </Pressable>
             );
@@ -128,7 +128,7 @@ export default function SubscribeScreen() {
         </ScrollView>
       </View>
     ),
-    [selectedKeyword, keywordOptions, keywordAvatars]
+    [selectedTopic, topicOptions, topicAvatars]
   );
 
   const handleRenderSectionHeader = ({ section: { title } }: { section: FeedSection }) => (
@@ -144,7 +144,7 @@ export default function SubscribeScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        {renderKeywordHeader()}
+        {renderTopicHeader()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>구독 피드를 불러오는 중...</Text>
@@ -156,7 +156,7 @@ export default function SubscribeScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        {renderKeywordHeader()}
+        {renderTopicHeader()}
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>피드를 불러올 수 없습니다</Text>
           <Text style={styles.errorMessage}>{error}</Text>
@@ -170,7 +170,7 @@ export default function SubscribeScreen() {
 
   return (
     <View style={styles.container}>
-      {renderKeywordHeader()}
+      {renderTopicHeader()}
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -180,15 +180,15 @@ export default function SubscribeScreen() {
             title={item.title}
             summary={item.summary}
             imageUri={item.imageUri}
-            keyword={item.keyword}
+            topic={item.topic}
             onPressCard={() =>
               router.push({
                 pathname: '/article/[id]',
                 params: { id: item.id },
               })
             }
-            onPressImage={() => handleNavigateKeyword(item.keyword)}
-            onPressKeyword={() => handleNavigateKeyword(item.keyword)}
+            onPressImage={() => handleNavigateTopic(item.topic)}
+            onPressTopic={() => handleNavigateTopic(item.topic)}
             showDate={false}
           />
         )}
@@ -205,8 +205,8 @@ export default function SubscribeScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>해당 키워드의 새 소식이 없어요</Text>
-            <Text style={styles.emptyBody}>관심 있는 키워드를 팔로우하면 이곳에서 최신 업데이트를 볼 수 있어요.</Text>
+            <Text style={styles.emptyTitle}>해당 토픽의 새 소식이 없어요</Text>
+            <Text style={styles.emptyBody}>관심 있는 토픽을 구독하면 이곳에서 최신 업데이트를 볼 수 있어요.</Text>
           </View>
         }
       />
@@ -219,45 +219,45 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  keywordHeader: {
+  topicHeader: {
     backgroundColor: '#ffffff',
   },
   sectionWrapper: {
     backgroundColor: '#ffffff',
   },
-  keywordRow: {
+  topicRow: {
     paddingHorizontal: 20,
     paddingBottom: 8,
     gap: 16,
   },
-  keywordRadio: {
+  topicRadio: {
     alignItems: 'center',
     width: 72,
     gap: 6,
     opacity: 0.75,
   },
-  keywordRadioActive: {
+  topicRadioActive: {
     opacity: 1,
   },
-  keywordRadioPressed: {
+  topicRadioPressed: {
     opacity: 0.6,
   },
-  keywordAvatar: {
+  topicAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: '#e5e7eb',
   },
-  keywordAvatarActive: {
+  topicAvatarActive: {
     borderWidth: 2,
     borderColor: '#2563eb',
   },
-  keywordLabel: {
+  topicLabel: {
     fontSize: 12,
     color: '#6b7280',
     textAlign: 'center',
   },
-  keywordLabelActive: {
+  topicLabelActive: {
     color: '#111827',
     fontWeight: '600',
   },

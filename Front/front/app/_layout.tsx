@@ -20,7 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="article/[id]" />
-          <Stack.Screen name="keyword/[keyword]" />
+          <Stack.Screen name="topic/[topic]" />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

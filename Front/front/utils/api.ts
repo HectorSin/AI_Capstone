@@ -162,15 +162,15 @@ export async function getArticleById(articleId: string): Promise<FeedItem> {
 }
 
 /**
- * Keyword(Topic) 기반 Article 조회
+ * Topic 기반 Article 조회
  */
-export async function getArticlesByKeyword(
-  keyword: string,
+export async function getArticlesByTopic(
+  topicName: string,
   skip: number = 0,
   limit: number = 20
 ): Promise<ArticleFeedResponse> {
   const response = await fetch(
-    `${API_BASE_URL}/topics/by-name/${encodeURIComponent(keyword)}/articles?skip=${skip}&limit=${limit}`,
+    `${API_BASE_URL}/topics/by-name/${encodeURIComponent(topicName)}/articles?skip=${skip}&limit=${limit}`,
     {
       method: 'GET',
       headers: {
@@ -180,8 +180,67 @@ export async function getArticlesByKeyword(
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch articles by keyword: ${response.status}`);
+    throw new Error(`Failed to fetch articles by topic: ${response.status}`);
   }
 
   return response.json();
+}
+
+// ============================================================
+// Topic 구독 관리 API
+// ============================================================
+
+import type { Topic } from '@/types';
+
+/**
+ * 내가 구독 중인 토픽 목록 조회
+ */
+export async function getMyTopics(token: string): Promise<Topic[]> {
+  const response = await fetch(`${API_BASE_URL}/users/me/topics`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch my topics: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * 토픽 구독 추가
+ */
+export async function subscribeTopic(token: string, topicId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/users/me/topics/${topicId}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to subscribe topic: ${response.status}`);
+  }
+}
+
+/**
+ * 토픽 구독 취소
+ */
+export async function unsubscribeTopic(token: string, topicId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/users/me/topics/${topicId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to unsubscribe topic: ${response.status}`);
+  }
 }

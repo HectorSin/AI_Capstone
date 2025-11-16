@@ -8,7 +8,11 @@ import {
   updateNotificationPreference as updateNotificationPreferenceApi,
   NotificationPreferenceDTO,
   NotificationPreferenceUpdatePayload,
+  getMyTopics,
+  subscribeTopic as subscribeTopicApi,
+  unsubscribeTopic as unsubscribeTopicApi,
 } from '@/utils/api';
+import type { Topic } from '@/types';
 
 type Credentials = {
   email: string;
@@ -56,6 +60,7 @@ type AuthContextValue = {
   user: AuthenticatedUser | null;
   token: string | null;
   notificationPreference: NotificationPreferenceState | null;
+  subscribedTopics: Topic[];
   signIn: (credentials: Credentials) => Promise<boolean>;
   signUp: (payload: RegisterPayload) => Promise<boolean>;
   signOut: () => Promise<void>;
@@ -64,6 +69,10 @@ type AuthContextValue = {
   refreshNotificationPreference: () => Promise<void>;
   updateNotificationPreference: (input: NotificationPreferenceInput) => Promise<boolean>;
   updateDifficulty: (difficulty: 'beginner' | 'intermediate' | 'advanced') => Promise<boolean>;
+  refreshSubscribedTopics: () => Promise<void>;
+  subscribeTopic: (topicId: string) => Promise<boolean>;
+  unsubscribeTopic: (topicId: string) => Promise<boolean>;
+  isTopicSubscribed: (topicId: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -102,6 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [notificationPreference, setNotificationPreference] = useState<NotificationPreferenceState | null>(null);
+  const [subscribedTopics, setSubscribedTopics] = useState<Topic[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const fetchProfile = useCallback(async (accessToken: string) => {
@@ -144,6 +154,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.warn('[Auth] fetchNotificationPreference failed', error);
         setNotificationPreference(null);
         return null;
+      }
+    },
+    []
+  );
+
+  const fetchAndStoreSubscribedTopics = useCallback(
+    async (accessToken: string) => {
+      try {
+        const topics = await getMyTopics(accessToken);
+        setSubscribedTopics(topics);
+        return topics;
+      } catch (error) {
+        console.warn('[Auth] fetchSubscribedTopics failed', error);
+        setSubscribedTopics([]);
+        return [];
       }
     },
     []
@@ -240,6 +265,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await persistToken(accessToken);
         await fetchProfile(accessToken);
         const pref = await fetchAndStorePreference(accessToken);
+        await fetchAndStoreSubscribedTopics(accessToken);
         maybePromptNotificationConsent(pref, accessToken);
         return true;
       } catch (error) {
@@ -300,6 +326,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await persistToken(null);
     setUser(null);
     setNotificationPreference(null);
+    setSubscribedTopics([]);
   }, [persistToken]);
 
   const deleteAccount = useCallback(async () => {
@@ -338,6 +365,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!token) return;
     await fetchAndStorePreference(token);
   }, [fetchAndStorePreference, token]);
+
+  const refreshSubscribedTopics = useCallback(async () => {
+    if (!token) return;
+    await fetchAndStoreSubscribedTopics(token);
+  }, [fetchAndStoreSubscribedTopics, token]);
+
+  const subscribeTopic = useCallback(
+    async (topicId: string) => {
+      if (!token) {
+        return false;
+      }
+
+      try {
+        await subscribeTopicApi(token, topicId);
+        await fetchAndStoreSubscribedTopics(token);
+        return true;
+      } catch (error) {
+        console.warn('[Auth] subscribeTopic error', error);
+        return false;
+      }
+    },
+    [fetchAndStoreSubscribedTopics, token]
+  );
+
+  const unsubscribeTopic = useCallback(
+    async (topicId: string) => {
+      if (!token) {
+        return false;
+      }
+
+      try {
+        await unsubscribeTopicApi(token, topicId);
+        await fetchAndStoreSubscribedTopics(token);
+        return true;
+      } catch (error) {
+        console.warn('[Auth] unsubscribeTopic error', error);
+        return false;
+      }
+    },
+    [fetchAndStoreSubscribedTopics, token]
+  );
+
+  const isTopicSubscribed = useCallback(
+    (topicId: string) => {
+      return subscribedTopics.some((topic) => topic.id === topicId);
+    },
+    [subscribedTopics]
+  );
 
   const updateNotificationPreference = useCallback(
     async (input: NotificationPreferenceInput) => {
@@ -408,6 +483,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setToken(storedToken);
           await fetchProfile(storedToken);
           await fetchAndStorePreference(storedToken);
+          await fetchAndStoreSubscribedTopics(storedToken);
         }
       } catch (error) {
         console.warn('[Auth] failed to hydrate token', error);
@@ -415,7 +491,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsHydrated(true);
       }
     })();
-  }, [fetchAndStorePreference, fetchProfile]);
+  }, [fetchAndStorePreference, fetchAndStoreSubscribedTopics, fetchProfile]);
 
   const value = useMemo(
     () => ({
@@ -423,6 +499,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       token,
       notificationPreference,
+      subscribedTopics,
       signIn,
       signUp,
       signOut,
@@ -431,11 +508,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshNotificationPreference,
       updateNotificationPreference,
       updateDifficulty,
+      refreshSubscribedTopics,
+      subscribeTopic,
+      unsubscribeTopic,
+      isTopicSubscribed,
     }),
     [
       token,
       user,
       notificationPreference,
+      subscribedTopics,
       signIn,
       signUp,
       signOut,
@@ -444,6 +526,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshNotificationPreference,
       updateNotificationPreference,
       updateDifficulty,
+      refreshSubscribedTopics,
+      subscribeTopic,
+      unsubscribeTopic,
+      isTopicSubscribed,
     ]
   );
 

@@ -107,15 +107,15 @@ export default function ArticleScreen() {
       <View style={styles.content}>
         <ArticleDetail
           title={feedItem.title}
-          keyword={feedItem.keyword}
+          topic={feedItem.topic}
           imageUri={feedItem.imageUri}
           summary={feedItem.summary}
           content={feedItem.content}
           date={feedItem.date}
-          onPressKeyword={() =>
+          onPressTopic={() =>
             router.push({
-              pathname: '/keyword/[keyword]',
-              params: { keyword: feedItem.keyword },
+              pathname: '/topic/[topic]',
+              params: { topic: feedItem.topic },
             })
           }
         />

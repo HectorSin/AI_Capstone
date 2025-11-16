@@ -61,10 +61,10 @@ export default function HomeScreen() {
     return sections;
   }, []);
 
-  const navigateToKeyword = (keyword: string) => {
+  const navigateToTopic = (topic: string) => {
     router.push({
-      pathname: '/keyword/[keyword]',
-      params: { keyword },
+      pathname: '/topic/[topic]',
+      params: { topic },
     });
   };
 
@@ -106,15 +106,15 @@ export default function HomeScreen() {
             title={item.title}
             summary={item.summary}
             imageUri={item.imageUri}
-            keyword={item.keyword}
+            topic={item.topic}
             onPressCard={() =>
               router.push({
                 pathname: '/article/[id]',
                 params: { id: item.id },
               })
             }
-            onPressImage={() => navigateToKeyword(item.keyword)}
-            onPressKeyword={() => navigateToKeyword(item.keyword)}
+            onPressImage={() => navigateToTopic(item.topic)}
+            onPressTopic={() => navigateToTopic(item.topic)}
           />
         )}
         renderSectionHeader={({ section: { title } }) => (

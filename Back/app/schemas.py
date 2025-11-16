@@ -220,7 +220,8 @@ class ArticleFeedItem(BaseModel):
     summary: str
     content: str
     imageUri: str  # topic.image_uri
-    keyword: str   # topic.name
+    topic: str     # topic.name
+    topicId: Optional[UUID] = None  # topic.id
 
     @classmethod
     def from_article(cls, article, topic) -> "ArticleFeedItem":
@@ -245,7 +246,8 @@ class ArticleFeedItem(BaseModel):
             summary=feed_summary,
             content=article_content,
             imageUri=topic.image_uri,
-            keyword=topic.name
+            topic=topic.name,
+            topicId=topic.id
         )
 
 
