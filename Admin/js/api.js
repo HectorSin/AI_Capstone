@@ -2,24 +2,14 @@
 const API_BASE_URL = '/api/v1/admin';
 
 function getAuthHeaders() {
-    const token = localStorage.getItem('admin_token');
-    // if (!token) {
-    //     window.location.href = 'login.html';
-    //     throw new Error('No authentication token found');
-    // }
-    return {
-        'Authorization': `Bearer ${token || ''}`
-    };
+    // Authentication disabled for development
+    return {};
 }
 
 async function handleApiResponse(response) {
-    // if (response.status === 401) {
-    //     localStorage.removeItem('admin_token');
-    //     window.location.href = 'login.html';
-    //     throw new Error('Unauthorized');
-    // }
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`API request failed with status: ${response.status}`);
+        return null;
     }
     return await response.json();
 }
