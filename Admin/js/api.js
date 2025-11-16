@@ -47,7 +47,7 @@ async function fetchRecentArticles(limit = 5) {
 
 async function fetchTopics(skip = 0, limit = 10, name = '') {
     try {
-        let url = `${API_BASE_URL}/topics?skip=${skip}&limit=${limit}`;
+        let url = `${API_BASE_URL}/topics/?skip=${skip}&limit=${limit}`;
         if (name) {
             url += `&name=${encodeURIComponent(name)}`;
         }
@@ -64,10 +64,20 @@ async function fetchTopics(skip = 0, limit = 10, name = '') {
 
 async function fetchTopicDetails(topicId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, { headers: getAuthHeaders() });
         return handleApiResponse(response);
     } catch (error) {
         console.error(`Error fetching topic details for ${topicId}:`, error);
         return null;
+    }
+}
+
+async function fetchTopicArticles(topicId, skip = 0, limit = 20) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/articles/?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error fetching articles for topic ${topicId}:`, error);
+        return [];
     }
 }
