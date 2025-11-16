@@ -459,7 +459,7 @@ class PodcastService:
             crawler = WebCrawlerService()
 
             for idx, article_meta in enumerate(articles):
-                news_url = article_meta.get('news_url', '')
+                news_url = article_meta.get('url', '') or article_meta.get('news_url', '')  # Perplexity는 'url', 이전 코드는 'news_url' 사용
                 article_title = article_meta.get('title', 'Untitled')
                 article_date = article_meta.get('date', datetime.now().strftime('%Y-%m-%d'))
 
