@@ -1,5 +1,6 @@
 // Functions for communicating with the backend API
-const API_BASE_URL = '/api/v1/admin';
+// 현재 호스트의 8001 포트 사용 (Nginx를 통해 프록시됨)
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8001/api/v1/admin`;
 
 function getAuthHeaders() {
     const token = localStorage.getItem('admin_token');
