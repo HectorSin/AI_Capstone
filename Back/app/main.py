@@ -73,7 +73,8 @@ app = FastAPI(
     title="AI Podcast Generator API",
     description="AI가 URL을 분석하여 팟캐스트를 생성하는 API",
     version="1.0.0",
-    debug=settings.debug
+    debug=settings.debug,
+    redirect_slashes=False  # trailing slash 자동 리디렉트 비활성화
 )
 
 # CORS 미들웨어 설정
