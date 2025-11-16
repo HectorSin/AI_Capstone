@@ -179,7 +179,7 @@ class Article(ArticleBase):
 class DifficultyAudioInfo(BaseModel):
     """난이도별 오디오 정보"""
     audio_file: Optional[str] = None
-    duration: Optional[int] = None
+    duration: Optional[float] = None
 
 
 class ArticlePodcastResponse(BaseModel):
