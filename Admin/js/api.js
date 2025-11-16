@@ -51,8 +51,11 @@ async function fetchTopics(skip = 0, limit = 10, name = '') {
         if (name) {
             url += `&name=${encodeURIComponent(name)}`;
         }
+        console.log('Fetching topics from:', url);
         const response = await fetch(url, { headers: getAuthHeaders() });
-        return handleApiResponse(response);
+        const data = await handleApiResponse(response);
+        console.log('Topics response:', data);
+        return data;
     } catch (error) {
         console.error('Error fetching topics:', error);
         return [];
