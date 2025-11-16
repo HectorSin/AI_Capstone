@@ -222,6 +222,17 @@ class PerplexityService(AIService):
 
                                 raw_data = json.loads(content)
                                 logger.info(f"JSON 파싱 성공, keys: {raw_data.keys()}")
+
+                                # Perplexity 응답 필드명을 우리 모델에 맞게 변환
+                                # url -> news_url, content -> text
+                                if "articles" in raw_data:
+                                    for article in raw_data["articles"]:
+                                        if "url" in article and "news_url" not in article:
+                                            article["news_url"] = article.pop("url")
+                                        if "content" in article and "text" not in article:
+                                            article["text"] = article.pop("content")
+                                    logger.info(f"필드 매핑 완료: url->news_url, content->text")
+
                                 news_data = NewsData(**raw_data)
                                 logger.info(f"Pydantic 변환 성공, 기사 개수: {len(news_data.articles)}")
                                 if len(news_data.articles) == 0:
