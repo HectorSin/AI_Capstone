@@ -179,10 +179,38 @@ class PerplexityService(AIService):
 
                         logger.info(f"Perplexity 원본 응답 (처음 500자): {content[:500]}")
 
+                        # JSON 마크다운 블록 제거
+                        if content.startswith("```json"):
+                            content = content.replace("```json", "").replace("```", "").strip()
+                            logger.info("JSON 마크다운 블록 제거")
+
+                        # 필드 매핑: Perplexity 응답을 우리 모델에 맞게 변환
+                        try:
+                            raw_data = json.loads(content)
+                            logger.info(f"JSON 파싱 성공, keys: {raw_data.keys()}")
+
+                            # url -> news_url, content -> text 변환
+                            if "articles" in raw_data:
+                                for article in raw_data["articles"]:
+                                    if "url" in article and "news_url" not in article:
+                                        article["news_url"] = article.pop("url")
+                                    if "content" in article and "text" not in article:
+                                        article["text"] = article.pop("content")
+                                logger.info(f"필드 매핑 완료: url->news_url, content->text (기사 {len(raw_data['articles'])}개)")
+
+                            # 매핑된 데이터를 JSON 문자열로 변환
+                            mapped_content = json.dumps(raw_data)
+                        except json.JSONDecodeError as je:
+                            logger.error(f"JSON 파싱 실패: {je}")
+                            return {
+                                "error": "JSON 파싱 실패",
+                                "raw_content": content[:1000]
+                            }
+
                         # LangChain JSON Output Parser 사용
                         try:
-                            parsed_data = self.json_parser.parse(content)
-                            logger.info(f"파싱 성공, 타입: {type(parsed_data)}")
+                            parsed_data = self.json_parser.parse(mapped_content)
+                            logger.info(f"LangChain 파싱 성공, 타입: {type(parsed_data)}")
                             # 기사 비어있음 처리
                             try:
                                 article_count = len(parsed_data.articles) if hasattr(parsed_data, 'articles') else 0
