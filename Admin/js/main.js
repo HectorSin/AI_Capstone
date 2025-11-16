@@ -38,10 +38,10 @@ window.logout = () => {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check for auth token on every page load except login page
-    // if (!localStorage.getItem('admin_token')) {
-    //     window.location.href = 'login.html';
-    //     return; // Stop further execution
-    // }
+    if (!localStorage.getItem('admin_token')) {
+        window.location.href = 'login.html';
+        return; // Stop further execution
+    }
 
     console.log('Admin page loaded');
 
