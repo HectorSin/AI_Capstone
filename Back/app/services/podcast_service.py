@@ -73,6 +73,35 @@ class PodcastService:
                 f.write(str(self._id_counter))
         except Exception as e:
             logger.error(f"ID 저장 실패: {e}")
+
+    def _load_topic_last_id(self, topic: str) -> int:
+        """토픽별 마지막 ID 로드"""
+        try:
+            topic_dir = os.path.join(self.base_storage_path, topic)
+            id_file = os.path.join(topic_dir, "last_id.txt")
+            if os.path.exists(id_file):
+                with open(id_file, 'r') as f:
+                    last_id = int(f.read().strip())
+                logger.info(f"토픽 '{topic}' 마지막 ID 로드: {last_id}")
+                return last_id
+            else:
+                logger.info(f"토픽 '{topic}' ID 카운터 초기화: 0")
+                return 0
+        except Exception as e:
+            logger.error(f"토픽 '{topic}' ID 로드 실패: {e}")
+            return 0
+
+    def _save_topic_last_id(self, topic: str, last_id: int):
+        """토픽별 마지막 ID 저장"""
+        try:
+            topic_dir = os.path.join(self.base_storage_path, topic)
+            os.makedirs(topic_dir, exist_ok=True)
+            id_file = os.path.join(topic_dir, "last_id.txt")
+            with open(id_file, 'w') as f:
+                f.write(str(last_id))
+            logger.info(f"토픽 '{topic}' 마지막 ID 저장: {last_id}")
+        except Exception as e:
+            logger.error(f"토픽 '{topic}' ID 저장 실패: {e}")
     
     def _generate_podcast_id(self) -> str:
         """새로운 팟캐스트 ID 생성 (5자리 숫자)"""
@@ -455,7 +484,11 @@ class PodcastService:
                 logger.warning("크롤링된 기사가 없습니다")
                 return []
 
-            # 2. 각 기사마다 독립적으로 처리
+            # 2. 토픽별 마지막 ID 로드
+            topic_last_id = self._load_topic_last_id(topic)
+            current_article_id = topic_last_id
+
+            # 3. 각 기사마다 독립적으로 처리
             crawler = WebCrawlerService()
 
             for idx, article_meta in enumerate(articles):
@@ -484,14 +517,14 @@ class PodcastService:
                 article_status = 'processing'
 
                 try:
-                    # 2-2. storage_path 설정 및 디렉토리 생성
-                    storage_path = os.path.join(self.base_storage_path, topic, f"article_{idx}")
+                    # 2-2. storage_path 설정 및 디렉토리 생성 (토픽별 연속 ID 사용)
+                    storage_path = os.path.join(self.base_storage_path, topic, f"article_{current_article_id}")
                     os.makedirs(storage_path, exist_ok=True)
-                    logger.info(f"Article {idx} 처리 시작: {article_title[:50]}...")
+                    logger.info(f"Article {current_article_id} (idx:{idx}) 처리 시작: {article_title[:50]}...")
 
                     # 메타데이터 생성 및 저장 (기존 create_podcast 방식)
                     metadata = {
-                        "article_id": f"article_{idx}",
+                        "article_id": f"article_{current_article_id}",
                         "topic": topic,
                         "title": article_title,
                         "date": article_date,
@@ -648,7 +681,7 @@ class PodcastService:
                         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
                     article_status = 'completed'
-                    logger.info(f"Article {idx} 처리 완료: {article_title[:50]}...")
+                    logger.info(f"Article {current_article_id} (idx:{idx}) 처리 완료: {article_title[:50]}...")
 
 
                 except Exception as e:
@@ -690,6 +723,12 @@ class PodcastService:
                     'storage_path': storage_path,
                     'error_message': error_message
                 })
+
+                # 2-8. ID 증가 (다음 기사를 위해)
+                current_article_id += 1
+
+            # 4. 토픽별 마지막 ID 저장
+            self._save_topic_last_id(topic, current_article_id)
 
             logger.info(f"토픽 '{topic}' 처리 완료: 총 {len(results)}개 (성공: {sum(1 for r in results if r['status'] == 'completed')}개)")
             return results
