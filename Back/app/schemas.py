@@ -277,6 +277,15 @@ class Topic(TopicBase):
         from_attributes = True
 
 
+# 관리자 페이지용 간단한 Topic 응답 (순환 참조 방지)
+class TopicAdmin(TopicBase):
+    id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class User(UserBase):
     id: UUID
     created_at: datetime
