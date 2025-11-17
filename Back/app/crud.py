@@ -1,8 +1,8 @@
 import re
 import secrets
 
-from datetime import time
-from typing import List, Optional, Sequence
+from datetime import date, time
+from typing import List, Optional, Sequence, Tuple
 from uuid import UUID
 
 from sqlalchemy import select
@@ -501,6 +501,34 @@ async def get_articles_by_user_topics(
 
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def list_articles_with_audio_for_topics(
+    db: AsyncSession,
+    topic_ids: List[UUID],
+    start_date: date,
+    end_date: date,
+) -> List[Tuple[models.Article, models.Topic]]:
+    """
+    지정한 토픽들의 기사 중 날짜 범위에 속하며 오디오가 포함된 데이터를 조회합니다.
+    """
+    if not topic_ids:
+        return []
+
+    stmt = (
+        select(models.Article, models.Topic)
+        .join(models.Topic, models.Article.topic_id == models.Topic.id)
+        .where(
+            models.Article.topic_id.in_(topic_ids),
+            models.Article.date >= start_date,
+            models.Article.date <= end_date,
+            models.Article.status == 'completed',
+        )
+        .order_by(models.Article.date.desc(), models.Article.created_at.desc())
+    )
+
+    result = await db.execute(stmt)
+    return list(result.all())
 
 
 async def get_articles_by_topic(

@@ -11,6 +11,7 @@ import {
   getMyTopics,
   subscribeTopic as subscribeTopicApi,
   unsubscribeTopic as unsubscribeTopicApi,
+  registerAuthTokenLoader,
 } from '@/utils/api';
 import type { Topic } from '@/types';
 
@@ -521,6 +522,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     })();
   }, [fetchAndStorePreference, fetchAndStoreSubscribedTopics, fetchProfile]);
+
+  useEffect(() => {
+    registerAuthTokenLoader(async () => token);
+  }, [token]);
 
   const value = useMemo(
     () => ({

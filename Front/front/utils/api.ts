@@ -1,5 +1,16 @@
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://35.216.97.52:8000';
 
+let authTokenLoader: (() => Promise<string | null>) | null = null;
+
+export function registerAuthTokenLoader(loader: () => Promise<string | null>) {
+  authTokenLoader = loader;
+}
+
+async function getAuthToken(): Promise<string | null> {
+  if (!authTokenLoader) return null;
+  return authTokenLoader();
+}
+
 export async function checkAvailability(
   endpoint: 'check-email' | 'check-nickname',
   value: string,
@@ -212,6 +223,7 @@ export async function getArticlesByTopic(
 // ============================================================
 
 import type { Topic } from '@/types';
+import type { DailyPodcastSummary } from '@/types/podcast';
 
 /**
  * 내가 구독 중인 토픽 목록 조회
@@ -311,4 +323,29 @@ export async function unsubscribeTopic(token: string, topicId: string): Promise<
   }
 
   console.log('[API] unsubscribeTopic success');
+}
+
+// ============================================================
+// Podcasts / Archive API
+// ============================================================
+export async function getDailyPodcasts(startDate?: string, endDate?: string): Promise<DailyPodcastSummary[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  const query = params.toString();
+  const url = `${API_BASE_URL}/podcasts/daily${query ? `?${query}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${await getAuthToken()}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch daily podcasts: ${response.status}`);
+  }
+
+  return response.json();
 }

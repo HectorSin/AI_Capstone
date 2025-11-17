@@ -298,6 +298,27 @@ class UserTopicLink(BaseModel):
         from_attributes = True
 
 
+# ==========================================================
+# Archive / Podcast 요약 스키마
+# ==========================================================
+class PodcastSegment(BaseModel):
+    article_id: UUID
+    topic_id: UUID
+    topic_name: str
+    title: str
+    audio_url: str
+    duration_seconds: float
+    source_url: Optional[str] = None
+
+
+class DailyPodcastSummary(BaseModel):
+    date: date
+    article_count: int
+    total_duration_seconds: float
+    topics: List[str]
+    segments: List[PodcastSegment]
+
+
 class SelectTopicRequest(BaseModel):
     topic_id: UUID
 
