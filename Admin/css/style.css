@@ -197,16 +197,19 @@ td a:hover {
     margin-top: 0;
 }
 
+/* 행 선택 스타일 개선 */
+.topic-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
 .topic-row.selected {
-    background-color: #e3f2fd;
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #3498db;
 }
 
-.button-danger {
-    background-color: #e74c3c;
-}
-
-.button-danger:hover {
-    background-color: #c0392b;
+.topic-row.selected:hover {
+    background-color: #bbdefb !important;
 }
 
 /* Topic Details Styles */
@@ -231,9 +234,40 @@ button {
     cursor: pointer;
     font-size: 1rem;
     margin-top: 1rem;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
     background-color: #2980b9;
+}
+
+button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 버튼 색상 클래스 */
+.button-success {
+    background-color: #27ae60;
+}
+
+.button-success:hover:not(:disabled) {
+    background-color: #229954;
+}
+
+.button-primary {
+    background-color: #3498db;
+}
+
+.button-primary:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+.button-danger {
+    background-color: #e74c3c;
+}
+
+.button-danger:hover:not(:disabled) {
+    background-color: #c0392b;
 }

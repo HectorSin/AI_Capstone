@@ -64,19 +64,19 @@ function renderTopics(topics, title = 'Topics', options = {}) {
             <td>${topic.summary || 'N/A'}</td>
             <td>
                 ${topic.image_uri
-                    ? `<a href="${topic.image_uri}" target="_blank" rel="noopener noreferrer">View Image</a>`
+                    ? `<a href="${topic.image_uri}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View Image</a>`
                     : 'N/A'}
             </td>
             <td>${topic.keywords && topic.keywords.length ? topic.keywords.join(', ') : 'N/A'}</td>
             <td>${topic.created_at ? new Date(topic.created_at).toLocaleDateString() : 'N/A'}</td>
-            <td><a href="#" onclick="loadTopicDetails('${topic.id}')">View Details</a></td>
+            <td><a href="#" onclick="event.stopPropagation(); loadTopicDetails('${topic.id}'); return false;">View Details</a></td>
         </tr>
     `).join('');
 
     const toolbarHtml = showToolbar ? `
         <div class="topics-toolbar">
-            <button type="button" onclick="handleAddTopic()">추가</button>
-            <button type="button" onclick="handleEditTopic()">수정</button>
+            <button type="button" class="button-success" onclick="handleAddTopic()">추가</button>
+            <button type="button" id="topic-edit-btn" class="button-primary" onclick="handleEditTopic()" disabled>수정</button>
             <button type="button" id="topic-delete-btn" class="button-danger" onclick="handleDeleteTopic()" disabled>삭제</button>
         </div>
     ` : '';
@@ -151,7 +151,12 @@ function updateTopicRowSelection(container) {
 }
 
 function updateTopicActionButtons() {
+    const editButton = document.getElementById('topic-edit-btn');
     const deleteButton = document.getElementById('topic-delete-btn');
+
+    if (editButton) {
+        editButton.disabled = !selectedTopicId;
+    }
     if (deleteButton) {
         deleteButton.disabled = !selectedTopicId;
     }
