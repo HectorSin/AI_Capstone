@@ -47,7 +47,7 @@ async function fetchRecentArticles(limit = 5) {
 
 async function fetchTopics(skip = 0, limit = 10, name = '') {
     try {
-        let url = `${API_BASE_URL}/topics?skip=${skip}&limit=${limit}`;
+        let url = `${API_BASE_URL}/topics/?skip=${skip}&limit=${limit}`;
         if (name) {
             url += `&name=${encodeURIComponent(name)}`;
         }
@@ -64,7 +64,7 @@ async function fetchTopics(skip = 0, limit = 10, name = '') {
 
 async function fetchTopicDetails(topicId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, { headers: getAuthHeaders() });
         return handleApiResponse(response);
     } catch (error) {
         console.error(`Error fetching topic details for ${topicId}:`, error);
@@ -74,7 +74,7 @@ async function fetchTopicDetails(topicId) {
 
 async function fetchTopicArticles(topicId, skip = 0, limit = 20) {
     try {
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/articles?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/articles/?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
         return handleApiResponse(response);
     } catch (error) {
         console.error(`Error fetching articles for topic ${topicId}:`, error);
@@ -87,7 +87,7 @@ async function updateTopic(topicId, topicData) {
         const headers = getAuthHeaders();
         headers['Content-Type'] = 'application/json';
 
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, {
             method: 'PUT',
             headers: headers,
             body: JSON.stringify(topicData)
@@ -105,7 +105,7 @@ async function uploadTopicImage(topicId, imageFile) {
         const formData = new FormData();
         formData.append('file', imageFile);
 
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image`, {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
             method: 'POST',
             headers: headers,
             body: formData
@@ -121,7 +121,7 @@ async function deleteTopicImage(topicId) {
     try {
         const headers = getAuthHeaders();
 
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image`, {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
             method: 'DELETE',
             headers: headers
         });

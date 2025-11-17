@@ -101,7 +101,7 @@ async def get_topic_articles(
     return articles
 
 
-@router.put("/{topic_id}", response_model=TopicSchema, summary="토픽 정보 수정")
+@router.put("/{topic_id}/", response_model=TopicSchema, summary="토픽 정보 수정")
 async def update_topic(
     topic_id: UUID,
     topic_data: TopicBase,
@@ -121,7 +121,7 @@ async def update_topic(
     return updated_topic
 
 
-@router.post("/{topic_id}/image", summary="토픽 이미지 업로드")
+@router.post("/{topic_id}/image/", summary="토픽 이미지 업로드")
 async def upload_topic_image(
     topic_id: UUID,
     file: UploadFile = File(...),
@@ -169,7 +169,7 @@ async def upload_topic_image(
     return {"image_uri": image_uri, "filename": filename}
 
 
-@router.delete("/{topic_id}/image", summary="토픽 이미지 삭제")
+@router.delete("/{topic_id}/image/", summary="토픽 이미지 삭제")
 async def delete_topic_image(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
