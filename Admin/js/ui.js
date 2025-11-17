@@ -58,7 +58,14 @@ function renderTopics(topics, title = 'Topics') {
         <tr>
             <td>${topic.name}</td>
             <td>${topic.type}</td>
-            <td>${topic.keywords ? topic.keywords.join(', ') : 'N/A'}</td>
+            <td>${topic.summary || 'N/A'}</td>
+            <td>
+                ${topic.image_uri
+                    ? `<a href="${topic.image_uri}" target="_blank" rel="noopener noreferrer">View Image</a>`
+                    : 'N/A'}
+            </td>
+            <td>${topic.keywords && topic.keywords.length ? topic.keywords.join(', ') : 'N/A'}</td>
+            <td>${topic.created_at ? new Date(topic.created_at).toLocaleDateString() : 'N/A'}</td>
             <td><a href="#" onclick="loadTopicDetails('${topic.id}')">View Details</a></td>
         </tr>
     `).join('');
@@ -70,7 +77,10 @@ function renderTopics(topics, title = 'Topics') {
                 <tr>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Summary</th>
+                    <th>Image</th>
                     <th>Keywords</th>
+                    <th>Created</th>
                     <th>Actions</th>
                 </tr>
             </thead>
