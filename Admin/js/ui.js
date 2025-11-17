@@ -1,5 +1,7 @@
 // Functions for rendering data to the UI
 
+let selectedTopicId = null;
+
 function renderDashboard(stats) {
     const content = document.getElementById('content');
     if (!stats) {
@@ -47,7 +49,8 @@ function renderRecentArticles(articles) {
 }
 
 
-function renderTopics(topics, title = 'Topics') {
+function renderTopics(topics, title = 'Topics', options = {}) {
+    const { showToolbar = title === 'Topics' } = options;
     const content = document.getElementById('content');
     if (!topics || topics.length === 0) {
         content.innerHTML = `<h2>${title}</h2><p>No topics found.</p>`;
@@ -55,7 +58,7 @@ function renderTopics(topics, title = 'Topics') {
     }
 
     let tableRows = topics.map(topic => `
-        <tr>
+        <tr class="topic-row" data-topic-id="${topic.id}">
             <td>${topic.name}</td>
             <td>${topic.type}</td>
             <td>${topic.summary || 'N/A'}</td>
@@ -70,8 +73,17 @@ function renderTopics(topics, title = 'Topics') {
         </tr>
     `).join('');
 
+    const toolbarHtml = showToolbar ? `
+        <div class="topics-toolbar">
+            <button type="button" onclick="handleAddTopic()">추가</button>
+            <button type="button" onclick="handleEditTopic()">수정</button>
+            <button type="button" id="topic-delete-btn" class="button-danger" onclick="handleDeleteTopic()" disabled>삭제</button>
+        </div>
+    ` : '';
+
     content.innerHTML = `
         <h2>${title}</h2>
+        ${toolbarHtml}
         <table>
             <thead>
                 <tr>
@@ -89,6 +101,7 @@ function renderTopics(topics, title = 'Topics') {
             </tbody>
         </table>
     `;
+    setupTopicsInteractionsIfNeeded(showToolbar);
 }
 
 function renderTopicDetails(topic) {
@@ -110,3 +123,68 @@ function renderTopicDetails(topic) {
     `;
     // TODO: Fetch and render related articles for this topic
 }
+
+function initializeTopicTableInteractions(container) {
+    if (!container) {
+        return;
+    }
+    const rows = container.querySelectorAll('tbody tr.topic-row');
+    rows.forEach((row) => {
+        row.addEventListener('click', () => {
+            const topicId = row.dataset.topicId;
+            selectedTopicId = selectedTopicId === topicId ? null : topicId;
+            updateTopicRowSelection(container);
+            updateTopicActionButtons();
+        });
+    });
+    updateTopicActionButtons();
+}
+
+function updateTopicRowSelection(container) {
+    if (!container) {
+        return;
+    }
+    const rows = container.querySelectorAll('tbody tr.topic-row');
+    rows.forEach((row) => {
+        row.classList.toggle('selected', row.dataset.topicId === selectedTopicId);
+    });
+}
+
+function updateTopicActionButtons() {
+    const deleteButton = document.getElementById('topic-delete-btn');
+    if (deleteButton) {
+        deleteButton.disabled = !selectedTopicId;
+    }
+}
+
+function setupTopicsInteractionsIfNeeded(showToolbar) {
+    if (!showToolbar) {
+        selectedTopicId = null;
+        return;
+    }
+    selectedTopicId = null;
+    const content = document.getElementById('content');
+    initializeTopicTableInteractions(content);
+}
+
+window.handleAddTopic = () => {
+    console.log('Add Topic clicked');
+};
+
+window.handleEditTopic = () => {
+    if (!selectedTopicId) {
+        alert('수정할 토픽을 선택하세요.');
+        return;
+    }
+    console.log('Edit Topic clicked for', selectedTopicId);
+};
+
+window.handleDeleteTopic = () => {
+    if (!selectedTopicId) {
+        return;
+    }
+    console.log('Delete Topic clicked for', selectedTopicId);
+    selectedTopicId = null;
+    updateTopicRowSelection(document.getElementById('content'));
+    updateTopicActionButtons();
+};

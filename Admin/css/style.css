@@ -186,6 +186,29 @@ td a:hover {
     text-decoration: underline;
 }
 
+.topics-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.topics-toolbar button {
+    margin-top: 0;
+}
+
+.topic-row.selected {
+    background-color: #e3f2fd;
+}
+
+.button-danger {
+    background-color: #e74c3c;
+}
+
+.button-danger:hover {
+    background-color: #c0392b;
+}
+
 /* Topic Details Styles */
 #content h3 {
     color: #2c3e50;

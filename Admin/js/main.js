@@ -26,7 +26,7 @@ window.loadTopics = async () => {
 window.loadArticles = async () => {
     try {
         const topics = await fetchTopics();
-        renderTopics(topics, 'Articles');
+        renderTopics(topics, 'Articles', { showToolbar: false });
     } catch (error) {
         console.error("Failed to load articles:", error);
     }
