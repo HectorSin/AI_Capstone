@@ -4,12 +4,6 @@ import * as FileSystem from 'expo-file-system';
 import type { DailyPodcastSummary } from '@/types/podcast';
 
 const STORAGE_KEY = '@archive/downloads';
-const fsPaths = FileSystem as unknown as {
-  documentDirectory?: string | null;
-  cacheDirectory?: string | null;
-};
-const DOWNLOAD_ROOT = fsPaths.documentDirectory ?? fsPaths.cacheDirectory ?? '';
-
 export type DownloadedSegment = {
   articleId: string;
   fileUri: string;
@@ -65,10 +59,11 @@ export async function removeDownloadedPlaylist(id: string) {
 }
 
 async function ensureDownloadDir() {
-  if (!DOWNLOAD_ROOT) {
+  const root = (FileSystem as any).documentDirectory ?? (FileSystem as any).cacheDirectory;
+  if (!root) {
     throw new Error('Download directory is not available');
   }
-  const dir = `${DOWNLOAD_ROOT}archive/`;
+  const dir = `${root}archive/`;
   const dirInfo = await FileSystem.getInfoAsync(dir);
   if (!dirInfo.exists) {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
