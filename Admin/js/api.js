@@ -105,7 +105,7 @@ async function uploadTopicImage(topicId, imageFile) {
         const formData = new FormData();
         formData.append('file', imageFile);
 
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image`, {
             method: 'POST',
             headers: headers,
             body: formData
@@ -121,7 +121,7 @@ async function deleteTopicImage(topicId) {
     try {
         const headers = getAuthHeaders();
 
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image`, {
             method: 'DELETE',
             headers: headers
         });
