@@ -8,6 +8,7 @@ from app.schemas import Topic as TopicSchema, Article as ArticleSchema, TopicBas
 from app.auth import get_current_admin_user
 from app.database import models
 from app import crud
+from app.config import settings
 from typing import List, Optional
 from uuid import UUID
 import os
@@ -160,8 +161,8 @@ async def upload_topic_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 저장 실패: {str(e)}")
 
-    # image_uri 생성 및 DB 업데이트
-    image_uri = f"/images/{filename}"
+    # image_uri 생성 및 DB 업데이트 (절대 URL)
+    image_uri = f"{settings.server_url}/images/{filename}"
     topic.image_uri = image_uri
     await db.commit()
     await db.refresh(topic)

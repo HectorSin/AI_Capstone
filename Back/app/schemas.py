@@ -226,6 +226,8 @@ class ArticleFeedItem(BaseModel):
     @classmethod
     def from_article(cls, article, topic) -> "ArticleFeedItem":
         """Article + Topic 모델에서 FeedItem 생성"""
+        from app.config import settings
+
         # date를 "YYYY. MM. DD" 형식으로 변환
         formatted_date = article.date.strftime("%Y. %m. %d")
 
@@ -239,13 +241,19 @@ class ArticleFeedItem(BaseModel):
             intermediate_data = article.article_data.get("intermediate", {})
             article_content = intermediate_data.get("content", "") if isinstance(intermediate_data, dict) else ""
 
+        # image_uri를 절대 URL로 변환
+        image_uri = topic.image_uri
+        if image_uri and not image_uri.startswith('http'):
+            # 상대 경로면 절대 URL로 변환
+            image_uri = f"{settings.server_url}{image_uri}"
+
         return cls(
             id=article.id,
             title=article.title,
             date=formatted_date,
             summary=feed_summary,
             content=article_content,
-            imageUri=topic.image_uri,
+            imageUri=image_uri,
             topic=topic.name,
             topicId=topic.id
         )

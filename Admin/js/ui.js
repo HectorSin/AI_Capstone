@@ -64,6 +64,13 @@ function renderTopics(topics, title = 'Topics', options = {}) {
         if (editingTopicId === topic.id) {
             return renderEditableRow(topic);
         } else {
+            // image_uri를 절대 URL로 변환
+            let imageUrl = topic.image_uri;
+            if (imageUrl && !imageUrl.startsWith('http')) {
+                // 상대 경로면 8000 포트로 변환
+                imageUrl = `${window.location.protocol}//${window.location.hostname}:8000${imageUrl}`;
+            }
+
             return `
                 <tr class="topic-row" data-topic-id="${topic.id}">
                     <td>${topic.name}</td>
@@ -71,7 +78,7 @@ function renderTopics(topics, title = 'Topics', options = {}) {
                     <td>${topic.summary || 'N/A'}</td>
                     <td>
                         ${topic.image_uri
-                            ? `<a href="${topic.image_uri}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View Image</a>`
+                            ? `<a href="${imageUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View Image</a>`
                             : 'N/A'}
                     </td>
                     <td>${topic.keywords && topic.keywords.length ? topic.keywords.join(', ') : 'N/A'}</td>
