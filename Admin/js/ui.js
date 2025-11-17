@@ -47,10 +47,10 @@ function renderRecentArticles(articles) {
 }
 
 
-function renderTopics(topics) {
+function renderTopics(topics, title = 'Topics') {
     const content = document.getElementById('content');
     if (!topics || topics.length === 0) {
-        content.innerHTML = '<h2>Topics</h2><p>No topics found.</p>';
+        content.innerHTML = `<h2>${title}</h2><p>No topics found.</p>`;
         return;
     }
 
@@ -64,7 +64,7 @@ function renderTopics(topics) {
     `).join('');
 
     content.innerHTML = `
-        <h2>Topics</h2>
+        <h2>${title}</h2>
         <table>
             <thead>
                 <tr>
