@@ -84,11 +84,6 @@ export function ArchiveRemoteTab() {
           onDownload={() => handleDownload(item)}
         />
       )}
-      renderSectionHeader={({ section }) => (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-        </View>
-      )}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor="#2563eb" colors={['#2563eb']} />}
       ListEmptyComponent={
         <View style={styles.emptyState}>
@@ -147,14 +142,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  sectionHeader: {
-    paddingVertical: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
   },
   emptyState: {
     alignItems: 'center',
