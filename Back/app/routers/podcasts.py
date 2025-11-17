@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import date, timedelta
 from typing import Dict, List, Optional, Tuple
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
