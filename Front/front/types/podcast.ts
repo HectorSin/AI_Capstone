@@ -3,6 +3,7 @@ export type PodcastSegment = {
   topic_id: string;
   topic_name: string;
   title: string;
+  difficulty: string;
   audio_url: string;
   duration_seconds: number;
   source_url?: string;

@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import type { DailyPodcastSummary } from '@/types/podcast';
+import { API_BASE_URL } from '@/utils/api';
 
 const STORAGE_KEY = '@archive/downloads';
 export type DownloadedSegment = {
@@ -59,7 +60,12 @@ export async function removeDownloadedPlaylist(id: string) {
 }
 
 async function ensureDownloadDir() {
-  const root = (FileSystem as any).documentDirectory ?? (FileSystem as any).cacheDirectory;
+  const root = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+  console.log('[ArchiveStorage] resolve directories', {
+    documentDirectory: FileSystem.documentDirectory,
+    cacheDirectory: FileSystem.cacheDirectory,
+    resolved: root,
+  });
   if (!root) {
     throw new Error('Download directory is not available');
   }
@@ -79,7 +85,8 @@ export async function downloadPlaylist(summary: DailyPodcastSummary): Promise<Do
     const safeTopic = segment.topic_name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `${summary.date}_${safeTopic}_${segment.article_id}.mp3`;
     const targetPath = `${downloadDir}${fileName}`;
-    const downloadResult = await FileSystem.downloadAsync(segment.audio_url, targetPath);
+    const downloadSource = resolveAudioUrl(segment.audio_url);
+    const downloadResult = await FileSystem.downloadAsync(downloadSource, targetPath);
     segments.push({
       articleId: segment.article_id,
       fileUri: downloadResult.uri,
@@ -101,4 +108,14 @@ export async function downloadPlaylist(summary: DailyPodcastSummary): Promise<Do
   const existing = await readStorage();
   await writeStorage([newEntry, ...existing]);
   return newEntry;
+}
+
+function resolveAudioUrl(url: string) {
+  if (!url) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
 }

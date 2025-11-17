@@ -306,6 +306,7 @@ class PodcastSegment(BaseModel):
     topic_id: UUID
     topic_name: str
     title: str
+    difficulty: str
     audio_url: str
     duration_seconds: float
     source_url: Optional[str] = None
