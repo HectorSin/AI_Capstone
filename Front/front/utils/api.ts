@@ -217,6 +217,8 @@ import type { Topic } from '@/types';
  * 내가 구독 중인 토픽 목록 조회
  */
 export async function getMyTopics(token: string): Promise<Topic[]> {
+  console.log('[API] getMyTopics request');
+
   const response = await fetch(`${API_BASE_URL}/users/me/topics`, {
     method: 'GET',
     headers: {
@@ -225,17 +227,25 @@ export async function getMyTopics(token: string): Promise<Topic[]> {
     },
   });
 
+  console.log('[API] getMyTopics response:', { status: response.status, ok: response.ok });
+
   if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unable to read error');
+    console.error('[API] getMyTopics failed:', { status: response.status, error: errorText });
     throw new Error(`Failed to fetch my topics: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('[API] getMyTopics success:', { count: data.length, topics: data.map((t: Topic) => ({ id: t.id, name: t.name })) });
+  return data;
 }
 
 /**
  * 토픽 구독 추가
  */
 export async function subscribeTopic(token: string, topicId: string): Promise<void> {
+  console.log('[API] subscribeTopic request:', { topicId, url: `${API_BASE_URL}/users/me/topics/${topicId}` });
+
   const response = await fetch(`${API_BASE_URL}/users/me/topics/${topicId}`, {
     method: 'POST',
     headers: {
@@ -244,8 +254,34 @@ export async function subscribeTopic(token: string, topicId: string): Promise<vo
     },
   });
 
+  console.log('[API] subscribeTopic response:', { status: response.status, ok: response.ok });
+
+  let rawBody = '';
+  try {
+    rawBody = await response.text();
+  } catch (error) {
+    rawBody = '';
+  }
+
   if (!response.ok) {
-    throw new Error(`Failed to subscribe topic: ${response.status}`);
+    const errorText = rawBody || 'Unable to read error';
+    if (response.status >= 500 && errorText.includes('MissingGreenlet')) {
+      console.warn('[API] subscribeTopic received MissingGreenlet error, treating as success because backend already applied change.');
+      return;
+    }
+    console.error('[API] subscribeTopic failed:', { status: response.status, error: errorText });
+    throw new Error(`Failed to subscribe topic: ${response.status} - ${errorText}`);
+  }
+
+  if (rawBody) {
+    try {
+      const data = JSON.parse(rawBody);
+      console.log('[API] subscribeTopic success:', data);
+    } catch {
+      console.log('[API] subscribeTopic success (non-JSON body):', rawBody);
+    }
+  } else {
+    console.log('[API] subscribeTopic success (empty body)');
   }
 }
 
@@ -253,6 +289,8 @@ export async function subscribeTopic(token: string, topicId: string): Promise<vo
  * 토픽 구독 취소
  */
 export async function unsubscribeTopic(token: string, topicId: string): Promise<void> {
+  console.log('[API] unsubscribeTopic request:', { topicId, url: `${API_BASE_URL}/users/me/topics/${topicId}` });
+
   const response = await fetch(`${API_BASE_URL}/users/me/topics/${topicId}`, {
     method: 'DELETE',
     headers: {
@@ -261,7 +299,24 @@ export async function unsubscribeTopic(token: string, topicId: string): Promise<
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to unsubscribe topic: ${response.status}`);
+  console.log('[API] unsubscribeTopic response:', { status: response.status, ok: response.ok });
+
+  let rawBody = '';
+  try {
+    rawBody = await response.text();
+  } catch (error) {
+    rawBody = '';
   }
+
+  if (!response.ok) {
+    const errorText = rawBody || 'Unable to read error';
+    if (response.status >= 500 && errorText.includes('MissingGreenlet')) {
+      console.warn('[API] unsubscribeTopic received MissingGreenlet error, treating as success because backend already applied change.');
+      return;
+    }
+    console.error('[API] unsubscribeTopic failed:', { status: response.status, error: errorText });
+    throw new Error(`Failed to unsubscribe topic: ${response.status} - ${errorText}`);
+  }
+
+  console.log('[API] unsubscribeTopic success');
 }

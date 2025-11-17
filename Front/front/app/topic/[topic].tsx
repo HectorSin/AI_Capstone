@@ -24,7 +24,7 @@ const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-500648767791-00dcc994a
 export default function TopicScreen() {
   const { topic } = useLocalSearchParams<{ topic?: string }>();
   const router = useRouter();
-  const { subscribeTopic, unsubscribeTopic, isTopicSubscribed, token } = useAuth();
+  const { subscribeTopic, unsubscribeTopic, isTopicSubscribed, token, subscribedTopics } = useAuth();
   const [topicInfo, setTopicInfo] = useState<Topic | null>(null);
   const [topicItems, setTopicItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function TopicScreen() {
   const isSubscribed = useMemo(() => {
     if (!currentTopicId) return false;
     return isTopicSubscribed(currentTopicId);
-  }, [currentTopicId, isTopicSubscribed]);
+  }, [currentTopicId, isTopicSubscribed, subscribedTopics]);
 
   const avatarSource = { uri: topicInfo?.image_uri ?? DEFAULT_AVATAR };
 
@@ -104,26 +104,46 @@ export default function TopicScreen() {
       return;
     }
 
+    // 디버깅용 Alert
+    console.log('[Topic] Subscribe toggle started:', {
+      topicId: currentTopicId,
+      topicName,
+      currentState: isSubscribed ? 'subscribed' : 'not subscribed',
+      subscribedCount: subscribedTopics.length,
+    });
+
+    // 이미 구독된 상태라면 확인 Alert
+    if (isSubscribed) {
+      console.log('[Topic] Topic is already subscribed, will unsubscribe');
+    } else {
+      console.log('[Topic] Topic is not subscribed, will subscribe');
+    }
+
     setIsSubscribing(true);
     try {
       let success = false;
       if (isSubscribed) {
+        console.log('[Topic] Attempting to unsubscribe...');
         success = await unsubscribeTopic(currentTopicId);
+        console.log('[Topic] Unsubscribe result:', success);
         if (success) {
           Alert.alert('구독 취소', `${topicName} 토픽 구독이 취소되었습니다.`);
         }
       } else {
+        console.log('[Topic] Attempting to subscribe...');
         success = await subscribeTopic(currentTopicId);
+        console.log('[Topic] Subscribe result:', success);
         if (success) {
           Alert.alert('구독 완료', `${topicName} 토픽을 구독했습니다!`);
         }
       }
 
       if (!success) {
+        console.error('[Topic] Subscribe toggle failed: success is false');
         Alert.alert('오류', '구독 상태를 변경할 수 없습니다. 다시 시도해주세요.');
       }
     } catch (error) {
-      console.error('[Topic] Subscribe toggle failed:', error);
+      console.error('[Topic] Subscribe toggle failed with error:', error);
       Alert.alert('오류', '구독 상태를 변경하는 중 오류가 발생했습니다.');
     } finally {
       setIsSubscribing(false);

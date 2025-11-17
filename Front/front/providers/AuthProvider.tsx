@@ -374,15 +374,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const subscribeTopic = useCallback(
     async (topicId: string) => {
       if (!token) {
+        console.warn('[Auth] subscribeTopic failed: no token');
         return false;
       }
 
+      console.log('[Auth] subscribeTopic started:', topicId);
       try {
         await subscribeTopicApi(token, topicId);
-        await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] subscribeTopicApi success, refreshing topics...');
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] Topics after subscribe:', topics?.map((t) => ({ id: t.id, name: t.name })));
         return true;
       } catch (error) {
-        console.warn('[Auth] subscribeTopic error', error);
+        console.error('[Auth] subscribeTopic error', error);
+        // API가 실패했더라도 실제로 서버에 반영되었는지 확인
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        const isSubscribedNow = topics.some((topic) => topic.id === topicId);
+        if (isSubscribedNow) {
+          console.warn('[Auth] subscribeTopic recovered: topic appears in my list after error');
+          return true;
+        }
         return false;
       }
     },
@@ -392,15 +403,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const unsubscribeTopic = useCallback(
     async (topicId: string) => {
       if (!token) {
+        console.warn('[Auth] unsubscribeTopic failed: no token');
         return false;
       }
 
+      console.log('[Auth] unsubscribeTopic started:', topicId);
       try {
         await unsubscribeTopicApi(token, topicId);
-        await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] unsubscribeTopicApi success, refreshing topics...');
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] Topics after unsubscribe:', topics?.map((t) => ({ id: t.id, name: t.name })));
         return true;
       } catch (error) {
-        console.warn('[Auth] unsubscribeTopic error', error);
+        console.error('[Auth] unsubscribeTopic error', error);
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        const isStillSubscribed = topics.some((topic) => topic.id === topicId);
+        if (!isStillSubscribed) {
+          console.warn('[Auth] unsubscribeTopic recovered: topic removed despite API error');
+          return true;
+        }
         return false;
       }
     },
@@ -409,7 +430,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const isTopicSubscribed = useCallback(
     (topicId: string) => {
-      return subscribedTopics.some((topic) => topic.id === topicId);
+      const result = subscribedTopics.some((topic) => topic.id === topicId);
+      // 디버깅용 로그
+      if (result) {
+        console.log(`✅ [Auth] Topic ${topicId} IS subscribed`);
+      } else {
+        console.log(`❌ [Auth] Topic ${topicId} is NOT subscribed`);
+      }
+      console.log('[Auth] Current subscribed topics:', subscribedTopics.map(t => `${t.name} (${t.id})`).join(', '));
+      return result;
     },
     [subscribedTopics]
   );
