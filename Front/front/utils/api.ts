@@ -11,6 +11,10 @@ async function getAuthToken(): Promise<string | null> {
   return authTokenLoader();
 }
 
+export async function getAuthTokenValue(): Promise<string | null> {
+  return getAuthToken();
+}
+
 export async function checkAvailability(
   endpoint: 'check-email' | 'check-nickname',
   value: string,

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import type { DailyPodcastSummary } from '@/types/podcast';
-import { API_BASE_URL } from '@/utils/api';
+import { API_BASE_URL, getAuthTokenValue } from '@/utils/api';
 
 const STORAGE_KEY = '@archive/downloads';
 export type DownloadedSegment = {
@@ -80,13 +80,17 @@ async function ensureDownloadDir() {
 export async function downloadPlaylist(summary: DailyPodcastSummary): Promise<DownloadedPlaylist> {
   const downloadDir = await ensureDownloadDir();
   const segments: DownloadedSegment[] = [];
+  const authToken = await getAuthTokenValue();
 
   for (const segment of summary.segments) {
     const safeTopic = segment.topic_name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `${summary.date}_${safeTopic}_${segment.article_id}.mp3`;
     const targetPath = `${downloadDir}${fileName}`;
     const downloadSource = resolveAudioUrl(segment.audio_url);
-    const downloadResult = await FileSystem.downloadAsync(downloadSource, targetPath);
+    const options = authToken
+      ? { headers: { Authorization: `Bearer ${authToken}` } }
+      : undefined;
+    const downloadResult = await FileSystem.downloadAsync(downloadSource, targetPath, options);
     segments.push({
       articleId: segment.article_id,
       fileUri: downloadResult.uri,
