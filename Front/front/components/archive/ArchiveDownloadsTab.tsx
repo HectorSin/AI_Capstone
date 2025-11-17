@@ -4,12 +4,12 @@ import { useFocusEffect } from 'expo-router';
 
 import { listDownloadedPlaylists, removeDownloadedPlaylist, type DownloadedPlaylist } from '@/utils/archiveStorage';
 import { formatDuration } from '@/utils/format';
-import { ArchivePlayer } from '@/components/archive/ArchivePlayer';
+import { useAudioPlayer } from '@/providers/AudioPlayerProvider';
 
 export function ArchiveDownloadsTab() {
   const [items, setItems] = useState<DownloadedPlaylist[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activePlaylist, setActivePlaylist] = useState<DownloadedPlaylist | null>(null);
+  const { loadPlaylist, currentPlaylist } = useAudioPlayer();
 
   const loadDownloads = useCallback(async () => {
     const downloads = await listDownloadedPlaylists();
@@ -46,9 +46,8 @@ export function ArchiveDownloadsTab() {
   );
 
   return (
-    <>
-      <FlatList
-        data={items}
+    <FlatList
+      data={items}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#2563eb" colors={['#2563eb']} />}
@@ -56,7 +55,7 @@ export function ArchiveDownloadsTab() {
         <DownloadCard
           playlist={item}
           onDelete={() => handleDelete(item.id)}
-          onPlay={() => setActivePlaylist(item)}
+          onPlay={() => loadPlaylist(item)}
         />
       )}
       ListEmptyComponent={
@@ -65,10 +64,8 @@ export function ArchiveDownloadsTab() {
           <Text style={styles.emptyBody}>보관함에서 다운로드하면 이곳에서 다시 재생할 수 있어요.</Text>
         </View>
       }
-        ListFooterComponent={<View style={{ height: activePlaylist ? 200 : 0 }} />}
-      />
-      {activePlaylist ? <ArchivePlayer playlist={activePlaylist} onClose={() => setActivePlaylist(null)} /> : null}
-    </>
+      ListFooterComponent={<View style={{ height: currentPlaylist ? 280 : 0 }} />}
+    />
   );
 }
 
