@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Admin page loaded');
     if (!window.location.hash) {
         window.location.hash = DEFAULT_ROUTE;
-        return;
     }
     handleRouteChange();
 });
