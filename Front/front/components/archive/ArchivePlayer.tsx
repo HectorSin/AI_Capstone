@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-// eslint-disable-next-line import/no-unresolved
 import { Audio, AVPlaybackStatus, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 
 import type { DownloadedPlaylist } from '@/utils/archiveStorage';
@@ -47,15 +46,25 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
   }, []);
 
   const unloadSound = useCallback(async () => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-      } catch {
-        // ignore
-      }
-      await soundRef.current.unloadAsync();
-      soundRef.current.setOnPlaybackStatusUpdate(null);
-      soundRef.current = null;
+    const current = soundRef.current;
+    if (!current) {
+      return;
+    }
+    soundRef.current = null;
+    try {
+      await current.stopAsync();
+    } catch {
+      // ignore
+    }
+    try {
+      await current.unloadAsync();
+    } catch {
+      // ignore
+    }
+    try {
+      current.setOnPlaybackStatusUpdate(null);
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -63,30 +72,36 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
     if (!currentSegment) return;
     setIsLoadingSound(true);
     setPlaybackState(initialPlaybackState);
-    await unloadSound();
-    await setupAudioMode();
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: currentSegment.fileUri },
-      { shouldPlay: true }
-    );
-    soundRef.current = sound;
-    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-      if (!status.isLoaded) {
-        setPlaybackState(initialPlaybackState);
-        return;
-      }
-      setPlaybackState({
-        isLoaded: true,
-        isPlaying: status.isPlaying,
-        positionMillis: status.positionMillis ?? 0,
-        durationMillis: status.durationMillis ?? currentSegment.durationSeconds * 1000,
-      });
+    try {
+      await unloadSound();
+      await setupAudioMode();
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: currentSegment.fileUri },
+        { shouldPlay: true }
+      );
+      soundRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        if (!status.isLoaded) {
+          setPlaybackState(initialPlaybackState);
+          return;
+        }
+        setPlaybackState({
+          isLoaded: true,
+          isPlaying: status.isPlaying,
+          positionMillis: status.positionMillis ?? 0,
+          durationMillis: status.durationMillis ?? currentSegment.durationSeconds * 1000,
+        });
 
-      if (status.didJustFinish) {
-        setCurrentIndex((prev) => (prev + 1 < totalSegments ? prev + 1 : 0));
-      }
-    });
-    setIsLoadingSound(false);
+        if (status.didJustFinish) {
+          setCurrentIndex((prev) => (prev + 1 < totalSegments ? prev + 1 : 0));
+        }
+      });
+    } catch (error) {
+      console.warn('[ArchivePlayer] failed to load segment', error);
+      await unloadSound();
+    } finally {
+      setIsLoadingSound(false);
+    }
   }, [currentSegment, totalSegments, setupAudioMode, unloadSound]);
 
   useEffect(() => {
@@ -106,12 +121,18 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
   }, [playbackState.isLoaded, playbackState.isPlaying]);
 
   const handleNext = useCallback(() => {
+    if (isLoadingSound) {
+      return;
+    }
     setCurrentIndex((prev) => (prev + 1 < totalSegments ? prev + 1 : prev));
-  }, [totalSegments]);
+  }, [isLoadingSound, totalSegments]);
 
   const handlePrev = useCallback(() => {
+    if (isLoadingSound) {
+      return;
+    }
     setCurrentIndex((prev) => (prev - 1 >= 0 ? prev - 1 : prev));
-  }, []);
+  }, [isLoadingSound]);
 
   const progress = useMemo(() => {
     if (!playbackState.durationMillis || playbackState.durationMillis === 0) return 0;
