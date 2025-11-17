@@ -10,7 +10,11 @@ engine = create_async_engine(DATABASE_URL, echo=settings.debug)
 
 # 비동기 세션 생성
 AsyncSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,  # 커밋 후 객체를 만료시키지 않아 lazy load로 인한 MissingGreenlet 방지
 )
 
 # 모델 클래스들이 상속받을 기본 클래스

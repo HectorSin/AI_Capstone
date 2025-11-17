@@ -265,10 +265,6 @@ export async function subscribeTopic(token: string, topicId: string): Promise<vo
 
   if (!response.ok) {
     const errorText = rawBody || 'Unable to read error';
-    if (response.status >= 500 && errorText.includes('MissingGreenlet')) {
-      console.warn('[API] subscribeTopic received MissingGreenlet error, treating as success because backend already applied change.');
-      return;
-    }
     console.error('[API] subscribeTopic failed:', { status: response.status, error: errorText });
     throw new Error(`Failed to subscribe topic: ${response.status} - ${errorText}`);
   }
@@ -310,10 +306,6 @@ export async function unsubscribeTopic(token: string, topicId: string): Promise<
 
   if (!response.ok) {
     const errorText = rawBody || 'Unable to read error';
-    if (response.status >= 500 && errorText.includes('MissingGreenlet')) {
-      console.warn('[API] unsubscribeTopic received MissingGreenlet error, treating as success because backend already applied change.');
-      return;
-    }
     console.error('[API] unsubscribeTopic failed:', { status: response.status, error: errorText });
     throw new Error(`Failed to unsubscribe topic: ${response.status} - ${errorText}`);
   }
