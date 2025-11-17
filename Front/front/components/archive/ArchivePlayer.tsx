@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Audio, AVPlaybackStatus, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 
 import type { DownloadedPlaylist } from '@/utils/archiveStorage';
 import { formatDuration } from '@/utils/format';
@@ -31,8 +32,6 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
   const soundRef = useRef<any>(null);
   const [isLoadingSound, setIsLoadingSound] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
-  const [pendingSeek, setPendingSeek] = useState(0);
-  const [sliderWidth, setSliderWidth] = useState(0);
 
   const currentSegment = playlist.segments[currentIndex];
   const totalSegments = playlist.segments.length;
@@ -89,6 +88,7 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
           setPlaybackState(initialPlaybackState);
           return;
         }
+
         setPlaybackState({
           isLoaded: true,
           isPlaying: status.isPlaying,
@@ -138,89 +138,29 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
     setCurrentIndex((prev) => (prev - 1 >= 0 ? prev - 1 : prev));
   }, [isLoadingSound]);
 
-  const progress = useMemo(() => {
-    if (!playbackState.durationMillis || playbackState.durationMillis === 0) return 0;
-    return playbackState.positionMillis / playbackState.durationMillis;
-  }, [playbackState.durationMillis, playbackState.positionMillis]);
-  const sliderValue = isSeeking ? pendingSeek : progress;
-
-  const handleSeekToFraction = useCallback(
-    async (fraction: number) => {
-      if (!soundRef.current) return;
-      const duration =
-        playbackState.durationMillis ?? (currentSegment?.durationSeconds ? currentSegment.durationSeconds * 1000 : null);
-      if (!duration) return;
-      const target = Math.min(Math.max(fraction, 0), 1) * duration;
-      try {
-        await soundRef.current.setPositionAsync(target);
-        setPlaybackState((prev) => ({
-          ...prev,
-          positionMillis: target,
-          durationMillis: duration,
-        }));
-      } catch (error) {
-        console.warn('[ArchivePlayer] seekToFraction error', error);
-      }
-    },
-    [playbackState.durationMillis, currentSegment]
-  );
+  const handleSliderChange = useCallback(async (value: number) => {
+    if (!soundRef.current || !playbackState.isLoaded) return;
+    try {
+      await soundRef.current.setPositionAsync(value);
+    } catch (error) {
+      console.warn('[ArchivePlayer] seek error', error);
+    }
+  }, [playbackState.isLoaded]);
 
   const handleSeekBy = useCallback(
     async (delta: number) => {
-      if (!soundRef.current || isLoadingSound) return;
+      if (!soundRef.current || isLoadingSound || !playbackState.isLoaded) return;
       try {
-        const status = await soundRef.current.getStatusAsync();
-        if (!status.isLoaded) return;
-        const duration =
-          status.durationMillis ??
-          playbackState.durationMillis ??
-          (currentSegment?.durationSeconds ? currentSegment.durationSeconds * 1000 : 0);
-        if (!duration) return;
-        const next = Math.min(Math.max((status.positionMillis ?? 0) + delta * 1000, 0), duration);
-        await soundRef.current.setPositionAsync(next);
-        setPlaybackState((prev) => ({
-          ...prev,
-          positionMillis: next,
-          durationMillis: duration,
-        }));
+        const newPosition = Math.min(
+          Math.max(playbackState.positionMillis + delta * 1000, 0),
+          playbackState.durationMillis
+        );
+        await soundRef.current.setPositionAsync(newPosition);
       } catch (error) {
         console.warn('[ArchivePlayer] seekBy error', error);
       }
     },
-    [playbackState.durationMillis, currentSegment, isLoadingSound]
-  );
-
-  const handleProgressGrant = useCallback(
-    (value: number) => {
-      if (!sliderWidth) return;
-      const fraction = Math.min(Math.max(value / sliderWidth, 0), 1);
-      setIsSeeking(true);
-      setPendingSeek(fraction);
-    },
-    [sliderWidth]
-  );
-
-  const handleProgressMove = useCallback(
-    (value: number) => {
-      if (!sliderWidth) return;
-      const fraction = Math.min(Math.max(value / sliderWidth, 0), 1);
-      setIsSeeking(true);
-      setPendingSeek(fraction);
-    },
-    [sliderWidth]
-  );
-
-  const handleProgressRelease = useCallback(
-    (value: number) => {
-      if (!sliderWidth) {
-        setIsSeeking(false);
-        return;
-      }
-      const fraction = Math.min(Math.max(value / sliderWidth, 0), 1);
-      setIsSeeking(false);
-      handleSeekToFraction(fraction);
-    },
-    [sliderWidth, handleSeekToFraction]
+    [playbackState.positionMillis, playbackState.durationMillis, playbackState.isLoaded, isLoadingSound]
   );
 
   const progressLabel = useMemo(() => {
@@ -241,19 +181,21 @@ export function ArchivePlayer({ playlist, onClose }: ArchivePlayerProps) {
         </Pressable>
       </View>
 
-      <View
-        style={styles.progressBarWrapper}
-        onLayout={(event) => setSliderWidth(event.nativeEvent.layout.width)}
-        onStartShouldSetResponder={() => true}
-        onResponderGrant={(event) => handleProgressGrant(event.nativeEvent.locationX)}
-        onResponderMove={(event) => handleProgressMove(event.nativeEvent.locationX)}
-        onResponderRelease={(event) => handleProgressRelease(event.nativeEvent.locationX)}
-      >
-        <View style={styles.progressBar}>
-          <View style={[styles.progressBarFill, { width: `${Math.min(sliderValue * 100, 100)}%` }]} />
-          <View style={[styles.progressThumb, { left: `${Math.min(sliderValue * 100, 100)}%` }]} />
-        </View>
-      </View>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={playbackState.durationMillis || 1}
+        value={playbackState.positionMillis}
+        onSlidingStart={() => setIsSeeking(true)}
+        onSlidingComplete={(value) => {
+          setIsSeeking(false);
+          handleSliderChange(value);
+        }}
+        minimumTrackTintColor="#2563eb"
+        maximumTrackTintColor="#e5e7eb"
+        thumbTintColor="#2563eb"
+        disabled={!playbackState.isLoaded || isLoadingSound}
+      />
 
       <View style={styles.timeRow}>
         <Text style={styles.timeLabel}>{formatDuration(playbackState.positionMillis / 1000)}</Text>
@@ -391,33 +333,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressBarWrapper: {
-    marginBottom: 12,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#e5e7eb',
-    position: 'relative',
-  },
-  progressBarFill: {
-    height: 4,
-    backgroundColor: '#2563eb',
-    borderRadius: 2,
-  },
-  progressThumb: {
-    position: 'absolute',
-    top: -4,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#2563eb',
-    marginLeft: -6,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
+  slider: {
+    width: '100%',
+    height: 40,
+    marginVertical: 8,
   },
   timeRow: {
     flexDirection: 'row',
