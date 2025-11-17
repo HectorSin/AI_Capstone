@@ -42,7 +42,18 @@ export default function TopicScreen() {
     return isTopicSubscribed(currentTopicId);
   }, [currentTopicId, isTopicSubscribed]);
 
-  const avatarSource = { uri: topicInfo?.image_uri ?? DEFAULT_AVATAR };
+  // 이미지 URI를 절대 URL로 변환
+  const avatarSource = useMemo(() => {
+    let imageUri = topicInfo?.image_uri ?? DEFAULT_AVATAR;
+
+    // 상대 경로면 절대 URL로 변환
+    if (imageUri && !imageUri.startsWith('http')) {
+      // TODO: 실제 서버 URL로 변경 필요
+      imageUri = `http://35.216.97.52:8000${imageUri}`;
+    }
+
+    return { uri: imageUri };
+  }, [topicInfo?.image_uri]);
 
   const loadTopicInfo = useCallback(async () => {
     if (!topicName) return;
@@ -168,17 +179,9 @@ export default function TopicScreen() {
     <View style={styles.heroContainer}>
       <Image source={avatarSource} style={styles.avatar} />
       <Text style={styles.topicText}>{topicName}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgeRow}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>AI</Text>
-        </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Trend</Text>
-        </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Insights</Text>
-        </View>
-      </ScrollView>
+      {topicInfo?.summary ? (
+        <Text style={styles.summaryText}>{topicInfo.summary}</Text>
+      ) : null}
       <Pressable
         onPress={handleSubscribeToggle}
         disabled={isSubscribing}
@@ -289,6 +292,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+  },
+  summaryText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   badgeRow: {
     flexDirection: 'row',

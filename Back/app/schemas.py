@@ -281,6 +281,17 @@ class Topic(TopicBase):
     sources: List[TopicSource] = Field(default_factory=list)
     articles: List[Article] = Field(default_factory=list)
 
+    @field_validator('image_uri', mode='after')
+    @classmethod
+    def convert_image_uri_to_absolute(cls, value: str) -> str:
+        """image_uri를 절대 URL로 변환"""
+        from app.config import settings
+
+        if value and not value.startswith('http'):
+            # 상대 경로면 절대 URL로 변환
+            return f"{settings.server_url}{value}"
+        return value
+
     class Config:
         from_attributes = True
 
