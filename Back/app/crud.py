@@ -389,6 +389,31 @@ async def list_all_topics(db: AsyncSession) -> List[models.Topic]:
     return list(result.scalars().unique())
 
 
+async def update_topic(
+    db: AsyncSession,
+    topic_id: UUID,
+    topic_update: schemas.TopicBase
+) -> Optional[models.Topic]:
+    """토픽 정보를 업데이트합니다."""
+    # 기존 토픽 조회
+    topic = await get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        return None
+
+    # 업데이트할 필드 적용
+    topic.name = topic_update.name
+    topic.type = models.TopicType[topic_update.type.name]
+    topic.summary = topic_update.summary
+    topic.image_uri = topic_update.image_uri
+    topic.keywords = topic_update.keywords or []
+
+    await db.commit()
+    await db.refresh(topic)
+
+    # sources와 articles를 포함하여 다시 조회
+    return await get_topic_by_id(db=db, topic_id=topic_id)
+
+
 # ==========================================================
 # User-Topic selection helpers
 # ==========================================================

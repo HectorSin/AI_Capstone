@@ -271,3 +271,61 @@ button:disabled {
 .button-danger:hover:not(:disabled) {
     background-color: #c0392b;
 }
+
+/* 인라인 편집 스타일 */
+.editing-row {
+    background-color: #fff9e6 !important;
+    border-left: 4px solid #f39c12 !important;
+}
+
+.editing-row:hover {
+    background-color: #fff3d1 !important;
+}
+
+.edit-input,
+.edit-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.edit-input:focus,
+.edit-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.edit-select {
+    cursor: pointer;
+    background-color: white;
+}
+
+.image-edit-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: flex-start;
+}
+
+.image-edit-cell a {
+    font-size: 0.85em;
+    margin-bottom: 0.2rem;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    margin-top: 0;
+    white-space: nowrap;
+}

@@ -81,3 +81,53 @@ async function fetchTopicArticles(topicId, skip = 0, limit = 20) {
         return [];
     }
 }
+
+async function updateTopic(topicId, topicData) {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(topicData)
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error updating topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function uploadTopicImage(topicId, imageFile) {
+    try {
+        const headers = getAuthHeaders();
+        const formData = new FormData();
+        formData.append('file', imageFile);
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error uploading image for topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function deleteTopicImage(topicId) {
+    try {
+        const headers = getAuthHeaders();
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error deleting image for topic ${topicId}:`, error);
+        throw error;
+    }
+}

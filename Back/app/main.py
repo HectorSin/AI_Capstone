@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database.database import engine, Base, AsyncSessionLocal
 from app.database.redis_client import redis_client
 from app.config import settings
@@ -8,10 +9,15 @@ from app.routers import users, auth, cache, topics, ai_jobs, articles, podcasts
 from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics
 from app import crud, schemas
 import logging
+from pathlib import Path
 
 # 로깅 설정
 logging.basicConfig(level=getattr(logging, settings.log_level.upper()))
 logger = logging.getLogger(__name__)
+
+# 이미지 저장 디렉토리 설정
+IMAGES_DIR = Path("/app/database/images")
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 # DB 테이블 생성을 위한 코드
 async def create_tables():
@@ -131,6 +137,9 @@ admin_router.include_router(admin_topics.router, prefix="/topics", tags=["Admin 
 
 app.include_router(admin_router, prefix="/api/v1/admin")
 # ==========================================================
+
+# 정적 파일 제공 (이미지)
+app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
 
 @app.get("/")
