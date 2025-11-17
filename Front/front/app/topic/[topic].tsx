@@ -15,16 +15,17 @@ import {
 } from 'react-native';
 
 import { FeedCard } from '@/components/FeedCard';
-import { getArticlesByTopic } from '@/utils/api';
+import { getArticlesByTopic, getTopicByName } from '@/utils/api';
 import { useAuth } from '@/providers/AuthProvider';
-import type { FeedItem } from '@/types';
+import type { FeedItem, Topic } from '@/types';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80';
 
 export default function TopicScreen() {
   const { topic } = useLocalSearchParams<{ topic?: string }>();
   const router = useRouter();
-  const { subscribedTopics, subscribeTopic, unsubscribeTopic, isTopicSubscribed, token } = useAuth();
+  const { subscribeTopic, unsubscribeTopic, isTopicSubscribed, token } = useAuth();
+  const [topicInfo, setTopicInfo] = useState<Topic | null>(null);
   const [topicItems, setTopicItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -33,22 +34,27 @@ export default function TopicScreen() {
 
   const topicName = typeof topic === 'string' ? topic : 'Unknown';
 
-  // 현재 토픽의 ID 찾기 (첫 번째 아이템에서 가져오거나, subscribedTopics에서 찾기)
-  const currentTopicId = useMemo(() => {
-    if (topicItems[0]?.topicId) {
-      return topicItems[0].topicId;
-    }
-    const found = subscribedTopics.find((t) => t.name === topicName);
-    return found?.id;
-  }, [topicItems, subscribedTopics, topicName]);
+  // 현재 토픽의 ID (Topic API에서 가져온 정보 사용)
+  const currentTopicId = topicInfo?.id;
 
   const isSubscribed = useMemo(() => {
     if (!currentTopicId) return false;
     return isTopicSubscribed(currentTopicId);
   }, [currentTopicId, isTopicSubscribed]);
 
-  const leadItem = topicItems[0];
-  const avatarSource = { uri: leadItem?.imageUri ?? DEFAULT_AVATAR };
+  const avatarSource = { uri: topicInfo?.image_uri ?? DEFAULT_AVATAR };
+
+  const loadTopicInfo = useCallback(async () => {
+    if (!topicName) return;
+
+    try {
+      const info = await getTopicByName(topicName);
+      setTopicInfo(info);
+    } catch (err) {
+      console.error('[Topic] Failed to load topic info:', err);
+      setError(err instanceof Error ? err.message : 'Topic 정보를 불러올 수 없습니다');
+    }
+  }, [topicName]);
 
   const loadArticles = useCallback(async (isRefresh = false) => {
     if (!topicName) {
@@ -83,8 +89,9 @@ export default function TopicScreen() {
   }, [loadArticles]);
 
   useEffect(() => {
+    loadTopicInfo();
     loadArticles();
-  }, [loadArticles]);
+  }, [loadTopicInfo, loadArticles]);
 
   const handleSubscribeToggle = async () => {
     if (!token) {

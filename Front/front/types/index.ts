@@ -4,6 +4,7 @@ export type Topic = {
   id: string;
   name: string;
   summary: string;
+  image_uri: string;
 };
 
 export type FeedItem = {

@@ -162,6 +162,27 @@ export async function getArticleById(articleId: string): Promise<FeedItem> {
 }
 
 /**
+ * Topic 이름으로 Topic 정보 조회
+ */
+export async function getTopicByName(topicName: string): Promise<Topic> {
+  const response = await fetch(
+    `${API_BASE_URL}/topics/by-name/${encodeURIComponent(topicName)}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch topic: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Topic 기반 Article 조회
  */
 export async function getArticlesByTopic(

@@ -157,6 +157,31 @@ async def get_topic_articles(
 
 
 @router.get(
+    "/by-name/{topic_name}",
+    response_model=schemas.Topic,
+    summary="Topic 이름으로 Topic 정보 조회"
+)
+async def get_topic_by_name_endpoint(
+    topic_name: str,
+    db: AsyncSession = Depends(auth.get_db),
+):
+    """
+    Topic 이름으로 Topic 정보 조회 (Topic Profile 페이지용)
+
+    - 인증 불필요
+    - Topic 이름(GOOGLE, META 등)으로 검색
+    - Topic의 id, name, image_uri 등 기본 정보 반환
+    """
+    topic = await crud.get_topic_by_name(db=db, topic_name=topic_name)
+    if not topic:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topic '{topic_name}' not found"
+        )
+    return topic
+
+
+@router.get(
     "/by-name/{topic_name}/articles",
     response_model=schemas.ArticleFeedResponse,
     summary="Topic 이름으로 Article 목록 조회"
@@ -168,7 +193,7 @@ async def get_topic_articles_by_name(
     db: AsyncSession = Depends(auth.get_db),
 ):
     """
-    Topic 이름(keyword)으로 Article 목록 조회 (Keyword Profile 페이지용)
+    Topic 이름으로 Article 목록 조회 (Topic Profile 페이지용)
 
     - 인증 불필요
     - Topic 이름(GOOGLE, META 등)으로 검색

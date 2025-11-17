@@ -15,7 +15,7 @@ const FALLBACK_ITEM: FeedItem = {
   content:
     '요청한 피드를 찾지 못했어요. 대신 최근 AI 업계에서 주목받는 이슈와 실제 사례를 정리해 드립니다. 데이터 인프라 구축, 모델 배포 전략, 팀 협업 팁 등 바로 활용할 수 있는 내용으로 구성했어요. 홈 화면으로 돌아가 최신 피드를 확인하거나, 검색 기능을 통해 원하는 항목을 찾아보세요.',
   imageUri: 'https://images.unsplash.com/photo-1523473827534-86c4e00c07a3?auto=format&fit=crop&w=640&q=80',
-  keyword: 'AI INSIGHT',
+  topic: 'AI INSIGHT',
 };
 
 export default function ArticleScreen() {

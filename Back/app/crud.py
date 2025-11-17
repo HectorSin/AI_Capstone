@@ -565,7 +565,7 @@ async def get_topic_by_name(
     topic_name: str
 ) -> Optional[models.Topic]:
     """
-    Topic 이름으로 Topic 조회 (Keyword 페이지용)
+    Topic 이름으로 Topic 조회 (Topic Profile 페이지용)
 
     Args:
         db: Database session
