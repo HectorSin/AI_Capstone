@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Share, StyleSheet, SafeAreaView, View, ActivityIndicator, Text } from 'react-native';
 
@@ -23,7 +23,6 @@ export default function ArticleScreen() {
   const router = useRouter();
   const [feedItem, setFeedItem] = useState<FeedItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadArticle = async () => {
@@ -35,12 +34,10 @@ export default function ArticleScreen() {
 
       try {
         setIsLoading(true);
-        setError(null);
         const article = await getArticleById(id);
         setFeedItem(article);
       } catch (err) {
         console.error('[Article] Failed to load article:', err);
-        setError(err instanceof Error ? err.message : 'Article을 불러올 수 없습니다');
         setFeedItem(FALLBACK_ITEM);
       } finally {
         setIsLoading(false);

@@ -87,7 +87,7 @@ export default function HomeScreen() {
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>피드를 불러올 수 없습니다</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <Text style={styles.errorHint} onPress={loadFeed}>
+          <Text style={styles.errorHint} onPress={() => loadFeed()}>
             다시 시도
           </Text>
         </View>

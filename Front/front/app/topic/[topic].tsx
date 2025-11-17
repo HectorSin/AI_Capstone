@@ -40,7 +40,7 @@ export default function TopicScreen() {
   const isSubscribed = useMemo(() => {
     if (!currentTopicId) return false;
     return isTopicSubscribed(currentTopicId);
-  }, [currentTopicId, isTopicSubscribed, subscribedTopics]);
+  }, [currentTopicId, isTopicSubscribed]);
 
   const avatarSource = { uri: topicInfo?.image_uri ?? DEFAULT_AVATAR };
 
