@@ -70,9 +70,21 @@ export function ArchiveDownloadsTab() {
 }
 
 function DownloadCard({ playlist, onDelete, onPlay }: { playlist: DownloadedPlaylist; onDelete: () => void; onPlay: () => void }) {
+  // 난이도를 한글로 변환
+  const difficultyLabel = {
+    beginner: '초급',
+    intermediate: '중급',
+    advanced: '고급',
+  }[playlist.difficulty] || playlist.difficulty;
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{playlist.date}</Text>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{playlist.date}</Text>
+        <View style={styles.difficultyBadge}>
+          <Text style={styles.difficultyText}>{difficultyLabel}</Text>
+        </View>
+      </View>
       <Text style={styles.cardSubtitle}>
         기사 {playlist.segments.length}개 · {playlist.topics.join(', ')}
       </Text>
@@ -119,9 +131,27 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
+    flex: 1,
+  },
+  difficultyBadge: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  difficultyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   cardSubtitle: {
     fontSize: 13,

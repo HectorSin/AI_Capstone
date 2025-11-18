@@ -103,10 +103,24 @@ type RemoteCardProps = {
 
 function RemoteCard({ summary, isDownloading, onDownload }: RemoteCardProps) {
   const totalDuration = formatDuration(summary.total_duration_seconds);
+
+  // 난이도를 한글로 변환 (첫 번째 세그먼트 기준)
+  const difficulty = summary.segments[0]?.difficulty || 'intermediate';
+  const difficultyLabel = {
+    beginner: '초급',
+    intermediate: '중급',
+    advanced: '고급',
+  }[difficulty] || difficulty;
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{summary.date}</Text>
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardTitle}>{summary.date}</Text>
+          <View style={styles.difficultyBadge}>
+            <Text style={styles.difficultyText}>{difficultyLabel}</Text>
+          </View>
+        </View>
         <Text style={styles.cardDuration}>{totalDuration}</Text>
       </View>
       <Text style={styles.cardSubtitle}>기사 {summary.article_count}개 · {summary.topics.join(', ')}</Text>
@@ -172,9 +186,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  difficultyBadge: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  difficultyText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   cardDuration: {
     fontSize: 14,

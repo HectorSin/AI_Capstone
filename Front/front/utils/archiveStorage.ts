@@ -16,6 +16,7 @@ export type DownloadedSegment = {
 export type DownloadedPlaylist = {
   id: string;
   date: string;
+  difficulty: string; // 'beginner', 'intermediate', 'advanced'
   topics: string[];
   totalDurationSeconds: number;
   segments: DownloadedSegment[];
@@ -82,9 +83,12 @@ export async function downloadPlaylist(summary: DailyPodcastSummary): Promise<Do
   const segments: DownloadedSegment[] = [];
   const authToken = await getAuthTokenValue();
 
+  // 첫 번째 세그먼트의 난이도를 대표 난이도로 사용 (모든 세그먼트가 같은 난이도)
+  const difficulty = summary.segments[0]?.difficulty || 'intermediate';
+
   for (const segment of summary.segments) {
     const safeTopic = segment.topic_name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `${summary.date}_${safeTopic}_${segment.article_id}.mp3`;
+    const fileName = `${summary.date}_${difficulty}_${safeTopic}_${segment.article_id}.mp3`;
     const targetPath = `${downloadDir}${fileName}`;
     const downloadSource = resolveAudioUrl(segment.audio_url);
     const options = authToken
@@ -101,8 +105,9 @@ export async function downloadPlaylist(summary: DailyPodcastSummary): Promise<Do
   }
 
   const newEntry: DownloadedPlaylist = {
-    id: `${summary.date}_${Date.now()}`,
+    id: `${summary.date}_${difficulty}_${Date.now()}`,
     date: summary.date,
+    difficulty,
     topics: summary.topics,
     totalDurationSeconds: summary.total_duration_seconds,
     segments,
