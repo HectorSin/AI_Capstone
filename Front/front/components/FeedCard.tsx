@@ -6,10 +6,10 @@ type FeedCardProps = {
   imageUri: string;
   title: string;
   summary: string;
-  keyword: string;
+  topic: string;
   onPressCard?: () => void;
   onPressImage?: () => void;
-  onPressKeyword?: () => void;
+  onPressTopic?: () => void;
   date?: string;
   showDate?: boolean;
 };
@@ -18,10 +18,10 @@ function FeedCardComponent({
   imageUri,
   title,
   summary,
-  keyword,
+  topic,
   onPressCard,
   onPressImage,
-  onPressKeyword,
+  onPressTopic,
   date,
   showDate = false,
 }: FeedCardProps) {
@@ -43,10 +43,10 @@ function FeedCardComponent({
     onPressImage?.();
   };
 
-  const handleKeywordPress = (event: GestureResponderEvent) => {
+  const handleTopicPress = (event: GestureResponderEvent) => {
     event.stopPropagation();
     setIsTopPressed(false);
-    onPressKeyword?.();
+    onPressTopic?.();
   };
 
   return (
@@ -71,12 +71,12 @@ function FeedCardComponent({
             android_ripple={{ color: '#d1d5db', borderless: false }}
             onPressIn={handleTopPressIn}
             onPressOut={handleTopPressOut}
-            onPress={handleKeywordPress}
-            style={styles.keywordPressable}
+            onPress={handleTopicPress}
+            style={styles.topicPressable}
           >
             {({ pressed }) => {
               const active = pressed || isTopPressed;
-              return <Text style={[styles.keywordText, active && styles.keywordTextPressed]}>{keyword}</Text>;
+              return <Text style={[styles.topicText, active && styles.topicTextPressed]}>{topic}</Text>;
             }}
           </Pressable>
         </View>
@@ -130,17 +130,17 @@ const styles = StyleSheet.create({
   avatarPressed: {
     opacity: 0.7,
   },
-  keywordPressable: {
+  topicPressable: {
     paddingVertical: 4,
     flexShrink: 1,
   },
-  keywordText: {
+  topicText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
     flexShrink: 1,
   },
-  keywordTextPressed: {
+  topicTextPressed: {
     color: '#111827',
   },
   bottomSection: {

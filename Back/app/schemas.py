@@ -73,10 +73,15 @@ class LocalLoginRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: Optional[str] = None  # Refresh Token 추가 (기존 코드 호환성 위해 Optional)
 
 
 class TokenData(BaseModel):
     user_id: Optional[UUID] = None
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 class AvailabilityResponse(BaseModel):
@@ -151,49 +156,134 @@ class TopicSource(TopicSourceBase):
         from_attributes = True
 
 
-class PodcastScriptBase(BaseModel):
-    data: Dict[str, Any]
-
-
-class PodcastBase(BaseModel):
-    audio_uri: str
-    duration: Optional[int] = None
-
-
 class ArticleBase(BaseModel):
     title: str
-    summary: str
-    content: str
-    source_url: Optional[HttpUrl] = None
     date: date
-    json_data: Optional[Dict[str, Any]] = None
-
-
-class PodcastScript(PodcastScriptBase):
-    id: UUID
-    article_id: UUID
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class Podcast(PodcastBase):
-    id: UUID
-    article_id: UUID
-    script_id: Optional[UUID] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+    source_url: Optional[str] = None
 
 
 class Article(ArticleBase):
     id: UUID
     topic_id: UUID
+    status: str
+    crawled_data: Optional[Dict[str, Any]] = None
+    article_data: Optional[Dict[str, Any]] = None
+    script_data: Optional[Dict[str, Any]] = None
+    audio_data: Optional[Dict[str, Any]] = None
+    storage_path: Optional[str] = None
+    error_message: Optional[str] = None
+    processing_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
-    podcast_script: Optional[PodcastScript] = None
-    podcast: Optional[Podcast] = None
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DifficultyAudioInfo(BaseModel):
+    """난이도별 오디오 정보"""
+    audio_file: Optional[str] = None
+    duration: Optional[float] = None
+
+
+class ArticlePodcastResponse(BaseModel):
+    """개별 팟캐스트(Article) 정보"""
+    article_id: UUID
+    title: str
+    date: str
+    source_url: Optional[str]
+    status: str
+    # 난이도별 오디오 정보
+    audio_beginner: Optional[DifficultyAudioInfo] = None
+    audio_intermediate: Optional[DifficultyAudioInfo] = None
+    audio_advanced: Optional[DifficultyAudioInfo] = None
+    error_message: Optional[str] = None
+
+
+class PodcastBatchCreateResponse(BaseModel):
+    """여러 팟캐스트 생성 응답"""
+    topic: str
+    topic_id: UUID
+    keywords: List[str]
+    total_crawled: int
+    successful: int
+    failed: int
+    processing: int
+    articles: List[ArticlePodcastResponse]
+    created_at: str
+
+
+# ==========================================================
+# Article 피드 API 스키마 (Phase 5)
+# ==========================================================
+class ArticleFeedItem(BaseModel):
+    """프론트엔드 FeedItem 타입과 호환되는 응답"""
+    id: UUID
+    title: str
+    date: str  # "2024. 03. 20" 형식
+    summary: str
+    content: str
+    imageUri: str  # topic.image_uri
+    topic: str     # topic.name
+    topicId: Optional[UUID] = None  # topic.id
+
+    @classmethod
+    def from_article(cls, article, topic, difficulty_level: str = "intermediate") -> "ArticleFeedItem":
+        """Article + Topic 모델에서 FeedItem 생성
+
+        Args:
+            article: Article 모델 인스턴스
+            topic: Topic 모델 인스턴스
+            difficulty_level: 사용자 난이도 ('beginner', 'intermediate', 'advanced')
+                            기본값은 'intermediate'
+        """
+        from app.config import settings
+
+        # date를 "YYYY. MM. DD" 형식으로 변환
+        formatted_date = article.date.strftime("%Y. %m. %d")
+
+        # article_data JSONB에서 피드용 공통 summary 추출
+        feed_summary = ""
+        article_content = ""
+
+        if article.article_data:
+            feed_summary = article.article_data.get("summary", "")
+            # 사용자 난이도에 맞는 content 사용, 없으면 intermediate로 fallback
+            difficulty_data = article.article_data.get(difficulty_level, {})
+            if not difficulty_data or not isinstance(difficulty_data, dict):
+                # fallback: intermediate -> beginner -> advanced 순서
+                for fallback_level in ["intermediate", "beginner", "advanced"]:
+                    difficulty_data = article.article_data.get(fallback_level, {})
+                    if difficulty_data and isinstance(difficulty_data, dict):
+                        break
+            article_content = difficulty_data.get("content", "") if isinstance(difficulty_data, dict) else ""
+
+        # image_uri를 절대 URL로 변환
+        image_uri = topic.image_uri
+        if image_uri and not image_uri.startswith('http'):
+            # 상대 경로면 절대 URL로 변환
+            image_uri = f"{settings.server_url}{image_uri}"
+
+        return cls(
+            id=article.id,
+            title=article.title,
+            date=formatted_date,
+            summary=feed_summary,
+            content=article_content,
+            imageUri=image_uri,
+            topic=topic.name,
+            topicId=topic.id
+        )
+
+
+class ArticleFeedResponse(BaseModel):
+    """페이지네이션이 포함된 피드 응답"""
+    items: List[ArticleFeedItem]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool
 
     class Config:
         from_attributes = True
@@ -208,6 +298,17 @@ class Topic(TopicBase):
     created_at: datetime
     sources: List[TopicSource] = Field(default_factory=list)
     articles: List[Article] = Field(default_factory=list)
+
+    @field_validator('image_uri', mode='after')
+    @classmethod
+    def convert_image_uri_to_absolute(cls, value: str) -> str:
+        """image_uri를 절대 URL로 변환"""
+        from app.config import settings
+
+        if value and not value.startswith('http'):
+            # 상대 경로면 절대 URL로 변환
+            return f"{settings.server_url}{value}"
+        return value
 
     class Config:
         from_attributes = True
@@ -232,6 +333,28 @@ class UserTopicLink(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ==========================================================
+# Archive / Podcast 요약 스키마
+# ==========================================================
+class PodcastSegment(BaseModel):
+    article_id: UUID
+    topic_id: UUID
+    topic_name: str
+    title: str
+    difficulty: str
+    audio_url: str
+    duration_seconds: float
+    source_url: Optional[str] = None
+
+
+class DailyPodcastSummary(BaseModel):
+    date: date
+    article_count: int
+    total_duration_seconds: float
+    topics: List[str]
+    segments: List[PodcastSegment]
 
 
 class SelectTopicRequest(BaseModel):
@@ -366,11 +489,7 @@ try:
     User.model_rebuild()
     Topic.model_rebuild()
     Article.model_rebuild()
-    Podcast.model_rebuild()
-    PodcastScript.model_rebuild()
 except AttributeError:
     User.update_forward_refs()
     Topic.update_forward_refs()
     Article.update_forward_refs()
-    Podcast.update_forward_refs()
-    PodcastScript.update_forward_refs()

@@ -1,17 +1,23 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database.database import engine, Base, AsyncSessionLocal
 from app.database.redis_client import redis_client
 from app.config import settings
 from app.database import models  # 모델 import 추가 - 테이블 생성을 위해 필요
-from app.routers import users, auth, cache, topics, ai_jobs
+from app.routers import users, auth, cache, topics, ai_jobs, articles, podcasts
 from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics
 from app import crud, schemas
 import logging
+from pathlib import Path
 
 # 로깅 설정
 logging.basicConfig(level=getattr(logging, settings.log_level.upper()))
 logger = logging.getLogger(__name__)
+
+# 이미지 저장 디렉토리 설정
+IMAGES_DIR = Path("/app/database/images")
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 # DB 테이블 생성을 위한 코드
 async def create_tables():
@@ -73,7 +79,8 @@ app = FastAPI(
     title="AI Podcast Generator API",
     description="AI가 URL을 분석하여 팟캐스트를 생성하는 API",
     version="1.0.0",
-    debug=settings.debug
+    debug=settings.debug,
+    redirect_slashes=False  # trailing slash 자동 리디렉트 비활성화
 )
 
 # CORS 미들웨어 설정
@@ -119,6 +126,8 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(cache.router, prefix="/cache", tags=["Cache & Redis"])
 app.include_router(topics.router, tags=["Topics"])
 app.include_router(ai_jobs.router, prefix="/ai_jobs", tags=["AI Jobs"])
+app.include_router(articles.router, tags=["Articles"])  # Phase 5: Article 피드 API
+app.include_router(podcasts.router)
 
 # 관리자 페이지용 API 라우터
 # ----------------------------------------------------------
@@ -128,6 +137,9 @@ admin_router.include_router(admin_topics.router, prefix="/topics", tags=["Admin 
 
 app.include_router(admin_router, prefix="/api/v1/admin")
 # ==========================================================
+
+# 정적 파일 제공 (이미지)
+app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
 
 @app.get("/")

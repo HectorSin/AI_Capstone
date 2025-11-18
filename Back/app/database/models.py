@@ -119,60 +119,37 @@ class TopicSource(Base):
 class Article(Base):
     __tablename__ = "articles"
 
+    # 기본 키
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), nullable=False)
+
+    # 메타데이터
     title = Column(Text, nullable=False)
-    summary = Column(Text, nullable=False)
-    content = Column(Text, nullable=False)
-    source_url = Column(Text)
     date = Column(Date, nullable=False)
-    json_data = Column(JSONB)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    source_url = Column(Text)
+    status = Column(String(50), nullable=False, server_default='pending')
 
+    # 각 단계별 데이터 (JSONB) - 난이도별로 중첩 구조
+    crawled_data = Column(JSONB)  # BeautifulSoup 크롤링 원문
+    article_data = Column(JSONB)  # Gemini 요약 문서 (공통 summary + 난이도별)
+    script_data = Column(JSONB)   # Gemini 대본 (난이도별)
+    audio_data = Column(JSONB)    # Clova 오디오 정보 (난이도별)
+
+    # 시스템 정보
+    storage_path = Column(Text)
+    error_message = Column(Text)
+    processing_metadata = Column(JSONB)
+
+    # 타임스탬프
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+    completed_at = Column(DateTime)
+
+    # 관계
     topic = relationship("Topic", back_populates="articles")
-    podcast_script = relationship("PodcastScript", back_populates="article", uselist=False, cascade="all, delete-orphan")
-    podcast = relationship("Podcast", back_populates="article", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Article(id={self.id}, title={self.title[:30]}...)>"
-
-
-# ==========================================================
-# PodcastScript
-# ==========================================================
-class PodcastScript(Base):
-    __tablename__ = "podcast_scripts"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    article_id = Column(UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False)
-    data = Column(JSONB, nullable=False)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-
-    article = relationship("Article", back_populates="podcast_script")
-    podcast = relationship("Podcast", back_populates="script", uselist=False)
-
-    def __repr__(self):
-        return f"<PodcastScript(id={self.id}, article_id={self.article_id})>"
-
-
-# ==========================================================
-# Podcast
-# ==========================================================
-class Podcast(Base):
-    __tablename__ = "podcasts"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    article_id = Column(UUID(as_uuid=True), ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False)
-    script_id = Column(UUID(as_uuid=True), ForeignKey("podcast_scripts.id", ondelete="CASCADE"), unique=True)
-    audio_uri = Column(Text, nullable=False)
-    duration = Column(Integer)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-
-    article = relationship("Article", back_populates="podcast")
-    script = relationship("PodcastScript", back_populates="podcast")
-
-    def __repr__(self):
-        return f"<Podcast(id={self.id}, duration={self.duration})>"
+        return f"<Article(id={self.id}, title={self.title[:30]}..., status={self.status})>"
 
 
 # ==========================================================

@@ -17,24 +17,33 @@ export default function DifficultySettingScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const loadCurrentDifficulty = async () => {
       setIsLoading(true);
       try {
         await refreshProfile();
-        if (user?.difficulty_level) {
-          const level = user.difficulty_level as DifficultyLevel;
-          setSelectedDifficulty(level);
-          setInitialDifficulty(level);
-        }
       } catch (error) {
         console.warn('[Difficulty] Failed to load user profile', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadCurrentDifficulty();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshProfile]);
+
+  useEffect(() => {
+    if (user?.difficulty_level) {
+      const level = user.difficulty_level as DifficultyLevel;
+      setSelectedDifficulty(level);
+      setInitialDifficulty(level);
+    }
+  }, [user?.difficulty_level]);
 
   const isDirty = useMemo(() => {
     return selectedDifficulty !== initialDifficulty;

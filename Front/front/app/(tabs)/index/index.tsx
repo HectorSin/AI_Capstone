@@ -1,37 +1,69 @@
-import { SectionList, StyleSheet, Text, View } from 'react-native';
+import { SectionList, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 
 import { FeedCard } from '@/components/FeedCard';
 import { ServerConnectivityBanner } from '@/components/ServerConnectivityBanner';
-import feedItemsData from '@/test_data/feedItems.json';
+import { getArticleFeed } from '@/utils/api';
 import type { FeedItem } from '@/types';
+import { FeedErrorState, FeedLoadingState } from '@/components/FeedState';
+import { useFeedLoader } from '@/hooks/useFeedLoader';
 
 type FeedSection = {
   title: string;
   data: FeedItem[];
 };
 
-const feedItems = feedItemsData as FeedItem[];
-
-const feedSections: FeedSection[] = feedItems.reduce<FeedSection[]>((sections, item) => {
-  const lastSection = sections[sections.length - 1];
-  if (!lastSection || lastSection.title !== item.date) {
-    sections.push({ title: item.date, data: [item] });
-  } else {
-    lastSection.data.push(item);
-  }
-  return sections;
-}, []);
-
 export default function HomeScreen() {
   const router = useRouter();
+  const feedFetcher = useCallback(async () => {
+    const response = await getArticleFeed(0, 20);
+    return response.items;
+  }, []);
 
-  const navigateToKeyword = (keyword: string) => {
+  const { items: feedItems, isLoading, isRefreshing, error, reload, refresh } = useFeedLoader<FeedItem>({
+    fetcher: feedFetcher,
+    fallbackErrorMessage: '피드를 불러올 수 없습니다',
+  });
+
+  const feedSections: FeedSection[] = useMemo(
+    () =>
+      feedItems.reduce<FeedSection[]>((sections, item) => {
+        const lastSection = sections[sections.length - 1];
+        if (!lastSection || lastSection.title !== item.date) {
+          sections.push({ title: item.date, data: [item] });
+        } else {
+          lastSection.data.push(item);
+        }
+        return sections;
+      }, []),
+    [feedItems]
+  );
+
+  const navigateToTopic = (topic: string) => {
     router.push({
-      pathname: '/keyword/[keyword]',
-      params: { keyword },
+      pathname: '/topic/[topic]',
+      params: { topic },
     });
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <ServerConnectivityBanner />
+        <FeedLoadingState message="피드를 불러오는 중..." />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ServerConnectivityBanner />
+        <FeedErrorState title="피드를 불러올 수 없습니다" message={error} onRetry={reload} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -44,15 +76,15 @@ export default function HomeScreen() {
             title={item.title}
             summary={item.summary}
             imageUri={item.imageUri}
-            keyword={item.keyword}
+            topic={item.topic}
             onPressCard={() =>
               router.push({
                 pathname: '/article/[id]',
                 params: { id: item.id },
               })
             }
-            onPressImage={() => navigateToKeyword(item.keyword)}
-            onPressKeyword={() => navigateToKeyword(item.keyword)}
+            onPressImage={() => navigateToTopic(item.topic)}
+            onPressTopic={() => navigateToTopic(item.topic)}
           />
         )}
         renderSectionHeader={({ section: { title } }) => (
@@ -65,6 +97,19 @@ export default function HomeScreen() {
         stickySectionHeadersEnabled
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            tintColor="#2563eb"
+            colors={['#2563eb']}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>아직 피드가 없습니다</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -95,5 +140,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
     backgroundColor: '#e5e7eb',
+  },
+  emptyContainer: {
+    paddingVertical: 64,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6b7280',
   },
 });

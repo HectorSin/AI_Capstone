@@ -1,5 +1,6 @@
 // Functions for communicating with the backend API
-const API_BASE_URL = '/api/v1/admin';
+// 현재 호스트의 8001 포트 사용 (Nginx를 통해 프록시됨)
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8001/api/v1/admin`;
 
 function getAuthHeaders() {
     const token = localStorage.getItem('admin_token');
@@ -46,12 +47,15 @@ async function fetchRecentArticles(limit = 5) {
 
 async function fetchTopics(skip = 0, limit = 10, name = '') {
     try {
-        let url = `${API_BASE_URL}/topics?skip=${skip}&limit=${limit}`;
+        let url = `${API_BASE_URL}/topics/?skip=${skip}&limit=${limit}`;
         if (name) {
             url += `&name=${encodeURIComponent(name)}`;
         }
+        console.log('Fetching topics from:', url);
         const response = await fetch(url, { headers: getAuthHeaders() });
-        return handleApiResponse(response);
+        const data = await handleApiResponse(response);
+        console.log('Topics response:', data);
+        return data;
     } catch (error) {
         console.error('Error fetching topics:', error);
         return [];
@@ -60,10 +64,102 @@ async function fetchTopics(skip = 0, limit = 10, name = '') {
 
 async function fetchTopicDetails(topicId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, { headers: getAuthHeaders() });
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, { headers: getAuthHeaders() });
         return handleApiResponse(response);
     } catch (error) {
         console.error(`Error fetching topic details for ${topicId}:`, error);
         return null;
+    }
+}
+
+async function fetchTopicArticles(topicId, skip = 0, limit = 20) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/articles/?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error fetching articles for topic ${topicId}:`, error);
+        return [];
+    }
+}
+
+async function updateTopic(topicId, topicData) {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(topicData)
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error updating topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function uploadTopicImage(topicId, imageFile) {
+    try {
+        const headers = getAuthHeaders();
+        const formData = new FormData();
+        formData.append('file', imageFile);
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error uploading image for topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function deleteTopicImage(topicId) {
+    try {
+        const headers = getAuthHeaders();
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/image/`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error deleting image for topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function createTopic(topicData) {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/topics/`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(topicData)
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error('Error creating topic:', error);
+        throw error;
+    }
+}
+
+async function deleteTopic(topicId) {
+    try {
+        const headers = getAuthHeaders();
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error deleting topic ${topicId}:`, error);
+        throw error;
     }
 }

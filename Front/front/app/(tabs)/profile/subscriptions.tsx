@@ -9,7 +9,7 @@ import type { Topic } from '@/types';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { token, refreshSubscribedTopics } = useAuth();
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -110,6 +110,7 @@ export default function SubscriptionsScreen() {
         });
       }
       setInitialSelectedIds(selectedIds);
+      await refreshSubscribedTopics();
       Alert.alert('안내', '구독 토픽이 저장되었습니다.');
       router.back();
     } catch (error) {
@@ -215,5 +216,3 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 });
-
-

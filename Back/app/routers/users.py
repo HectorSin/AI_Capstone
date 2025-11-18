@@ -208,20 +208,23 @@ async def add_topic_to_user(
     current_user=Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
 ):
+    # current_user.id를 미리 추출 (detached 상태 방지)
+    user_id = current_user.id
+
     # 토픽 존재 여부 확인
     topic = await crud.get_topic_by_id(db, topic_id)
     if not topic:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
 
     try:
-        link = await crud.upsert_user_topic(db, user_id=current_user.id, topic_id=topic_id)
+        link = await crud.upsert_user_topic(db, user_id=user_id, topic_id=topic_id)
     except ValueError as e:
         if str(e) == "topic_not_found":
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
         raise
 
     return schemas.UserTopicLink(
-        user_id=current_user.id,
+        user_id=user_id,
         topic_id=topic_id,
         created_at=link.created_at,
     )
@@ -238,10 +241,13 @@ async def remove_topic_from_user(
     current_user=Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
 ):
+    # current_user.id를 미리 추출 (detached 상태 방지)
+    user_id = current_user.id
+
     # UserTopic 링크 조회
     from sqlalchemy import select, delete
     stmt = select(models.UserTopic).where(
-        models.UserTopic.user_id == current_user.id,
+        models.UserTopic.user_id == user_id,
         models.UserTopic.topic_id == topic_id,
     )
     result = await db.execute(stmt)
@@ -252,7 +258,7 @@ async def remove_topic_from_user(
 
     # 링크 삭제
     delete_stmt = delete(models.UserTopic).where(
-        models.UserTopic.user_id == current_user.id,
+        models.UserTopic.user_id == user_id,
         models.UserTopic.topic_id == topic_id,
     )
     await db.execute(delete_stmt)

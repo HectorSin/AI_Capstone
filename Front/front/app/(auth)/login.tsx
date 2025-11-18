@@ -1,4 +1,4 @@
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -6,7 +6,6 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

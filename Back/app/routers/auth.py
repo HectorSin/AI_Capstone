@@ -132,7 +132,8 @@ async def login_local(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password.")
 
     access_token = auth.create_access_token(subject=str(user.id))
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = auth.create_refresh_token(subject=str(user.id))
+    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
 
 @router.post(
@@ -156,7 +157,8 @@ async def login_admin(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not an administrator.")
 
     access_token = auth.create_access_token(subject=str(admin_user.id))
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = auth.create_refresh_token(subject=str(admin_user.id))
+    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
 
 @router.post(
@@ -234,7 +236,8 @@ async def login_google(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists.") from exc
 
     access_token = auth.create_access_token(subject=str(user.id))
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = auth.create_refresh_token(subject=str(user.id))
+    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
 
 @router.post(
@@ -282,7 +285,49 @@ async def login_kakao(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists.") from exc
 
     access_token = auth.create_access_token(subject=str(user.id))
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = auth.create_refresh_token(subject=str(user.id))
+    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+
+
+@router.post(
+    "/refresh",
+    response_model=schemas.Token,
+    summary="토큰 갱신",
+    description="Refresh Token으로 새로운 Access Token과 Refresh Token을 발급받습니다.",
+)
+async def refresh_token(
+    payload: schemas.RefreshTokenRequest,
+    db: AsyncSession = Depends(auth.get_db),
+):
+    """Refresh Token으로 새로운 Access Token 발급"""
+    user_id_str = auth.verify_refresh_token(payload.refresh_token)
+
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # User 존재 확인
+    from uuid import UUID
+    user = await crud.get_user_by_id(db, UUID(user_id_str))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 새로운 Access Token과 Refresh Token 발급
+    new_access_token = auth.create_access_token(subject=user_id_str)
+    new_refresh_token = auth.create_refresh_token(subject=user_id_str)
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "refresh_token": new_refresh_token
+    }
 
 
 @router.get(

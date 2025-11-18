@@ -186,6 +186,32 @@ td a:hover {
     text-decoration: underline;
 }
 
+.topics-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.topics-toolbar button {
+    margin-top: 0;
+}
+
+/* 행 선택 스타일 개선 */
+.topic-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.topic-row.selected {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #3498db;
+}
+
+.topic-row.selected:hover {
+    background-color: #bbdefb !important;
+}
+
 /* Topic Details Styles */
 #content h3 {
     color: #2c3e50;
@@ -208,9 +234,98 @@ button {
     cursor: pointer;
     font-size: 1rem;
     margin-top: 1rem;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
     background-color: #2980b9;
+}
+
+button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 버튼 색상 클래스 */
+.button-success {
+    background-color: #27ae60;
+}
+
+.button-success:hover:not(:disabled) {
+    background-color: #229954;
+}
+
+.button-primary {
+    background-color: #3498db;
+}
+
+.button-primary:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+.button-danger {
+    background-color: #e74c3c;
+}
+
+.button-danger:hover:not(:disabled) {
+    background-color: #c0392b;
+}
+
+/* 인라인 편집 스타일 */
+.editing-row {
+    background-color: #fff9e6 !important;
+    border-left: 4px solid #f39c12 !important;
+}
+
+.editing-row:hover {
+    background-color: #fff3d1 !important;
+}
+
+.edit-input,
+.edit-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.edit-input:focus,
+.edit-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.edit-select {
+    cursor: pointer;
+    background-color: white;
+}
+
+.image-edit-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: flex-start;
+}
+
+.image-edit-cell a {
+    font-size: 0.85em;
+    margin-bottom: 0.2rem;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    margin-top: 0;
+    white-space: nowrap;
 }

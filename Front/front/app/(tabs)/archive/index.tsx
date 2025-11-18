@@ -1,39 +1,41 @@
-import { SafeAreaView, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ArchiveCard } from '@/components/ArchiveCard';
-import archiveItemsData from '@/test_data/archiveItems.json';
+import { ArchiveRemoteTab } from '@/components/archive/ArchiveRemoteTab';
+import { ArchiveDownloadsTab } from '@/components/archive/ArchiveDownloadsTab';
 
-type ArchiveItem = {
-  date: string;
-  keywords: string[];
-  durationSeconds: number;
-};
+const TAB_OPTIONS = [
+  { key: 'remote', label: '보관함' },
+  { key: 'downloads', label: '다운로드' },
+] as const;
 
-const archiveItems = archiveItemsData as ArchiveItem[];
+type ArchiveTabKey = typeof TAB_OPTIONS[number]['key'];
 
 export default function ArchiveScreen() {
+  const [activeTab, setActiveTab] = useState<ArchiveTabKey>('remote');
+
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={archiveItems}
-        keyExtractor={(item) => item.date}
-        renderItem={({ item }) => (
-          <ArchiveCard
-            date={item.date}
-            keywords={item.keywords}
-            durationSeconds={item.durationSeconds}
-          />
-        )}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>보관된 피드가 없어요</Text>
-            <Text style={styles.emptyBody}>흥미로운 소식을 보관하면 여기에서 다시 확인할 수 있어요.</Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+    <View style={styles.container}>
+      <View style={styles.tabBar}>
+        {TAB_OPTIONS.map((option) => {
+          const isActive = option.key === activeTab;
+          return (
+            <Pressable
+              key={option.key}
+              onPress={() => setActiveTab(option.key)}
+              style={({ pressed }) => [
+                styles.tabButton,
+                isActive && styles.tabButtonActive,
+                pressed && styles.tabButtonPressed,
+              ]}
+            >
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.content}>{activeTab === 'remote' ? <ArchiveRemoteTab /> : <ArchiveDownloadsTab />}</View>
+    </View>
   );
 }
 
@@ -42,24 +44,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  listContent: {
-    paddingBottom: 32,
+  content: {
+    flex: 1,
   },
-  emptyState: {
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  tabButton: {
+    flex: 1,
+    borderRadius: 999,
+    paddingVertical: 10,
     alignItems: 'center',
-    gap: 12,
-    marginTop: 72,
-    paddingHorizontal: 24,
+    backgroundColor: '#f3f4f6',
   },
-  emptyTitle: {
-    fontSize: 18,
+  tabButtonActive: {
+    backgroundColor: '#111827',
+  },
+  tabButtonPressed: {
+    opacity: 0.7,
+  },
+  tabLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
-    textAlign: 'center',
+    color: '#4b5563',
   },
-  emptyBody: {
-    fontSize: 15,
-    color: '#6b7280',
-    textAlign: 'center',
+  tabLabelActive: {
+    color: '#ffffff',
   },
 });

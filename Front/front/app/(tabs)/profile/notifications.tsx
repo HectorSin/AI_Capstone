@@ -137,7 +137,6 @@ export default function NotificationSettingsScreen() {
   }, [notificationPreference]);
 
   const scheduleEnabled = allowNotifications && timeSettingEnabled;
-  const scheduleActive = allowNotifications && timeSettingEnabled;
   const periodOptions: ('오전' | '오후')[] = ['오전', '오후'];
   const hourOptions = Array.from({ length: 12 }, (_, index) => index + 1);
   const minuteOptions = Array.from({ length: 12 }, (_, index) => index * 5);
@@ -147,12 +146,13 @@ export default function NotificationSettingsScreen() {
 
   const currentSnapshot = useMemo(() => {
     const { hour, minute } = to24Hour(timePreference);
+    const scheduleActive = allowNotifications && timeSettingEnabled;
     return {
       allowed: allowNotifications,
       timeEnabled: timeSettingEnabled,
-      hour: scheduleEnabled ? hour : null,
-      minute: scheduleEnabled ? minute : null,
-      days: scheduleEnabled ? [...selectedDays] : [],
+      hour: scheduleActive ? hour : null,
+      minute: scheduleActive ? minute : null,
+      days: scheduleActive ? [...selectedDays] : [],
     };
   }, [allowNotifications, timeSettingEnabled, selectedDays, timePreference]);
 

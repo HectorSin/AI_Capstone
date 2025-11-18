@@ -8,7 +8,13 @@ import {
   updateNotificationPreference as updateNotificationPreferenceApi,
   NotificationPreferenceDTO,
   NotificationPreferenceUpdatePayload,
+  getMyTopics,
+  subscribeTopic as subscribeTopicApi,
+  unsubscribeTopic as unsubscribeTopicApi,
+  registerAuthTokenLoader,
+  refreshAccessToken,
 } from '@/utils/api';
+import type { Topic } from '@/types';
 
 type Credentials = {
   email: string;
@@ -56,6 +62,7 @@ type AuthContextValue = {
   user: AuthenticatedUser | null;
   token: string | null;
   notificationPreference: NotificationPreferenceState | null;
+  subscribedTopics: Topic[];
   signIn: (credentials: Credentials) => Promise<boolean>;
   signUp: (payload: RegisterPayload) => Promise<boolean>;
   signOut: () => Promise<void>;
@@ -64,11 +71,16 @@ type AuthContextValue = {
   refreshNotificationPreference: () => Promise<void>;
   updateNotificationPreference: (input: NotificationPreferenceInput) => Promise<boolean>;
   updateDifficulty: (difficulty: 'beginner' | 'intermediate' | 'advanced') => Promise<boolean>;
+  refreshSubscribedTopics: () => Promise<void>;
+  subscribeTopic: (topicId: string) => Promise<boolean>;
+  unsubscribeTopic: (topicId: string) => Promise<boolean>;
+  isTopicSubscribed: (topicId: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_STORAGE_KEY = '@capstone/authToken';
+const REFRESH_TOKEN_STORAGE_KEY = '@capstone/refreshToken';
 const DEFAULT_HOUR = 7;
 const DEFAULT_MINUTE = 0;
 const DEFAULT_WEEKDAY_INDICES = [0, 1, 2, 3, 4];
@@ -100,8 +112,10 @@ const buildUpdatePayload = (input: NotificationPreferenceInput): NotificationPre
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [notificationPreference, setNotificationPreference] = useState<NotificationPreferenceState | null>(null);
+  const [subscribedTopics, setSubscribedTopics] = useState<Topic[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const fetchProfile = useCallback(async (accessToken: string) => {
@@ -149,12 +163,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     []
   );
 
-  const persistToken = useCallback(async (accessToken: string | null) => {
+  const fetchAndStoreSubscribedTopics = useCallback(
+    async (accessToken: string) => {
+      try {
+        const topics = await getMyTopics(accessToken);
+        setSubscribedTopics(topics);
+        return topics;
+      } catch (error) {
+        console.warn('[Auth] fetchSubscribedTopics failed', error);
+        setSubscribedTopics([]);
+        return [];
+      }
+    },
+    []
+  );
+
+  const persistToken = useCallback(async (accessToken: string | null, newRefreshToken?: string | null) => {
     setToken(accessToken);
     if (accessToken) {
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
     } else {
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+
+    // Refresh Token 저장 (undefined가 아닌 경우에만 처리)
+    if (newRefreshToken !== undefined) {
+      setRefreshToken(newRefreshToken);
+      if (newRefreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, newRefreshToken);
+      } else {
+        await AsyncStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+      }
     }
   }, []);
 
@@ -231,15 +270,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return false;
         }
 
-        const { access_token: accessToken } = await response.json();
+        const { access_token: accessToken, refresh_token: newRefreshToken } = await response.json();
         if (!accessToken) {
           console.warn('[Auth] signIn response missing token');
           return false;
         }
 
-        await persistToken(accessToken);
+        await persistToken(accessToken, newRefreshToken);
         await fetchProfile(accessToken);
         const pref = await fetchAndStorePreference(accessToken);
+        await fetchAndStoreSubscribedTopics(accessToken);
         maybePromptNotificationConsent(pref, accessToken);
         return true;
       } catch (error) {
@@ -297,9 +337,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const signOut = useCallback(async () => {
-    await persistToken(null);
+    await persistToken(null, null);
     setUser(null);
     setNotificationPreference(null);
+    setSubscribedTopics([]);
   }, [persistToken]);
 
   const deleteAccount = useCallback(async () => {
@@ -338,6 +379,95 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!token) return;
     await fetchAndStorePreference(token);
   }, [fetchAndStorePreference, token]);
+
+  const refreshSubscribedTopics = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      await fetchAndStoreSubscribedTopics(token);
+    } catch (error: any) {
+      // 401 에러 시 토큰 갱신 시도
+      if (error?.message?.includes('401') && refreshToken) {
+        console.log('[Auth] 401 in refreshSubscribedTopics, attempting token refresh');
+        const success = await tryRefreshToken(refreshToken);
+        if (success && token) {
+          await fetchAndStoreSubscribedTopics(token);
+        }
+      }
+    }
+  }, [fetchAndStoreSubscribedTopics, token, refreshToken, tryRefreshToken]);
+
+  const subscribeTopic = useCallback(
+    async (topicId: string) => {
+      if (!token) {
+        console.warn('[Auth] subscribeTopic failed: no token');
+        return false;
+      }
+
+      console.log('[Auth] subscribeTopic started:', topicId);
+      try {
+        await subscribeTopicApi(token, topicId);
+        console.log('[Auth] subscribeTopicApi success, refreshing topics...');
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] Topics after subscribe:', topics?.map((t) => ({ id: t.id, name: t.name })));
+        return true;
+      } catch (error) {
+        console.error('[Auth] subscribeTopic error', error);
+        // API가 실패했더라도 실제로 서버에 반영되었는지 확인
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        const isSubscribedNow = topics.some((topic) => topic.id === topicId);
+        if (isSubscribedNow) {
+          console.warn('[Auth] subscribeTopic recovered: topic appears in my list after error');
+          return true;
+        }
+        return false;
+      }
+    },
+    [fetchAndStoreSubscribedTopics, token]
+  );
+
+  const unsubscribeTopic = useCallback(
+    async (topicId: string) => {
+      if (!token) {
+        console.warn('[Auth] unsubscribeTopic failed: no token');
+        return false;
+      }
+
+      console.log('[Auth] unsubscribeTopic started:', topicId);
+      try {
+        await unsubscribeTopicApi(token, topicId);
+        console.log('[Auth] unsubscribeTopicApi success, refreshing topics...');
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        console.log('[Auth] Topics after unsubscribe:', topics?.map((t) => ({ id: t.id, name: t.name })));
+        return true;
+      } catch (error) {
+        console.error('[Auth] unsubscribeTopic error', error);
+        const topics = await fetchAndStoreSubscribedTopics(token);
+        const isStillSubscribed = topics.some((topic) => topic.id === topicId);
+        if (!isStillSubscribed) {
+          console.warn('[Auth] unsubscribeTopic recovered: topic removed despite API error');
+          return true;
+        }
+        return false;
+      }
+    },
+    [fetchAndStoreSubscribedTopics, token]
+  );
+
+  const isTopicSubscribed = useCallback(
+    (topicId: string) => {
+      const result = subscribedTopics.some((topic) => topic.id === topicId);
+      // 디버깅용 로그
+      if (result) {
+        console.log(`✅ [Auth] Topic ${topicId} IS subscribed`);
+      } else {
+        console.log(`❌ [Auth] Topic ${topicId} is NOT subscribed`);
+      }
+      console.log('[Auth] Current subscribed topics:', subscribedTopics.map(t => `${t.name} (${t.id})`).join(', '));
+      return result;
+    },
+    [subscribedTopics]
+  );
 
   const updateNotificationPreference = useCallback(
     async (input: NotificationPreferenceInput) => {
@@ -400,14 +530,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [fetchProfile, token]
   );
 
+  // Refresh Token으로 자동 갱신 시도
+  const tryRefreshToken = useCallback(async (storedRefreshToken: string): Promise<boolean> => {
+    try {
+      console.log('[Auth] Attempting to refresh access token');
+      const { access_token, refresh_token: new_refresh_token } = await refreshAccessToken(storedRefreshToken);
+
+      await persistToken(access_token, new_refresh_token);
+      await fetchProfile(access_token);
+      await fetchAndStorePreference(access_token);
+      await fetchAndStoreSubscribedTopics(access_token);
+
+      console.log('[Auth] Token refresh successful');
+      return true;
+    } catch (error) {
+      console.warn('[Auth] Token refresh failed:', error);
+      // Refresh Token도 만료됨 - 로그아웃 처리
+      await persistToken(null, null);
+      setUser(null);
+      setNotificationPreference(null);
+      setSubscribedTopics([]);
+      return false;
+    }
+  }, [fetchProfile, fetchAndStorePreference, fetchAndStoreSubscribedTopics, persistToken]);
+
   useEffect(() => {
     (async () => {
       try {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        const storedRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+
         if (storedToken) {
           setToken(storedToken);
-          await fetchProfile(storedToken);
-          await fetchAndStorePreference(storedToken);
+          setRefreshToken(storedRefreshToken);
+
+          // 프로필 로드 시도 (Access Token 만료 시 401 발생 가능)
+          try {
+            await fetchProfile(storedToken);
+            await fetchAndStorePreference(storedToken);
+            await fetchAndStoreSubscribedTopics(storedToken);
+          } catch (error: any) {
+            // Access Token 만료된 경우, Refresh Token으로 갱신 시도
+            if (error?.message?.includes('401') && storedRefreshToken) {
+              console.log('[Auth] Access token expired, trying refresh token');
+              await tryRefreshToken(storedRefreshToken);
+            } else {
+              throw error;
+            }
+          }
         }
       } catch (error) {
         console.warn('[Auth] failed to hydrate token', error);
@@ -415,7 +585,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsHydrated(true);
       }
     })();
-  }, [fetchAndStorePreference, fetchProfile]);
+  }, [fetchAndStorePreference, fetchAndStoreSubscribedTopics, fetchProfile, tryRefreshToken]);
+
+  useEffect(() => {
+    registerAuthTokenLoader(async () => token);
+  }, [token]);
 
   const value = useMemo(
     () => ({
@@ -423,6 +597,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       token,
       notificationPreference,
+      subscribedTopics,
       signIn,
       signUp,
       signOut,
@@ -431,11 +606,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshNotificationPreference,
       updateNotificationPreference,
       updateDifficulty,
+      refreshSubscribedTopics,
+      subscribeTopic,
+      unsubscribeTopic,
+      isTopicSubscribed,
     }),
     [
       token,
       user,
       notificationPreference,
+      subscribedTopics,
       signIn,
       signUp,
       signOut,
@@ -444,6 +624,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshNotificationPreference,
       updateNotificationPreference,
       updateDifficulty,
+      refreshSubscribedTopics,
+      subscribeTopic,
+      unsubscribeTopic,
+      isTopicSubscribed,
     ]
   );
 

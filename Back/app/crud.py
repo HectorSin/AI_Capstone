@@ -1,8 +1,8 @@
 import re
 import secrets
 
-from datetime import time
-from typing import List, Optional, Sequence
+from datetime import date, time
+from typing import List, Optional, Sequence, Tuple
 from uuid import UUID
 
 from sqlalchemy import select
@@ -327,10 +327,7 @@ async def list_topics_for_user(db: AsyncSession, user_id: UUID) -> List[models.T
         .where(models.UserTopic.user_id == user_id)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
             selectinload(models.Topic.users),
         )
         .order_by(models.Topic.created_at.desc())
@@ -345,10 +342,7 @@ async def get_topic_by_id(db: AsyncSession, topic_id: UUID) -> Optional[models.T
         .where(models.Topic.id == topic_id)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
         )
     )
     result = await db.execute(stmt)
@@ -387,15 +381,51 @@ async def list_all_topics(db: AsyncSession) -> List[models.Topic]:
         select(models.Topic)
         .options(
             selectinload(models.Topic.sources),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast_script),
-            selectinload(models.Topic.articles)
-            .selectinload(models.Article.podcast),
+            selectinload(models.Topic.articles),
         )
         .order_by(models.Topic.created_at.desc())
     )
     result = await db.execute(stmt)
     return list(result.scalars().unique())
+
+
+async def update_topic(
+    db: AsyncSession,
+    topic_id: UUID,
+    topic_update: schemas.TopicBase
+) -> Optional[models.Topic]:
+    """토픽 정보를 업데이트합니다."""
+    # 기존 토픽 조회
+    topic = await get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        return None
+
+    # 업데이트할 필드 적용
+    topic.name = topic_update.name
+    topic.type = models.TopicType[topic_update.type.name]
+    topic.summary = topic_update.summary
+    topic.image_uri = topic_update.image_uri
+    topic.keywords = topic_update.keywords or []
+
+    await db.commit()
+    await db.refresh(topic)
+
+    # sources와 articles를 포함하여 다시 조회
+    return await get_topic_by_id(db=db, topic_id=topic_id)
+
+
+async def delete_topic(
+    db: AsyncSession,
+    topic_id: UUID
+) -> bool:
+    """토픽을 삭제합니다."""
+    topic = await get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        return False
+
+    await db.delete(topic)
+    await db.commit()
+    return True
 
 
 # ==========================================================
@@ -427,3 +457,198 @@ async def upsert_user_topic(
 
     await db.commit()
     return link
+
+
+# ==========================================================
+# Article helpers (Phase 5 - Feed API)
+# ==========================================================
+async def get_all_articles(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 20,
+    order_by_date: bool = True
+) -> List[models.Article]:
+    """
+    모든 Article을 조회 (페이지네이션 지원)
+
+    Args:
+        db: Database session
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+        order_by_date: True면 date DESC, False면 created_at DESC
+
+    Returns:
+        Article 목록
+    """
+    from sqlalchemy import desc
+
+    stmt = select(models.Article).options(
+        selectinload(models.Article.topic)
+    )
+
+    if order_by_date:
+        stmt = stmt.order_by(desc(models.Article.date))
+    else:
+        stmt = stmt.order_by(desc(models.Article.created_at))
+
+    stmt = stmt.offset(skip).limit(limit)
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_articles_by_user_topics(
+    db: AsyncSession,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20
+) -> List[models.Article]:
+    """
+    사용자가 구독한 토픽들의 Article 조회
+
+    Args:
+        db: Database session
+        user_id: 사용자 UUID
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+
+    Returns:
+        Article 목록 (날짜 내림차순)
+    """
+    from sqlalchemy import desc
+
+    # 사용자가 구독한 토픽 ID 목록 조회
+    user_topics_stmt = (
+        select(models.UserTopic.topic_id)
+        .where(models.UserTopic.user_id == user_id)
+    )
+    user_topics_result = await db.execute(user_topics_stmt)
+    topic_ids = [row[0] for row in user_topics_result.all()]
+
+    if not topic_ids:
+        return []
+
+    # 해당 토픽들의 Article 조회
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.topic_id.in_(topic_ids))
+        .order_by(desc(models.Article.date))
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def list_articles_with_audio_for_topics(
+    db: AsyncSession,
+    topic_ids: List[UUID],
+    start_date: date,
+    end_date: date,
+) -> List[Tuple[models.Article, models.Topic]]:
+    """
+    지정한 토픽들의 기사 중 날짜 범위에 속하며 오디오가 포함된 데이터를 조회합니다.
+    """
+    if not topic_ids:
+        return []
+
+    stmt = (
+        select(models.Article, models.Topic)
+        .join(models.Topic, models.Article.topic_id == models.Topic.id)
+        .where(
+            models.Article.topic_id.in_(topic_ids),
+            models.Article.date >= start_date,
+            models.Article.date <= end_date,
+            models.Article.status == 'completed',
+        )
+        .order_by(models.Article.date.desc(), models.Article.created_at.desc())
+    )
+
+    result = await db.execute(stmt)
+    return list(result.all())
+
+
+async def get_articles_by_topic(
+    db: AsyncSession,
+    topic_id: UUID,
+    skip: int = 0,
+    limit: int = 20
+) -> List[models.Article]:
+    """
+    특정 토픽의 Article 조회
+
+    Args:
+        db: Database session
+        topic_id: 토픽 UUID
+        skip: 건너뛸 개수
+        limit: 가져올 최대 개수
+
+    Returns:
+        Article 목록 (날짜 내림차순)
+    """
+    from sqlalchemy import desc
+
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.topic_id == topic_id)
+        .order_by(desc(models.Article.date))
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_article_by_id(
+    db: AsyncSession,
+    article_id: UUID
+) -> Optional[models.Article]:
+    """
+    Article ID로 개별 Article 조회 (Article 상세 페이지용)
+
+    Args:
+        db: Database session
+        article_id: Article UUID
+
+    Returns:
+        Article 또는 None
+    """
+    stmt = (
+        select(models.Article)
+        .options(selectinload(models.Article.topic))
+        .where(models.Article.id == article_id)
+    )
+
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_topic_by_name(
+    db: AsyncSession,
+    topic_name: str
+) -> Optional[models.Topic]:
+    """
+    Topic 이름으로 Topic 조회 (Topic Profile 페이지용)
+
+    Args:
+        db: Database session
+        topic_name: Topic 이름 (예: "GOOGLE", "META")
+
+    Returns:
+        Topic 또는 None
+    """
+    stmt = (
+        select(models.Topic)
+        .where(models.Topic.name == topic_name)
+        .options(
+            selectinload(models.Topic.sources),
+            selectinload(models.Topic.articles),
+        )
+    )
+
+    result = await db.execute(stmt)
+    return result.scalars().first()

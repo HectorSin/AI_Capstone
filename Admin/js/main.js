@@ -1,5 +1,7 @@
 // Main entry point for the admin page
 
+const DEFAULT_ROUTE = '#/dashboard';
+
 // Global functions to be accessible from HTML onclick
 window.loadDashboard = async () => {
     try {
@@ -21,6 +23,15 @@ window.loadTopics = async () => {
     }
 };
 
+window.loadArticles = async () => {
+    try {
+        const topics = await fetchTopics();
+        renderTopics(topics, 'Articles', { showToolbar: false });
+    } catch (error) {
+        console.error("Failed to load articles:", error);
+    }
+};
+
 window.loadTopicDetails = async (topicId) => {
     try {
         const topic = await fetchTopicDetails(topicId);
@@ -35,6 +46,41 @@ window.logout = () => {
     window.location.href = 'login.html';
 };
 
+const routes = {
+    '#/dashboard': window.loadDashboard,
+    '#/topics': window.loadTopics,
+    '#/articles': window.loadArticles
+};
+
+function setActiveNav(route) {
+    document.querySelectorAll('nav ul li a').forEach((link) => {
+        if (link.getAttribute('href') === route) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+function handleRouteChange() {
+    const currentHash = window.location.hash;
+
+    if (!currentHash) {
+        window.location.hash = DEFAULT_ROUTE;
+        return;
+    }
+
+    const routeHandler = routes[currentHash];
+    if (!routeHandler) {
+        window.location.hash = DEFAULT_ROUTE;
+        return;
+    }
+
+    setActiveNav(currentHash);
+    routeHandler();
+}
+
+window.addEventListener('hashchange', handleRouteChange);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check for auth token on every page load except login page
@@ -44,18 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log('Admin page loaded');
-
-    // Set up navigation
-    document.querySelector('nav ul li a[href="#dashboard"]').addEventListener('click', (e) => {
-        e.preventDefault();
-        window.loadDashboard();
-    });
-
-    document.querySelector('nav ul li a[href="#topics"]').addEventListener('click', (e) => {
-        e.preventDefault();
-        window.loadTopics();
-    });
-
-    // Initial load
-    window.loadDashboard(); 
+    if (!window.location.hash) {
+        window.location.hash = DEFAULT_ROUTE;
+    }
+    handleRouteChange();
 });
