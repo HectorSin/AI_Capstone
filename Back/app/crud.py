@@ -414,6 +414,20 @@ async def update_topic(
     return await get_topic_by_id(db=db, topic_id=topic_id)
 
 
+async def delete_topic(
+    db: AsyncSession,
+    topic_id: UUID
+) -> bool:
+    """토픽을 삭제합니다."""
+    topic = await get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        return False
+
+    await db.delete(topic)
+    await db.commit()
+    return True
+
+
 # ==========================================================
 # User-Topic selection helpers
 # ==========================================================

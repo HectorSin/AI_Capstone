@@ -148,3 +148,18 @@ async function createTopic(topicData) {
         throw error;
     }
 }
+
+async function deleteTopic(topicId) {
+    try {
+        const headers = getAuthHeaders();
+
+        const response = await fetch(`${API_BASE_URL}/topics/${topicId}/`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error deleting topic ${topicId}:`, error);
+        throw error;
+    }
+}

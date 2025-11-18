@@ -220,3 +220,34 @@ async def delete_topic_image(
     await db.refresh(topic)
 
     return {"message": "이미지가 삭제되었습니다"}
+
+
+@router.delete("/{topic_id}/", summary="토픽 삭제")
+async def delete_topic_endpoint(
+    topic_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_admin_user: models.AdminUser = Depends(get_current_admin_user)
+):
+    """토픽을 삭제합니다. 연관된 이미지 파일도 함께 삭제됩니다."""
+    # 토픽 조회
+    topic = await crud.get_topic_by_id(db=db, topic_id=topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    # 이미지가 있으면 파일도 삭제
+    if topic.image_uri:
+        filename = topic.image_uri.split('/')[-1]
+        file_path = IMAGES_DIR / filename
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception as e:
+                # 파일 삭제 실패해도 토픽은 삭제 진행
+                print(f"Warning: Failed to delete image file: {str(e)}")
+
+    # 토픽 삭제
+    success = await crud.delete_topic(db=db, topic_id=topic_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    return {"message": "토픽이 삭제되었습니다", "topic_id": str(topic_id)}

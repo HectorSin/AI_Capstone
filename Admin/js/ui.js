@@ -260,14 +260,30 @@ window.handleEditTopic = async () => {
     renderTopics(topics);
 };
 
-window.handleDeleteTopic = () => {
+window.handleDeleteTopic = async () => {
     if (!selectedTopicId) {
+        alert('삭제할 토픽을 선택하세요.');
         return;
     }
-    console.log('Delete Topic clicked for', selectedTopicId);
-    selectedTopicId = null;
-    updateTopicRowSelection(document.getElementById('content'));
-    updateTopicActionButtons();
+
+    // 확인 메시지
+    if (!confirm('정말로 이 토픽을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        return;
+    }
+
+    try {
+        await deleteTopic(selectedTopicId);
+        alert('토픽이 성공적으로 삭제되었습니다.');
+
+        // 선택 해제 및 목록 새로고침
+        selectedTopicId = null;
+
+        const topics = await fetchTopics();
+        renderTopics(topics);
+    } catch (error) {
+        console.error('Error deleting topic:', error);
+        alert('토픽 삭제 중 오류가 발생했습니다: ' + error.message);
+    }
 };
 
 function renderEditableRow(topic) {
