@@ -82,6 +82,7 @@ async def test_perplexity_direct(topic: str = "GOOGLE"):
 # AI 팟캐스트 생성
 # 1. 팟캐스트 생성 요청 POST -> perplexity 활용 데이터 크롤링 -> Gemini 활용 문서 생성 -> Gemini 활용 대본 생성 -> Clova 활용 TTS 생성 -> 팟캐스트 생성 완료
 
+# TODO: 현재 만들어진 코드를 보니 /test는 필요 없어 보입니다. 우선 주석처리한 후 테스트 5단계 진행해보시고 이상 없으면 제거 해주세요!
 @router.post("/test", response_model=schemas.PodcastBatchCreateResponse, summary="AI 팟캐스트 생성 (테스트용)")
 async def create_ai_podcast_test(  # TODO: 비동기 처리
     podcast_data: schemas.PodcastCreate,
@@ -142,6 +143,7 @@ async def create_ai_podcast_test(  # TODO: 비동기 처리
         for a in articles_data:
             audio_data = a.get('audio_data', {})
 
+            # TODO: 지금 테스트 API인데 DB에 데이터가 저장되는 로직이 들어가 있는건가요? 있다면 빼주세요 & UUID 왜 있는거죠? 필요 없는거면 지워주세요
             # 테스트용이므로 article_id는 임시 UUID 사용
             from uuid import uuid4
             article_responses.append(

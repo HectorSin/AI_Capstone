@@ -98,7 +98,7 @@ class PromptManager:
     
     def create_tech_news_prompt(self, category: str, company_info: Dict[str, Any], source_preferences: str) -> str:
         """기술 뉴스 수집을 위한 프롬프트 생성"""
-        
+        # TODO: configs/prompt_templates.json에 해당 프롬프트 옮겨주세요
         prompt = f"""
         You are a technology news curator and translator specializing in cutting-edge tech developments.
 

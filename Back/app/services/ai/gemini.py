@@ -267,7 +267,8 @@ class GeminiService(AIService):
         beginner_content = article_data.get('beginner', {}).get('content', '')
         intermediate_content = article_data.get('intermediate', {}).get('content', '')
         advanced_content = article_data.get('advanced', {}).get('content', '')
-
+        # TODO: 지금 프롬프트 단에서 자료 2000자 제한하고 있어요, 싹다 prompt_templates.json으로 옮겨주세요
+        # TODO: langchain output parser 써주세요
         prompt = f"""
 다음 3가지 난이도의 문서를 각각 팟캐스트 대본으로 만들어주세요.
 
@@ -313,7 +314,7 @@ class GeminiService(AIService):
         try:
             resp = await self.chat_model.ainvoke(prompt)
             text = resp.content if hasattr(resp, "content") else str(resp)
-
+            # TODO: json output parser로 쓰기 <- 제 기존 코드 봐주세요
             # JSON 마크다운 블록 제거
             if text.startswith("```json"):
                 text = text.replace("```json", "").replace("```", "").strip()

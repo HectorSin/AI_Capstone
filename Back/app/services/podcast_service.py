@@ -42,6 +42,7 @@ class PodcastService:
         )
         
         # 저장 경로 설정 (Docker 볼륨 마운트 경로)
+        # TODO: 이런 경로 싹다 .env에 저장해주세요 & docker-compose.yml에 있을수도 있으니 둘다 체크해서 단 1개만 쓰고 될 수 있으면 .env에서만 관리해주세요
         self.base_storage_path = "/app/podcasts"
         self._ensure_storage_directory()
         
@@ -464,7 +465,8 @@ class PodcastService:
             # 1. Perplexity로 링크 수집
             # TODO: 모든 로거 지워주세요 -> DB & Storage 구분 작업 필요해요 -> 어느 경로에 무슨 파일이 저장될지 정하기
             logger.info(f"토픽 '{topic}'에 대한 기사 크롤링 시작")
-            crawled_links = await self.perplexity.crawl_topic(topic, keywords)
+            # TODO: 퍼플렉시티의 결과물 원본도 저장 해주세요
+            crawled_links = await self.perplexity.crawl_topic(topic, keywords) # TODO: Beautiful Soup랑 Perplexity summary를 보완해서 모델 다시 짜주세요
 
             logger.info(f"Perplexity 응답 타입: {type(crawled_links)}")
             logger.info(f"Perplexity 응답 keys: {crawled_links.keys() if isinstance(crawled_links, dict) else 'Not a dict'}")
@@ -557,6 +559,8 @@ class PodcastService:
                     # 크롤링 데이터 저장 (성공/실패 여부와 관계없이 저장)
                     with open(os.path.join(storage_path, "01_crawled_data.json"), 'w', encoding='utf-8') as f:
                         json.dump(crawled, f, ensure_ascii=False, indent=2)
+                    
+                    # TODO: 중복된거 저장 안되게 해주시고 지금 너무 복잡해요, 단순화 해주세요 <- 현재 상태 에러 생기면 찾기 힘들어요
 
                     if not crawled['success']:
                         logger.error(f"Article {idx} 크롤링 실패: {crawled['error']}")
@@ -577,8 +581,9 @@ class PodcastService:
                         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
                     # 2-4. Gemini로 난이도별 원문 요약 (1번의 호출로 3개 난이도)
+                    # TODO: 로거......
                     logger.info(f"Article {idx}: Step 2 - 난이도별 문서 생성 중...")
-                    metadata["steps"]["article_generation"]["status"] = "running"
+                    metadata["steps"]["article_generation"]["status"] = "running" # TODO: 관리자 페이지용 API 만드셔서 거기에 넣어주세요
                     metadata["steps"]["article_generation"]["started_at"] = datetime.now().isoformat()
                     with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
                         json.dump(metadata, f, ensure_ascii=False, indent=2)
@@ -616,6 +621,8 @@ class PodcastService:
                     metadata["steps"]["script_generation"]["started_at"] = datetime.now().isoformat()
                     with open(os.path.join(storage_path, "00_metadata.json"), 'w', encoding='utf-8') as f:
                         json.dump(metadata, f, ensure_ascii=False, indent=2)
+                    
+                    # TODO: 쓸데없는 로거 코드 메타데이터 다 지워주세요
 
                     script_data = await self.gemini.generate_scripts_all_difficulties(
                         article_title=article_title,
@@ -657,7 +664,8 @@ class PodcastService:
                         if not script_for_difficulty:
                             logger.warning(f"Article {idx}: {difficulty} 대본이 없습니다")
                             continue
-
+                        
+                        # TODO: 비동기 없애주세요
                         audio_result = await self.clova.generate_podcast_audio(
                             script=script_for_difficulty,
                             output_dir=storage_path,
