@@ -73,10 +73,15 @@ class LocalLoginRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: Optional[str] = None  # Refresh Token 추가 (기존 코드 호환성 위해 Optional)
 
 
 class TokenData(BaseModel):
     user_id: Optional[UUID] = None
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 class AvailabilityResponse(BaseModel):

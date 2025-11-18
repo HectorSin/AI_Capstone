@@ -33,6 +33,7 @@ except Exception:  # pragma: no cover - 라이브러리 미설치 대비
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -93,6 +94,38 @@ def create_access_token(
     claims.update({"sub": subject, "exp": expire})
     token = jwt.encode(claims, SECRET_KEY, algorithm=ALGORITHM)
     return token
+
+
+def create_refresh_token(
+    *,
+    subject: str,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """Refresh Token 생성 (Access Token보다 긴 유효기간)"""
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    )
+    claims = {"sub": subject, "exp": expire, "type": "refresh"}
+    token = jwt.encode(claims, SECRET_KEY, algorithm=ALGORITHM)
+    return token
+
+
+def verify_refresh_token(token: str) -> Optional[str]:
+    """
+    Refresh Token 검증 후 user_id 반환
+    실패 시 None 반환
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token_type = payload.get("type")
+        if token_type != "refresh":
+            return None
+        subject = payload.get("sub")
+        if subject is None:
+            return None
+        return str(subject)
+    except JWTError:
+        return None
 
 
 # ==========================================================

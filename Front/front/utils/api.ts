@@ -362,3 +362,40 @@ export async function getDailyPodcasts(startDate?: string, endDate?: string): Pr
 
   return response.json();
 }
+
+// ============================================================
+// Token Refresh API
+// ============================================================
+
+/**
+ * Refresh Token으로 새로운 Access Token 발급
+ * @param refreshToken Refresh Token
+ * @returns 새로운 Access Token과 Refresh Token
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {
+  console.log('[API] refreshAccessToken request');
+
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  console.log('[API] refreshAccessToken response:', { status: response.status, ok: response.ok });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unable to read error');
+    console.error('[API] refreshAccessToken failed:', { status: response.status, error: errorText });
+    throw new Error(`Failed to refresh token: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log('[API] refreshAccessToken success');
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+  };
+}

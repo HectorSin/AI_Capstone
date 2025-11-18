@@ -12,6 +12,7 @@ import {
   subscribeTopic as subscribeTopicApi,
   unsubscribeTopic as unsubscribeTopicApi,
   registerAuthTokenLoader,
+  refreshAccessToken,
 } from '@/utils/api';
 import type { Topic } from '@/types';
 
@@ -79,6 +80,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_STORAGE_KEY = '@capstone/authToken';
+const REFRESH_TOKEN_STORAGE_KEY = '@capstone/refreshToken';
 const DEFAULT_HOUR = 7;
 const DEFAULT_MINUTE = 0;
 const DEFAULT_WEEKDAY_INDICES = [0, 1, 2, 3, 4];
@@ -110,6 +112,7 @@ const buildUpdatePayload = (input: NotificationPreferenceInput): NotificationPre
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [notificationPreference, setNotificationPreference] = useState<NotificationPreferenceState | null>(null);
   const [subscribedTopics, setSubscribedTopics] = useState<Topic[]>([]);
@@ -175,12 +178,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     []
   );
 
-  const persistToken = useCallback(async (accessToken: string | null) => {
+  const persistToken = useCallback(async (accessToken: string | null, newRefreshToken?: string | null) => {
     setToken(accessToken);
     if (accessToken) {
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
     } else {
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+
+    // Refresh Token 저장 (undefined가 아닌 경우에만 처리)
+    if (newRefreshToken !== undefined) {
+      setRefreshToken(newRefreshToken);
+      if (newRefreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, newRefreshToken);
+      } else {
+        await AsyncStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+      }
     }
   }, []);
 
@@ -257,13 +270,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return false;
         }
 
-        const { access_token: accessToken } = await response.json();
+        const { access_token: accessToken, refresh_token: newRefreshToken } = await response.json();
         if (!accessToken) {
           console.warn('[Auth] signIn response missing token');
           return false;
         }
 
-        await persistToken(accessToken);
+        await persistToken(accessToken, newRefreshToken);
         await fetchProfile(accessToken);
         const pref = await fetchAndStorePreference(accessToken);
         await fetchAndStoreSubscribedTopics(accessToken);
@@ -324,7 +337,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const signOut = useCallback(async () => {
-    await persistToken(null);
+    await persistToken(null, null);
     setUser(null);
     setNotificationPreference(null);
     setSubscribedTopics([]);
@@ -369,8 +382,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshSubscribedTopics = useCallback(async () => {
     if (!token) return;
-    await fetchAndStoreSubscribedTopics(token);
-  }, [fetchAndStoreSubscribedTopics, token]);
+
+    try {
+      await fetchAndStoreSubscribedTopics(token);
+    } catch (error: any) {
+      // 401 에러 시 토큰 갱신 시도
+      if (error?.message?.includes('401') && refreshToken) {
+        console.log('[Auth] 401 in refreshSubscribedTopics, attempting token refresh');
+        const success = await tryRefreshToken(refreshToken);
+        if (success && token) {
+          await fetchAndStoreSubscribedTopics(token);
+        }
+      }
+    }
+  }, [fetchAndStoreSubscribedTopics, token, refreshToken, tryRefreshToken]);
 
   const subscribeTopic = useCallback(
     async (topicId: string) => {
@@ -505,15 +530,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [fetchProfile, token]
   );
 
+  // Refresh Token으로 자동 갱신 시도
+  const tryRefreshToken = useCallback(async (storedRefreshToken: string): Promise<boolean> => {
+    try {
+      console.log('[Auth] Attempting to refresh access token');
+      const { access_token, refresh_token: new_refresh_token } = await refreshAccessToken(storedRefreshToken);
+
+      await persistToken(access_token, new_refresh_token);
+      await fetchProfile(access_token);
+      await fetchAndStorePreference(access_token);
+      await fetchAndStoreSubscribedTopics(access_token);
+
+      console.log('[Auth] Token refresh successful');
+      return true;
+    } catch (error) {
+      console.warn('[Auth] Token refresh failed:', error);
+      // Refresh Token도 만료됨 - 로그아웃 처리
+      await persistToken(null, null);
+      setUser(null);
+      setNotificationPreference(null);
+      setSubscribedTopics([]);
+      return false;
+    }
+  }, [fetchProfile, fetchAndStorePreference, fetchAndStoreSubscribedTopics, persistToken]);
+
   useEffect(() => {
     (async () => {
       try {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        const storedRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+
         if (storedToken) {
           setToken(storedToken);
-          await fetchProfile(storedToken);
-          await fetchAndStorePreference(storedToken);
-          await fetchAndStoreSubscribedTopics(storedToken);
+          setRefreshToken(storedRefreshToken);
+
+          // 프로필 로드 시도 (Access Token 만료 시 401 발생 가능)
+          try {
+            await fetchProfile(storedToken);
+            await fetchAndStorePreference(storedToken);
+            await fetchAndStoreSubscribedTopics(storedToken);
+          } catch (error: any) {
+            // Access Token 만료된 경우, Refresh Token으로 갱신 시도
+            if (error?.message?.includes('401') && storedRefreshToken) {
+              console.log('[Auth] Access token expired, trying refresh token');
+              await tryRefreshToken(storedRefreshToken);
+            } else {
+              throw error;
+            }
+          }
         }
       } catch (error) {
         console.warn('[Auth] failed to hydrate token', error);
@@ -521,7 +585,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsHydrated(true);
       }
     })();
-  }, [fetchAndStorePreference, fetchAndStoreSubscribedTopics, fetchProfile]);
+  }, [fetchAndStorePreference, fetchAndStoreSubscribedTopics, fetchProfile, tryRefreshToken]);
 
   useEffect(() => {
     registerAuthTokenLoader(async () => token);
