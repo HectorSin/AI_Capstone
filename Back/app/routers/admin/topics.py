@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.database.database import get_db
 from app.database.models import Topic, Article
-from app.schemas import Topic as TopicSchema, Article as ArticleSchema, TopicBase
+from app.schemas import Topic as TopicSchema, Article as ArticleSchema, TopicBase, TopicCreate
 from app.auth import get_current_admin_user
 from app.database import models
 from app import crud
@@ -51,6 +51,20 @@ async def get_topics_list(
     result = await db.execute(stmt)
     topics = result.scalars().all()
     return topics
+
+@router.post("/", response_model=TopicSchema, summary="새 토픽 생성", status_code=201)
+async def create_new_topic(
+    topic_data: TopicCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin_user: models.AdminUser = Depends(get_current_admin_user)
+):
+    """새로운 토픽을 생성합니다."""
+    try:
+        new_topic = await crud.create_topic(db=db, topic=topic_data)
+        return new_topic
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"토픽 생성 실패: {str(e)}")
+
 
 @router.get("/{topic_id}", response_model=TopicSchema, summary="토픽 상세 정보 조회")
 async def get_topic_details(

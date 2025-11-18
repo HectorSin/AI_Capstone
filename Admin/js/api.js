@@ -131,3 +131,20 @@ async function deleteTopicImage(topicId) {
         throw error;
     }
 }
+
+async function createTopic(topicData) {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/topics/`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(topicData)
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error('Error creating topic:', error);
+        throw error;
+    }
+}

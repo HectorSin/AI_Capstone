@@ -4,6 +4,8 @@ let selectedTopicId = null;
 let editingTopicId = null;
 let originalTopicData = null;
 let uploadedImageFile = null;
+let isAddingNewTopic = false;
+const NEW_TOPIC_ID = 'NEW_TOPIC';
 
 function renderDashboard(stats) {
     const content = document.getElementById('content');
@@ -60,6 +62,12 @@ function renderTopics(topics, title = 'Topics', options = {}) {
         return;
     }
 
+    // 새 토픽 추가 행을 테이블 최상단에 추가
+    let newTopicRow = '';
+    if (isAddingNewTopic) {
+        newTopicRow = renderNewTopicRow();
+    }
+
     let tableRows = topics.map(topic => {
         if (editingTopicId === topic.id) {
             return renderEditableRow(topic);
@@ -113,6 +121,7 @@ function renderTopics(topics, title = 'Topics', options = {}) {
                 </tr>
             </thead>
             <tbody>
+                ${newTopicRow}
                 ${tableRows}
             </tbody>
         </table>
@@ -188,8 +197,46 @@ function setupTopicsInteractionsIfNeeded(showToolbar) {
     initializeTopicTableInteractions(content);
 }
 
-window.handleAddTopic = () => {
-    console.log('Add Topic clicked');
+function renderNewTopicRow() {
+    return `
+        <tr class="topic-row editing-row new-topic-row" data-topic-id="${NEW_TOPIC_ID}">
+            <td><input type="text" class="edit-input" id="new-name" placeholder="토픽 이름" /></td>
+            <td>
+                <select class="edit-select" id="new-type">
+                    <option value="company">company</option>
+                    <option value="keyword">keyword</option>
+                </select>
+            </td>
+            <td><input type="text" class="edit-input" id="new-summary" placeholder="요약" /></td>
+            <td class="image-edit-cell">
+                <input type="file" id="new-image-upload" accept="image/*" style="display:none" onchange="handleNewImageUpload(event)" />
+                <button type="button" class="btn-small button-primary" onclick="document.getElementById('new-image-upload').click(); event.stopPropagation();">Upload</button>
+                <span id="new-uploaded-file-name" style="font-size: 0.85em; color: #666; display: block; margin-top: 0.3rem;"></span>
+            </td>
+            <td><input type="text" class="edit-input" id="new-keywords" placeholder="쉼표로 구분" /></td>
+            <td>-</td>
+            <td class="edit-actions">
+                <button type="button" class="btn-small button-success" onclick="saveNewTopic(); event.stopPropagation();">저장</button>
+                <button type="button" class="btn-small" onclick="cancelAddTopic(); event.stopPropagation();">취소</button>
+            </td>
+        </tr>
+    `;
+}
+
+window.handleAddTopic = async () => {
+    // 이미 추가 중이거나 편집 중이면 무시
+    if (isAddingNewTopic || editingTopicId) {
+        alert('이미 편집 또는 추가 중입니다.');
+        return;
+    }
+
+    // 추가 모드 진입
+    isAddingNewTopic = true;
+    uploadedImageFile = null;
+
+    // 토픽 목록 다시 렌더링
+    const topics = await fetchTopics();
+    renderTopics(topics);
 };
 
 window.handleEditTopic = async () => {
@@ -263,6 +310,17 @@ window.handleImageUpload = (event) => {
     if (file) {
         uploadedImageFile = file;
         const fileNameSpan = document.getElementById('uploaded-file-name');
+        if (fileNameSpan) {
+            fileNameSpan.textContent = `선택됨: ${file.name}`;
+        }
+    }
+};
+
+window.handleNewImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        uploadedImageFile = file;
+        const fileNameSpan = document.getElementById('new-uploaded-file-name');
         if (fileNameSpan) {
             fileNameSpan.textContent = `선택됨: ${file.name}`;
         }
@@ -348,6 +406,68 @@ window.saveTopicEdit = async (topicId) => {
 window.cancelTopicEdit = async () => {
     editingTopicId = null;
     originalTopicData = null;
+    uploadedImageFile = null;
+
+    const topics = await fetchTopics();
+    renderTopics(topics);
+};
+
+window.saveNewTopic = async () => {
+    try {
+        // 폼 데이터 수집
+        const name = document.getElementById('new-name').value.trim();
+        const type = document.getElementById('new-type').value;
+        const summary = document.getElementById('new-summary').value.trim();
+        const keywordsInput = document.getElementById('new-keywords').value.trim();
+        const keywords = keywordsInput ? keywordsInput.split(',').map(k => k.trim()).filter(k => k) : [];
+
+        // 검증
+        if (!name) {
+            alert('토픽 이름은 필수입니다.');
+            return;
+        }
+
+        // 토픽 생성 데이터 (sources는 빈 배열로)
+        const newTopicData = {
+            name,
+            type,
+            summary,
+            image_uri: '',
+            keywords,
+            sources: []
+        };
+
+        // 토픽 생성
+        const createdTopic = await createTopic(newTopicData);
+
+        // 이미지 업로드 (선택사항)
+        if (uploadedImageFile && createdTopic && createdTopic.id) {
+            try {
+                await uploadTopicImage(createdTopic.id, uploadedImageFile);
+            } catch (error) {
+                console.error('이미지 업로드 실패:', error);
+                alert('토픽은 생성되었으나 이미지 업로드에 실패했습니다: ' + error.message);
+            }
+        }
+
+        alert('새 토픽이 성공적으로 생성되었습니다.');
+
+        // 추가 모드 종료 및 재렌더링
+        isAddingNewTopic = false;
+        uploadedImageFile = null;
+        selectedTopicId = null;
+
+        const topics = await fetchTopics();
+        renderTopics(topics);
+
+    } catch (error) {
+        console.error('Error creating topic:', error);
+        alert('토픽 생성 중 오류가 발생했습니다: ' + error.message);
+    }
+};
+
+window.cancelAddTopic = async () => {
+    isAddingNewTopic = false;
     uploadedImageFile = null;
 
     const topics = await fetchTopics();
