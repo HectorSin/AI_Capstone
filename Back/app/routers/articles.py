@@ -5,11 +5,11 @@ Article 피드 API 라우터
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from app.database.database import get_db
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_user_optional
 from app.database import models
 from app import schemas, crud
 
@@ -123,12 +123,13 @@ async def get_subscribed_articles(
 )
 async def get_article_detail(
     article_id: UUID,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Article ID로 개별 Article 조회 (Article 상세 페이지용)
 
-    - 인증 불필요
+    - 인증 선택적: 로그인된 사용자는 자신의 난이도에 맞는 콘텐츠를, 비로그인 사용자는 intermediate 콘텐츠를 받음
     - Topic 정보 포함
     - 404 에러 처리
     """
@@ -146,4 +147,9 @@ async def get_article_detail(
             detail="Article topic not found"
         )
 
-    return schemas.ArticleFeedItem.from_article(article, article.topic)
+    # 사용자가 로그인된 경우 해당 사용자의 난이도 사용, 아니면 intermediate 기본값
+    difficulty_level = "intermediate"
+    if current_user and current_user.difficulty_level:
+        difficulty_level = current_user.difficulty_level.value
+
+    return schemas.ArticleFeedItem.from_article(article, article.topic, difficulty_level)

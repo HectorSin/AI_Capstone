@@ -160,13 +160,22 @@ export async function getSubscribedArticles(
 
 /**
  * Article 상세 조회
+ * @param articleId - Article ID
+ * @param token - 인증 토큰 (선택적). 제공되면 사용자 난이도에 맞는 콘텐츠 반환
  */
-export async function getArticleById(articleId: string): Promise<FeedItem> {
+export async function getArticleById(articleId: string, token?: string | null): Promise<FeedItem> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+
+  // 토큰이 있으면 Authorization 헤더 추가
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/articles/${articleId}`, {
     method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
+    headers,
   });
 
   if (!response.ok) {

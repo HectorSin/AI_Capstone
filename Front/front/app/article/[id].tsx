@@ -6,6 +6,7 @@ import { ArticleDetail } from '@/components/ArticleDetail';
 import { NavigationHeader } from '@/components/NavigationHeader';
 import { getArticleById } from '@/utils/api';
 import type { FeedItem } from '@/types';
+import { useAuth } from '@/providers/AuthProvider';
 
 const FALLBACK_ITEM: FeedItem = {
   id: 'fallback',
@@ -21,6 +22,7 @@ const FALLBACK_ITEM: FeedItem = {
 export default function ArticleScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { token } = useAuth();
   const [feedItem, setFeedItem] = useState<FeedItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,7 +36,8 @@ export default function ArticleScreen() {
 
       try {
         setIsLoading(true);
-        const article = await getArticleById(id);
+        // 토큰을 전달하여 사용자 난이도에 맞는 article을 받음
+        const article = await getArticleById(id, token);
         setFeedItem(article);
       } catch (err) {
         console.error('[Article] Failed to load article:', err);
@@ -45,7 +48,7 @@ export default function ArticleScreen() {
     };
 
     loadArticle();
-  }, [id]);
+  }, [id, token]);
 
   const handleShare = useCallback(async () => {
     if (!feedItem) return;

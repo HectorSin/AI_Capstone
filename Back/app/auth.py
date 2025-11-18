@@ -128,6 +128,28 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="/auth/login/local", auto_error=False)),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[models.User]:
+    """선택적 인증 - 토큰이 있으면 사용자 정보 반환, 없으면 None 반환"""
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        subject = payload.get("sub")
+        if subject is None:
+            return None
+        user_id = UUID(str(subject))
+        token_data = schemas.TokenData(user_id=user_id)
+    except (JWTError, ValueError):
+        return None
+
+    user = await crud.get_user_by_id(db, token_data.user_id)
+    return user
+
+
 async def get_current_admin_user(
     token: str = Depends(oauth2_admin_scheme),
     db: AsyncSession = Depends(get_db),

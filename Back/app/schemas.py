@@ -224,8 +224,15 @@ class ArticleFeedItem(BaseModel):
     topicId: Optional[UUID] = None  # topic.id
 
     @classmethod
-    def from_article(cls, article, topic) -> "ArticleFeedItem":
-        """Article + Topic 모델에서 FeedItem 생성"""
+    def from_article(cls, article, topic, difficulty_level: str = "intermediate") -> "ArticleFeedItem":
+        """Article + Topic 모델에서 FeedItem 생성
+
+        Args:
+            article: Article 모델 인스턴스
+            topic: Topic 모델 인스턴스
+            difficulty_level: 사용자 난이도 ('beginner', 'intermediate', 'advanced')
+                            기본값은 'intermediate'
+        """
         from app.config import settings
 
         # date를 "YYYY. MM. DD" 형식으로 변환
@@ -237,9 +244,15 @@ class ArticleFeedItem(BaseModel):
 
         if article.article_data:
             feed_summary = article.article_data.get("summary", "")
-            # 본문은 중급 난이도 content 사용
-            intermediate_data = article.article_data.get("intermediate", {})
-            article_content = intermediate_data.get("content", "") if isinstance(intermediate_data, dict) else ""
+            # 사용자 난이도에 맞는 content 사용, 없으면 intermediate로 fallback
+            difficulty_data = article.article_data.get(difficulty_level, {})
+            if not difficulty_data or not isinstance(difficulty_data, dict):
+                # fallback: intermediate -> beginner -> advanced 순서
+                for fallback_level in ["intermediate", "beginner", "advanced"]:
+                    difficulty_data = article.article_data.get(fallback_level, {})
+                    if difficulty_data and isinstance(difficulty_data, dict):
+                        break
+            article_content = difficulty_data.get("content", "") if isinstance(difficulty_data, dict) else ""
 
         # image_uri를 절대 URL로 변환
         image_uri = topic.image_uri
