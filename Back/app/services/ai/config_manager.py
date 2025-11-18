@@ -35,11 +35,15 @@ class ConfigManager:
 
 
 class CompanyInfoManager:
-    """회사 정보 관리 클래스"""
+    """
+    TODO: 주석 좀더 자세히 적어주세요 -> 어떤 데이터가 들어오는지 & 나가는지
+    회사 정보 관리 클래스
+    """
     
     def __init__(self, config_manager: ConfigManager):
         self.config_manager = config_manager
     
+    # TODO: 변수명 통일 해주세요!
     def get_company_info(self, category: str) -> Dict[str, Any]:
         """카테고리에 맞는 회사 정보 반환 (JSON 파일에서 읽기, 별칭 지원)"""
         config = self.config_manager.get_company_config()

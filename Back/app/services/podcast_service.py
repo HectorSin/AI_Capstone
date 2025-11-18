@@ -427,7 +427,7 @@ class PodcastService:
     async def create_podcasts_for_topic(
         self,
         topic: str,
-        keywords: list = None,
+        keywords: list = None, # TODO: 해당 변수 왜 가져오고 사용하는지 체크 필요!
         processed_urls: set = None
     ) -> List[Dict[str, Any]]:
         """
@@ -456,11 +456,13 @@ class PodcastService:
                 ...
             ]
         """
+        # TODO: 모든 변수 선언 주석 작성해주세요!
         results = []
         processed_urls = processed_urls or set()
 
         try:
             # 1. Perplexity로 링크 수집
+            # TODO: 모든 로거 지워주세요 -> DB & Storage 구분 작업 필요해요 -> 어느 경로에 무슨 파일이 저장될지 정하기
             logger.info(f"토픽 '{topic}'에 대한 기사 크롤링 시작")
             crawled_links = await self.perplexity.crawl_topic(topic, keywords)
 

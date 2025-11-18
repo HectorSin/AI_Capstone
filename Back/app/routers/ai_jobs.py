@@ -83,7 +83,7 @@ async def test_perplexity_direct(topic: str = "GOOGLE"):
 # 1. 팟캐스트 생성 요청 POST -> perplexity 활용 데이터 크롤링 -> Gemini 활용 문서 생성 -> Gemini 활용 대본 생성 -> Clova 활용 TTS 생성 -> 팟캐스트 생성 완료
 
 @router.post("/test", response_model=schemas.PodcastBatchCreateResponse, summary="AI 팟캐스트 생성 (테스트용)")
-async def create_ai_podcast_test(
+async def create_ai_podcast_test(  # TODO: 비동기 처리
     podcast_data: schemas.PodcastCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
@@ -125,7 +125,7 @@ async def create_ai_podcast_test(
         result = await db.execute(stmt)
         existing_urls = set(row[0] for row in result.all())
 
-        # 3. 여러 팟캐스트 생성 (JSON 파일 저장됨)
+        # 3. 여러 팟캐스트 생성 (JSON 파일 저장됨) & Perplexity 크롤링 포함
         articles_data = await podcast_service.create_podcasts_for_topic(
             topic=podcast_data.topic,
             keywords=podcast_data.keywords,

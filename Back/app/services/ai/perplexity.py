@@ -129,8 +129,8 @@ class PerplexityService(AIService):
         Returns:
             크롤링된 정보
         """
+        # TODO: logger 지우기
         logger.info(f"토픽 크롤링 시작: {topic}")
-
         # API 키 확인
         if not self.api_key or len(self.api_key) < 10:
             logger.error(f"Perplexity API 키가 유효하지 않음: {self.api_key[:10] if self.api_key else 'None'}...")
@@ -148,7 +148,7 @@ class PerplexityService(AIService):
                 "messages": [
                     {"role": "user", "content": prompt}
                 ],
-                "search_domain_filter": company_info["sources"],
+                "search_domain_filter": company_info["sources"], # TODO: 이게 뭔지 주석 좀더 적어주세요!
                 "search_recency_filter": "week",  # 노트북과 동일
                 "return_citations": True,
                 "max_tokens": 4000
@@ -165,7 +165,7 @@ class PerplexityService(AIService):
                 try:
                     timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=60.0)
                     async with httpx.AsyncClient(timeout=timeout) as client:
-                        response = await client.post(self.API_URL, headers=headers, json=payload)
+                        response = await client.post(self.API_URL, headers=headers, json=payload) # TODO: 비동기 꼭 필요한거 아니면 빼주세요
                         if response.status_code in (429, 500, 502, 503, 504):
                             raise httpx.HTTPStatusError("Server busy", request=response.request, response=response)
                         response.raise_for_status()
@@ -177,6 +177,7 @@ class PerplexityService(AIService):
 
                         # JSON 파싱 시도
                         try:
+                            # TODO: 제 작업물 돌려주세요 재욱님
                             # JSON 마크다운 블록 제거
                             if content.startswith("```json"):
                                 content = content.replace("```json", "").replace("```", "").strip()
