@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # 파일 업로드 설정
     max_file_size: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
     upload_dir: str = os.getenv("UPLOAD_DIR", "/app/database")
+    infographic_output_dir: str = os.getenv("INFOGRAPHIC_OUTPUT_DIR", "uploads/test_output")
 
     # 서버 URL 설정 (이미지 절대 URL 생성용)
     server_url: str = os.getenv("SERVER_URL", "http://localhost:8000")

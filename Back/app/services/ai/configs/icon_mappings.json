@@ -1,0 +1,23 @@
+{
+    "icon_map": {
+        "lightbulb": "💡",
+        "idea": "💡",
+        "chart": "📊",
+        "chart-up": "📈",
+        "trend": "📈",
+        "chip": "💾",
+        "tech": "💻",
+        "money": "💰",
+        "finance": "💰",
+        "people": "👥",
+        "user": "👤",
+        "target": "🎯",
+        "goal": "🎯",
+        "warning": "⚠️",
+        "check": "✅",
+        "robot": "🤖",
+        "ai": "🤖",
+        "global": "Ql",
+        "world": "Ql"
+    }
+}

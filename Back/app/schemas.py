@@ -483,6 +483,28 @@ class AdminUserResponse(BaseModel):
 
 
 # ==========================================================
+# 인포그래픽 생성 관련 스키마
+# ==========================================================
+class InfographicRequest(BaseModel):
+    script: str = Field(..., description="인포그래픽 생성을 위한 대본")
+
+
+class InfographicElement(BaseModel):
+    title: str = Field(..., description="섹션 제목")
+    content: str = Field(..., description="섹션 내용")
+    icon: Optional[str] = Field(None, description="추천 아이콘 (예: 'chart', 'people', 'money' 등)")
+
+
+class InfographicData(BaseModel):
+    title: str = Field(..., description="인포그래픽 메인 제목")
+    subtitle: Optional[str] = Field(None, description="인포그래픽 부제목")
+    summary: str = Field(..., description="전체 요약")
+    sections: List[InfographicElement] = Field(default_factory=list, description="본문 섹션 목록")
+    conclusion: Optional[str] = Field(None, description="결론")
+    colors: List[str] = Field(default_factory=list, description="추천 색상 팔레트 (Hex 코드)")
+
+
+# ==========================================================
 # Forward reference 초기화
 # ==========================================================
 try:

@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # 애플리케이션 코드 복사
 COPY . .
 
+# 폰트 디렉토리 복사 (명시적으로)
+COPY fonts /app/fonts
+
 # 업로드 디렉토리 생성
 RUN mkdir -p /app/uploads
 

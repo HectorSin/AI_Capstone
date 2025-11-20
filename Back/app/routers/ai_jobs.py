@@ -323,216 +323,51 @@ async def create_ai_podcast(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# @router.post("/", response_model=AIJob, summary="AI 작업 생성")
-# async def create_ai_job(
-#     job_data: AIJobCreate,
-#     background_tasks: BackgroundTasks,
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     새로운 AI 작업을 생성합니다.
-#     """
-#     try:
-#         # 사용자 ID 설정
-#         job_data.user_id = current_user.user_id
+@router.post("/test/info-graphic", summary="인포그래픽 생성 (테스트)")
+async def create_infographic_test(request: schemas.InfographicRequest):
+    """
+    테스트용 API로 정해진 location에 pdf 파일 생성
+    input: 대본
+    output: 인포그래픽 PDF 파일 경로
+    
+    과정:
+    LLM [인포그래픽에 들어갈 json 데이터 생성] -> HTML로 변환 -> PDF로 변환
+    """
+    from app.services.infographic_service import infographic_service
+    import os
+    from datetime import datetime
+    
+    try:
+        # 1. LLM을 통한 데이터 생성
+        logger.info("Generating infographic data from script...")
+        infographic_data = await infographic_service.generate_infographic_json(request.script)
         
-#         # AI 작업 서비스 생성
-#         job_service = AIJobService(db)
+        # 2. HTML 변환
+        logger.info("Converting data to HTML...")
+        html_content = infographic_service.generate_html(infographic_data)
         
-#         # 작업 생성
-#         job = await job_service.create_job(job_data)
+        # 3. PDF 생성
+        # 저장 경로 설정 (환경 변수에서 로드)
+        output_dir = settings.infographic_output_dir
+        os.makedirs(output_dir, exist_ok=True)
         
-#         # 백그라운드에서 새 세션으로 작업 시작
-#         async def start_job_bg(job_id: int):
-#             async with AsyncSessionLocal() as session:
-#                 from app.services.ai_job_service import AIJobService as _Svc
-#                 svc = _Svc(session)
-#                 await svc.start_job(job_id)
-
-#         background_tasks.add_task(start_job_bg, job.job_id)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"infographic_{timestamp}.pdf"
+        output_path = os.path.join(output_dir, filename)
         
-#         logger.info(f"AI 작업 생성됨: {job.job_id} by user {current_user.user_id}")
-#         # 응답을 명시적으로 직렬화하여 필수 필드 보장
-#         return {
-#             "job_id": int(job.job_id) if job.job_id is not None else 0,
-#             "job_type": job.job_type.value if hasattr(job.job_type, "value") else str(job.job_type),
-#             "user_id": int(job.user_id),
-#             "topic_id": job.topic_id,
-#             "input_data": job.input_data or {},
-#             "priority": int(job.priority or 0),
-#             "status": job.status.value if hasattr(job.status, "value") else str(job.status),
-#             "progress": int(job.progress or 0),
-#             "result_data": job.result_data,
-#             "error_message": job.error_message,
-#             "created_at": job.created_at,
-#             "updated_at": job.updated_at,
-#             "started_at": job.started_at,
-#             "completed_at": job.completed_at,
-#         }
+        logger.info(f"Generating PDF at {output_path}...")
+        success = infographic_service.generate_pdf(html_content, output_path)
         
-#     except Exception as e:
-#         logger.error(f"AI 작업 생성 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.get("/{job_id}", response_model=AIJob, summary="AI 작업 조회")
-# async def get_ai_job(
-#     job_id: int,
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     특정 AI 작업의 상세 정보를 조회합니다.
-#     """
-#     try:
-#         job_service = AIJobService(db)
-#         job = await job_service.get_job(job_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="PDF generation failed")
+            
+        return {
+            "status": "success",
+            "message": "Infographic generated successfully",
+            "file_path": os.path.abspath(output_path),
+            "data": infographic_data
+        }
         
-#         if not job:
-#             raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-        
-#         # 사용자 권한 확인
-#         if job.user_id != current_user.user_id:
-#             raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-        
-#         return job
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"AI 작업 조회 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.get("/", response_model=List[AIJob], summary="AI 작업 목록 조회")
-# async def get_ai_jobs(
-#     status: Optional[JobStatus] = Query(None, description="상태 필터"),
-#     job_type: Optional[JobType] = Query(None, description="작업 타입 필터"),
-#     limit: int = Query(50, ge=1, le=100, description="조회 개수 제한"),
-#     offset: int = Query(0, ge=0, description="오프셋"),
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     사용자의 AI 작업 목록을 조회합니다.
-#     """
-#     try:
-#         job_service = AIJobService(db)
-#         jobs = await job_service.get_user_jobs(
-#             user_id=current_user.user_id,
-#             status=status,
-#             job_type=job_type,
-#             limit=limit,
-#             offset=offset
-#         )
-        
-#         return jobs
-        
-#     except Exception as e:
-#         logger.error(f"AI 작업 목록 조회 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.put("/{job_id}", response_model=AIJob, summary="AI 작업 상태 업데이트")
-# async def update_ai_job(
-#     job_id: int,
-#     job_update: AIJobUpdate,
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     AI 작업의 상태를 업데이트합니다.
-#     """
-#     try:
-#         job_service = AIJobService(db)
-        
-#         # 작업 존재 및 권한 확인
-#         job = await job_service.get_job(job_id)
-#         if not job:
-#             raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-        
-#         if job.user_id != current_user.user_id:
-#             raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-        
-#         # 상태 업데이트
-#         updated_job = await job_service.update_job_status(
-#             job_id=job_id,
-#             status=job_update.status,
-#             progress=job_update.progress,
-#             result_data=job_update.result_data,
-#             error_message=job_update.error_message
-#         )
-        
-#         return updated_job
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"AI 작업 상태 업데이트 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.post("/{job_id}/cancel", summary="AI 작업 취소")
-# async def cancel_ai_job(
-#     job_id: int,
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     AI 작업을 취소합니다.
-#     """
-#     try:
-#         job_service = AIJobService(db)
-        
-#         # 작업 존재 및 권한 확인
-#         job = await job_service.get_job(job_id)
-#         if not job:
-#             raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-        
-#         if job.user_id != current_user.user_id:
-#             raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-        
-#         # 작업 취소
-#         success = await job_service.cancel_job(job_id)
-        
-#         if not success:
-#             raise HTTPException(status_code=400, detail="작업을 취소할 수 없습니다")
-        
-#         return {"message": "작업이 취소되었습니다"}
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"AI 작업 취소 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.get("/{job_id}/logs", summary="AI 작업 로그 조회")
-# async def get_ai_job_logs(
-#     job_id: int,
-#     limit: int = Query(100, ge=1, le=1000, description="조회 개수 제한"),
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     AI 작업의 로그를 조회합니다.
-#     """
-#     try:
-#         job_service = AIJobService(db)
-        
-#         # 작업 존재 및 권한 확인
-#         job = await job_service.get_job(job_id)
-#         if not job:
-#             raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다")
-        
-#         if job.user_id != current_user.user_id:
-#             raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-        
-#         # 로그 조회
-#         logs = await job_service.get_job_logs(job_id, limit)
-        
-#         return logs
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"AI 작업 로그 조회 실패: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# """Airflow 관련 엔드포인트는 미사용으로 제거되었습니다."""
+    except Exception as e:
+        logger.error(f"Infographic generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
