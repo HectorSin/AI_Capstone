@@ -86,18 +86,25 @@ class InfographicService:
 
     def generate_html(self, data: InfographicData) -> str:
         """
-        InfographicData를 HTML로 변환합니다.
+        InfographicData를 PDF 생성을 위한 HTML로 변환합니다.
+        (Corporate Report Style - xhtml2pdf Optimized)
         """
-        # 아이콘 매핑 사용
-        icon_map = self.icon_map
-
-        # 간단한 인포그래픽 HTML 템플릿
+        
+        # 색상 팔레트 안전 처리
+        # 전문적인 느낌을 위해 채도가 너무 높은 원색보다는 톤다운된 컬러가 좋으므로
+        # 데이터가 없을 경우를 대비한 기본값을 '신뢰감 있는 네이비/골드/그레이' 톤으로 설정
+        primary_color = data.colors[0] if data.colors and len(data.colors) > 0 else '#1a237e'  # Deep Navy
+        secondary_color = data.colors[1] if data.colors and len(data.colors) > 1 else '#ff6f00' # Amber/Gold
+        accent_color = data.colors[2] if data.colors and len(data.colors) > 2 else '#455a64'   # Blue Grey
+        
+        # HTML 템플릿
         template_str = """
         <!DOCTYPE html>
         <html lang="ko">
         <head>
             <meta charset="UTF-8">
             <style>
+                /* [폰트 설정] */
                 @font-face {
                     font-family: 'NanumGothic';
                     src: url('/app/fonts/NanumGothic.ttf');
@@ -107,129 +114,238 @@ class InfographicService:
                     src: url('/app/fonts/NanumGothic-Bold.ttf');
                     font-weight: bold;
                 }
+
+                /* [페이지 설정] - A4 여백 지정 */
+                @page {
+                    size: A4;
+                    margin: 1.5cm;
+                    @frame footer_frame {
+                        -pdf-frame-content: footerContent;
+                        bottom: 1cm;
+                        margin-left: 1.5cm;
+                        margin-right: 1.5cm;
+                        height: 1cm;
+                    }
+                }
+
                 body {
                     font-family: 'NanumGothic', sans-serif;
-                    margin: 0;
-                    padding: 20px;
-                    background-color: #f5f5f5;
-                    color: #333;
+                    font-size: 10pt;
+                    line-height: 1.6;
+                    color: #2c3e50;
+                    background-color: #ffffff;
                 }
-                .container {
-                    max-width: 800px;
-                    margin: 0 auto;
-                    background-color: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 40px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid {{ data.colors[0] if data.colors else '#333' }};
-                }
-                h1 {
-                    color: {{ data.colors[0] if data.colors else '#333' }};
-                    font-size: 36px;
-                    margin-bottom: 10px;
-                }
-                .subtitle {
-                    font-size: 18px;
-                    color: #666;
-                }
-                .summary {
-                    background-color: {{ data.colors[1] if data.colors|length > 1 else '#eee' }}33;
-                    padding: 20px;
-                    border-radius: 8px;
+
+                /* [헤더 영역] - 전체 너비 배경색 */
+                .header-wrapper {
+                    background-color: {{ primary_color }};
+                    color: #ffffff;
+                    padding: 20px 30px;
                     margin-bottom: 30px;
-                    font-size: 16px;
+                    border-radius: 4px;
+                }
+
+                .report-label {
+                    font-size: 8pt;
+                    opacity: 0.8;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    margin-bottom: 5px;
+                }
+
+                h1 {
+                    font-family: 'NanumGothic', sans-serif;
+                    font-size: 24pt;
+                    font-weight: bold;
+                    margin: 0;
+                    padding: 0;
+                    line-height: 1.2;
+                }
+
+                .subtitle {
+                    font-size: 11pt;
+                    opacity: 0.9;
+                    margin-top: 8px;
+                    font-weight: normal;
+                }
+
+                .summary-container {
+                    margin-bottom: 40px;
+                    padding: 0 10px;
+                }
+                
+                .summary-table {
+                    width: 100%;
+                    border-top: 2px solid {{ secondary_color }};
+                    border-bottom: 1px solid #eeeeee;
+                    background-color: #fbfbfb;
+                }
+
+                .summary-title-cell {
+                    width: 15%;
+                    vertical-align: top;
+                    padding: 20px 0;
+                    font-weight: bold;
+                    color: {{ secondary_color }};
+                    font-size: 9pt;
+                    text-transform: uppercase;
+                }
+
+                .summary-content-cell {
+                    vertical-align: top;
+                    padding: 20px 10px;
+                    font-size: 11pt;
+                    font-weight: bold;
+                    color: #444;
+                    line-height: 1.8;
+                    text-align: justify;
+                }
+
+                /* [본문 섹션] - 클린한 리스트 스타일 */
+                .section-wrapper {
+                    width: 100%;
+                }
+
+                .section-table {
+                    width: 100%;
+                    margin-bottom: 15px;
+                    padding-bottom: 15px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+
+                /* 마지막 테이블은 선 없애기 */
+                .section-table.last {
+                    border-bottom: none;
+                }
+
+                .icon-cell {
+                    width: 40px;
+                    vertical-align: top;
+                    padding-top: 5px;
+                }
+
+                .icon-box {
+                    font-size: 20px;
+                    color: {{ primary_color }};
+                }
+
+                .content-cell {
+                    vertical-align: top;
+                    padding-left: 15px;
+                }
+
+                .section-title {
+                    font-size: 13pt;
+                    font-weight: bold;
+                    color: {{ primary_color }};
+                    margin-bottom: 6px;
+                }
+
+                .section-text {
+                    font-size: 10pt;
+                    color: #555;
+                    text-align: justify;
+                }
+
+                /* [결론 영역] - 하단 강조 박스 */
+                .conclusion-box {
+                    margin-top: 30px;
+                    padding: 25px;
+                    background-color: #f0f2f5;
+                    border-left: 5px solid {{ primary_color }};
+                    border-radius: 0 4px 4px 0;
+                }
+
+                .conclusion-text {
+                    font-size: 11pt;
+                    font-weight: bold;
+                    color: {{ primary_color }};
+                    text-align: center;
                     line-height: 1.6;
                 }
-                .section {
-                    margin-bottom: 25px;
-                    padding: 15px;
-                    border-left: 5px solid {{ data.colors[2] if data.colors|length > 2 else '#999' }};
-                    background-color: #fff;
-                }
-                .section-title {
-                    font-size: 20px;
-                    font-weight: bold;
-                    color: {{ data.colors[0] if data.colors else '#333' }};
-                    margin-bottom: 10px;
-                    display: flex;
-                    align-items: center;
-                }
-                .section-icon {
-                    margin-right: 10px;
-                    font-size: 24px;
-                }
-                .section-content {
-                    font-size: 15px;
-                    line-height: 1.5;
-                }
-                .conclusion {
-                    margin-top: 40px;
-                    text-align: center;
-                    font-weight: bold;
-                    font-size: 18px;
-                    padding: 20px;
-                    background-color: {{ data.colors[0] if data.colors else '#333' }};
-                    color: white;
-                    border-radius: 8px;
-                }
-                .footer {
-                    margin-top: 20px;
-                    text-align: center;
-                    font-size: 12px;
+
+                /* [푸터] */
+                #footerContent {
+                    text-align: right;
                     color: #999;
+                    font-size: 8pt;
+                    border-top: 1px solid #eee;
+                    padding-top: 5px;
                 }
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{{ data.title }}</h1>
-                    {% if data.subtitle %}
-                    <div class="subtitle">{{ data.subtitle }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="summary">
-                    <strong>요약:</strong> {{ data.summary }}
-                </div>
-
-                {% for section in data.sections %}
-                <div class="section">
-                    <div class="section-title">
-                        {% if section.icon %}
-                        <span class="section-icon">{{ icon_map.get(section.icon.lower(), '📌') }}</span>
-                        {% else %}
-                        <span class="section-icon">📌</span>
-                        {% endif %}
-                        {{ section.title }}
-                    </div>
-                    <div class="section-content">
-                        {{ section.content }}
-                    </div>
-                </div>
-                {% endfor %}
-
-                {% if data.conclusion %}
-                <div class="conclusion">
-                    {{ data.conclusion }}
-                </div>
+            <!-- 헤더 (Top Banner Style) -->
+            <div class="header-wrapper">
+                <div class="report-label">ISSUE REPORT</div>
+                <h1>{{ data.title }}</h1>
+                {% if data.subtitle %}
+                <div class="subtitle">{{ data.subtitle }}</div>
                 {% endif %}
-                
-                <div class="footer">
-                    Generated by AI Infographic Service
+            </div>
+
+            <!-- 요약 (Executive Summary) -->
+            <div class="summary-container">
+                <table class="summary-table" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td class="summary-title-cell">KEY<br>SUMMARY</td>
+                        <td class="summary-content-cell">
+                            {{ data.summary }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 본문 섹션 -->
+            <div class="section-wrapper">
+                {% for section in data.sections %}
+                <table class="section-table" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <!-- 아이콘 -->
+                        <td class="icon-cell">
+                            <div class="icon-box">
+                                {% if section.icon %}
+                                    {{ icon_map.get(section.icon.lower(), '■') }}
+                                {% else %}
+                                    ■
+                                {% endif %}
+                            </div>
+                        </td>
+                        <!-- 내용 -->
+                        <td class="content-cell">
+                            <div class="section-title">{{ section.title }}</div>
+                            <div class="section-text">{{ section.content }}</div>
+                        </td>
+                    </tr>
+                </table>
+                {% endfor %}
+            </div>
+
+            <!-- 결론 (Insight) -->
+            {% if data.conclusion %}
+            <div class="conclusion-box">
+                <div class="conclusion-text">
+                    "{{ data.conclusion }}"
                 </div>
+            </div>
+            {% endif %}
+
+            <!-- 푸터 -->
+            <div id="footerContent">
+                Generated by Snack Cast | Page <pdf:pagenumber>
             </div>
         </body>
         </html>
         """
         
         template = jinja2.Template(template_str)
-        return template.render(data=data, icon_map=icon_map)
+        return template.render(
+            data=data, 
+            icon_map=self.icon_map,
+            primary_color=primary_color,
+            secondary_color=secondary_color,
+            accent_color=accent_color
+        )
 
     def generate_pdf(self, html_content: str, output_path: str) -> bool:
         """
