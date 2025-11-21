@@ -246,9 +246,33 @@ async def create_ai_podcast(
                 except:
                     article_date = datetime.now().date()
 
+                # Extract summary and content from article_data or crawled_data
+                summary = ""
+                content = ""
+                
+                # Try to get from article_data first (intermediate level as default)
+                if article_data.get('article_data'):
+                    intermediate_article = article_data['article_data'].get('intermediate', {})
+                    summary = intermediate_article.get('summary', '')
+                    content = intermediate_article.get('content', '')
+                
+                # Fallback to crawled_data if article_data doesn't have content
+                if not content and article_data.get('crawled_data'):
+                    crawled = article_data['crawled_data']
+                    summary = crawled.get('title', article_data['title'])[:500]  # Limit summary length
+                    content = crawled.get('text', '')[:5000]  # Limit content length
+                
+                # Final fallback to title if still empty
+                if not summary:
+                    summary = article_data['title']
+                if not content:
+                    content = f"Article: {article_data['title']}"
+                
                 db_article = models.Article(
                     topic_id=topic_id,
                     title=article_data['title'],
+                    summary=summary,
+                    content=content,
                     date=article_date,
                     source_url=article_data.get('source_url'),
                     status=article_data['status'],
@@ -263,7 +287,7 @@ async def create_ai_podcast(
                 db.add(db_article)
                 db_articles.append(db_article)
             except Exception as e:
-                logger.error(f"Article DB 저장 실패: {e}")
+                logger.error(f"Article DB 저장 실패: {e}", exc_info=True)
                 continue
 
         await db.commit()
@@ -371,3 +395,126 @@ async def create_infographic_test(request: schemas.InfographicRequest):
     except Exception as e:
         logger.error(f"Infographic generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/info-graphic", summary="인포그래픽 생성 (DB 기반)")
+async def create_infographic_from_article(
+    request: schemas.InfographicFromArticleRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    DB에 저장된 Article의 script_data를 사용하여 인포그래픽 생성
+    
+    팟캐스트 생성 시 Perplexity로 수집된 데이터가 DB에 저장되어 있으며,
+    해당 데이터를 활용하여 인포그래픽을 생성합니다.
+    
+    input: article_id, difficulty_level (optional)
+    output: 인포그래픽 PDF 파일 경로
+    
+    과정:
+    1. DB에서 Article 조회
+    2. script_data에서 해당 난이도의 대본 추출
+    3. LLM [인포그래픽에 들어갈 json 데이터 생성] -> HTML로 변환 -> PDF로 변환
+    """
+    from app.services.infographic_service import infographic_service
+    from sqlalchemy import select
+    import os
+    from datetime import datetime
+    
+    try:
+        # 1. DB에서 Article 조회
+        logger.info(f"Fetching article {request.article_id} from database...")
+        stmt = select(models.Article).where(models.Article.id == request.article_id)
+        result = await db.execute(stmt)
+        article = result.scalars().first()
+        
+        if not article:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Article with id {request.article_id} not found"
+            )
+        
+        # 2. script_data 확인
+        if not article.script_data:
+            raise HTTPException(
+                status_code=400,
+                detail="Article does not have script data. Please generate podcast first."
+            )
+        
+        # 3. 난이도별 대본 추출
+        difficulty = request.difficulty_level.value
+        script_for_difficulty = article.script_data.get(difficulty)
+        
+        # Fallback: 요청한 난이도가 없으면 intermediate -> beginner -> advanced 순으로 시도
+        if not script_for_difficulty:
+            logger.warning(f"Difficulty '{difficulty}' not found, trying fallback...")
+            for fallback_level in ["intermediate", "beginner", "advanced"]:
+                script_for_difficulty = article.script_data.get(fallback_level)
+                if script_for_difficulty:
+                    logger.info(f"Using fallback difficulty: {fallback_level}")
+                    difficulty = fallback_level
+                    break
+        
+        if not script_for_difficulty:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid script data found in any difficulty level"
+            )
+        
+        # 4. 대본 텍스트 추출 (content 필드 또는 dialogues 조합)
+        script_text = script_for_difficulty.get("content", "")
+        
+        # content가 없으면 dialogues에서 조합
+        if not script_text and script_for_difficulty.get("dialogues"):
+            dialogues = script_for_difficulty.get("dialogues", [])
+            script_text = "\n\n".join([
+                f"{d.get('speaker', 'Unknown')}: {d.get('text', '')}"
+                for d in dialogues
+            ])
+        
+        if not script_text:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Script content is empty for difficulty '{difficulty}'"
+            )
+        
+        logger.info(f"Extracted script (length: {len(script_text)}) from difficulty: {difficulty}")
+        
+        # 5. LLM을 통한 인포그래픽 데이터 생성
+        logger.info("Generating infographic data from script...")
+        infographic_data = await infographic_service.generate_infographic_json(script_text)
+        
+        # 6. HTML 변환
+        logger.info("Converting data to HTML...")
+        html_content = infographic_service.generate_html(infographic_data)
+        
+        # 7. PDF 생성
+        output_dir = settings.infographic_output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"infographic_{article.id}_{difficulty}_{timestamp}.pdf"
+        output_path = os.path.join(output_dir, filename)
+        
+        logger.info(f"Generating PDF at {output_path}...")
+        success = infographic_service.generate_pdf(html_content, output_path)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="PDF generation failed")
+            
+        return {
+            "status": "success",
+            "message": "Infographic generated successfully from database",
+            "article_id": str(article.id),
+            "article_title": article.title,
+            "difficulty_level": difficulty,
+            "file_path": os.path.abspath(output_path),
+            "data": infographic_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Infographic generation from article failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+

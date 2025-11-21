@@ -489,6 +489,16 @@ class InfographicRequest(BaseModel):
     script: str = Field(..., description="인포그래픽 생성을 위한 대본")
 
 
+class InfographicFromArticleRequest(BaseModel):
+    """Article ID로부터 인포그래픽 생성 요청"""
+    article_id: UUID = Field(..., description="인포그래픽을 생성할 Article ID")
+    difficulty_level: Optional[DifficultyLevel] = Field(
+        default=DifficultyLevel.intermediate,
+        description="사용할 난이도 레벨 (beginner/intermediate/advanced)"
+    )
+
+
+
 class InfographicElement(BaseModel):
     title: str = Field(..., description="섹션 제목")
     content: str = Field(..., description="섹션 내용")
