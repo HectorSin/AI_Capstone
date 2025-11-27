@@ -13,9 +13,7 @@ URL 묶음을 입력하면 AI가 종합 분석하여 요약 리포트와 오디�
 - **Framework**: FastAPI
 - **Database**: PostgreSQL
 - **AI Pipeline**: LangGraph, Perplexity API, Google Gemini API, Naver CLOVA Voice API
-- **Workflow Orchestration**: Apache Airflow
 - **ORM**: SQLAlchemy (Asynchronous)
-- **API Documentation**: Swagger UI
 
 ## DB 세팅 (DB Setup)
 1.  **[PostgreSQL](https://www.postgresql.org/download/) 설치**: 로컬 환경에 PostgreSQL 데이터베이스를 설치합니다.

@@ -176,8 +176,8 @@ class PromptManager:
         - 전문 용어는 영어로 유지
         """
     
-    def create_script_prompt(self, article_title: str, article_content: str, speakers: List[str] = None, persona_description: str = None) -> str:
-        """팟캐스트 대본 생성을 위한 프롬프트 생성 (화자 지정 및 JSON 출력)"""
+    def create_script_prompt(self, article_title: str, article_data: Dict[str, Any], speakers: List[str] = None, persona_description: str = None) -> str:
+        """난이도별 문서를 바탕으로 세 가지 난이도의 대본을 한 번에 생성하는 프롬프트"""
         speakers = speakers or ["man", "woman"]
         speakers_text = ", ".join(speakers)
         # persona_description이 없으면 템플릿에서 불러와 speakers에 맞게 포매팅
@@ -190,11 +190,27 @@ class PromptManager:
             except Exception:
                 persona_description = persona_tpl
 
-        return f"""
-        다음 기사 내용을 '재미있는 팟캐스트 토크쇼' 대본으로 재구성해주세요. 반드시 JSON만 출력하세요.
+        # 난이도별 기사 내용 추출
+        beginner = article_data.get("beginner", {})
+        intermediate = article_data.get("intermediate", {})
+        advanced = article_data.get("advanced", {})
 
-        기사 제목: {article_title}
-        기사 내용: {article_content}
+        return f"""
+        다음 세 가지 난이도의 기사를 각각 '재미있는 팟캐스트 토크쇼' 대본으로 재구성해주세요. 반드시 JSON만 출력하세요.
+
+        주제: {article_title}
+
+        **[초급 기사]**
+        제목: {beginner.get('title', '')}
+        내용: {beginner}
+
+        **[중급 기사]**
+        제목: {intermediate.get('title', '')}
+        내용: {intermediate}
+
+        **[고급 기사]**
+        제목: {advanced.get('title', '')}
+        내용: {advanced}
 
         화자 설정:
         - 총 인원: {len(speakers)}명
@@ -209,41 +225,103 @@ class PromptManager:
             - '티키타카'가 잘 드러나야 함. 한 사람이 길게 말하기보다 짧은 턴을 주고받는 형식.
             - 어려운 용어는 '반드시' 청취자의 눈높이에서 비유나 예시를 들어 설명.
             - 청취자에게 말을 거는 듯한 '수사적 질문' (예: "다들 이런 경험 없으신가요?") 포함.
+            - **난이도별 분량**:
+              * beginner: 3-4분 (약 400-600단어)
+              * intermediate: 4-5분 (약 600-800단어)
+              * advanced: 5-6분 (약 800-1000단어)
         4.  **마무리 (outro)**: 단순 요약/끝인사 금지. 핵심 메시지를 '한 문장으로 요약'하고, 청취자에게 '생각할 거리(food for thought)나 구체적인 행동 제안(Call to Action)' (예: "오늘 집에 가면서 OOO에 대해 한번 생각해보시는 건 어떨까요?")을 던져주세요.
-        5.  **분량**: 3-5분 분량 (약 500-800 **단어**).
-        6.  **기본 원칙**: 사실 기반, 과장/선정성 금지.
+        5.  **기본 원칙**: 사실 기반, 과장/선정성 금지.
 
-        출력:
-        - 오직 JSON만 출력 (설명/마크다운 금지)
-        - JSON 구조: {{ "intro": "...", "turns": [{{ "speaker": "...", "script": "..." }}], "outro": "..." }}
+        출력 형식 (JSON만):
+        {{
+            "beginner": {{
+                "intro": "...",
+                "turns": [{{"speaker": "man", "text": "..."}}, {{"speaker": "woman", "text": "..."}}, ...],
+                "outro": "..."
+            }},
+            "intermediate": {{
+                "intro": "...",
+                "turns": [{{"speaker": "man", "text": "..."}}, ...],
+                "outro": "..."
+            }},
+            "advanced": {{
+                "intro": "...",
+                "turns": [{{"speaker": "man", "text": "..."}}, ...],
+                "outro": "..."
+            }}
+        }}
         - speaker 값은 [{speakers_text}] 중 하나여야 함.
         """
 
-    def create_article_prompt(self, topic: str, articles: List[Dict[str, Any]]) -> str:
-        """Perplexity 수집 기사 목록을 바탕으로 통합 기사 생성을 위한 프롬프트 생성"""
-        # 기사 리스트를 프롬프트에 포함하기 위해 간단한 텍스트로 직렬화
-        articles_text = "\n".join(
-            [
-                f"- URL: {a.get('news_url','')}\n  TITLE: {a.get('title','')}\n  DATE: {a.get('date','')}\n  TEXT: {a.get('text','')}"
-                for a in (articles or [])
-            ]
-        )
+    def create_article_prompt(self, topic: str, article: Dict[str, Any]) -> str:
+        """BeautifulSoup 크롤링 기사 1개를 바탕으로 세 가지 난이도의 문서를 생성하는 프롬프트"""
+        # BeautifulSoup 크롤링 데이터 형식: {url, title, content, content_length, perplexity_metadata}
+        article_url = article.get('url', '')
+        article_title = article.get('title', '')
+        article_date = article.get('perplexity_metadata', {}).get('date', '')
+        article_content = article.get('content', '')
 
         return f"""
-        너는 최신 기술 뉴스를 한국어로 통합 정리하는 전문 기술 기자야.
+너는 최신 기술 뉴스를 한국어로 정리하는 전문 기술 기자야.
 
-        주제: {topic}
+주제: {topic}
 
-        입력 기사들:
-        {articles_text}
+입력 기사 (BeautifulSoup으로 크롤링된 원문):
+URL: {article_url}
+TITLE: {article_title}
+DATE: {article_date}
+CONTENT:
+{article_content}
 
-        작성 지침:
-        - 완전한 기사 한 편을 작성하되, 구조화된 JSON으로만 출력해.
-        - 과장 없이 정확하게, 기술적 의미와 시사점을 중심으로 작성해.
-        - 출처(URL)는 실제 기사 링크만 포함해. 접근 불가/로그인 필요 페이지는 제외.
-        - 한국어로 작성하되, 고유 기술 용어는 영어를 유지해.
-        - 본문 분량은 800~1200자 수준 권장.
+작성 목표:
+위 기사를 바탕으로 **세 가지 난이도의 문서**를 작성해.
 
-        출력:
-        - 오직 JSON만 출력(설명/마크다운 금지)
+난이도별 작성 지침:
+
+**1. beginner (초급):**
+- 기술에 익숙하지 않은 일반인도 이해할 수 있도록 쉽게 작성
+- 전문 용어 최소화, 필수 용어는 쉬운 설명 추가
+- 비유와 예시를 활용하여 개념 설명
+- 본문 분량: 600~800자
+
+**2. intermediate (중급):**
+- 기술에 어느 정도 관심 있는 사람들을 대상
+- 적절한 기술 용어 사용, 개념과 실제 적용 사례 균형있게 다룸
+- 기술적 배경과 의미를 설명
+- 본문 분량: 800~1000자
+
+**3. advanced (고급):**
+- 해당 분야 전문가 또는 개발자를 대상
+- 전문 기술 용어 적극 사용
+- 기술적 세부사항, 구현 방식, 성능 지표 등 심층 분석
+- 본문 분량: 1000~1500자
+
+공통 지침:
+- 각 난이도별로 title, sections, sources, word_count 포함
+- 과장 없이 정확하게, 기술적 의미와 시사점 중심으로 작성
+- 출처(URL)는 실제 기사 링크만 포함 (접근 불가/로그인 필요 페이지 제외)
+- 한국어로 작성하되, 고유 기술 용어는 영어 유지
+- sections는 2~4개의 소제목(heading)과 본문(body)으로 구성
+
+출력 형식 (JSON만):
+{{
+    "beginner": {{
+        "title": "초급용 제목",
+        "sections": [{{"heading": "소제목", "body": "본문"}}, ...],
+        "sources": ["URL1", "URL2"],
+        "word_count": 숫자
+    }},
+    "intermediate": {{
+        "title": "중급용 제목",
+        "sections": [{{"heading": "소제목", "body": "본문"}}, ...],
+        "sources": ["URL1", "URL2"],
+        "word_count": 숫자
+    }},
+    "advanced": {{
+        "title": "고급용 제목",
+        "sections": [{{"heading": "소제목", "body": "본문"}}, ...],
+        "sources": ["URL1", "URL2"],
+        "word_count": 숫자
+    }}
+}}
         """

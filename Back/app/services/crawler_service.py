@@ -6,10 +6,39 @@ BeautifulSoup을 사용하여 기사 원문을 크롤링합니다.
 
 import httpx
 from bs4 import BeautifulSoup
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
+from pydantic import BaseModel, validator, ValidationError
 
 logger = logging.getLogger(__name__)
+
+
+class CrawledArticle(BaseModel):
+    """크롤링된 기사 데이터 모델 (Pydantic 검증)"""
+    success: bool
+    url: str
+    title: str
+    content: str
+    content_length: int
+    error: Optional[str] = None
+
+    @validator('url')
+    def validate_url(cls, v):
+        if not v.startswith('http'):
+            raise ValueError('URL must start with http or https')
+        return v
+
+    @validator('content')
+    def validate_content(cls, v, values):
+        if values.get('success') and not v:
+            raise ValueError('Successful crawl must have content')
+        return v
+
+    @validator('content_length')
+    def validate_content_length(cls, v, values):
+        if values.get('success') and v == 0:
+            raise ValueError('Successful crawl must have content_length > 0')
+        return v
 
 
 class WebCrawlerService:
@@ -91,7 +120,7 @@ class WebCrawlerService:
             content = '\n'.join([line for line in content.split('\n') if line.strip()])
 
             if not content:
-                return {
+                error_data = {
                     'success': False,
                     'url': url,
                     'title': title,
@@ -99,15 +128,33 @@ class WebCrawlerService:
                     'content_length': 0,
                     'error': '본문을 찾을 수 없습니다'
                 }
+                try:
+                    validated = CrawledArticle(**error_data)
+                    return validated.model_dump()
+                except ValidationError:
+                    return error_data
 
-            return {
-                'success': True,
-                'url': url,
-                'title': title or 'Untitled',
-                'content': content,
-                'content_length': len(content),
-                'error': None
-            }
+            # Pydantic 검증
+            try:
+                validated = CrawledArticle(
+                    success=True,
+                    url=url,
+                    title=title or 'Untitled',
+                    content=content,
+                    content_length=len(content),
+                    error=None
+                )
+                return validated.model_dump()
+            except ValidationError as e:
+                logger.error(f"크롤링 데이터 검증 실패: {e}")
+                return {
+                    'success': False,
+                    'url': url,
+                    'title': title or '',
+                    'content': '',
+                    'content_length': 0,
+                    'error': f'Validation error: {str(e)}'
+                }
 
         except httpx.TimeoutException:
             logger.error(f"크롤링 타임아웃: {url}")

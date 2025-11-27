@@ -9,6 +9,9 @@ import asyncio
 from typing import Dict, Any, Optional, List
 import httpx
 from datetime import datetime
+from pydantic import BaseModel, ValidationError
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 
 from .base import AIService, AIServiceConfig
 from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
@@ -16,20 +19,18 @@ from .config_manager import ConfigManager, CompanyInfoManager, PromptManager
 logger = logging.getLogger(__name__)
 
 
-class Article:
-    """기사 데이터 모델"""
-    def __init__(self, news_url: str, title: str, text: str, date: str):
-        self.news_url = news_url
-        self.title = title
-        self.text = text
-        self.date = date
+class Article(BaseModel):
+    """기사 데이터 모델 (Pydantic)"""
+    news_url: str
+    title: str
+    text: str
+    date: str
 
 
-class NewsData:
-    """뉴스 데이터 모델"""
-    def __init__(self, category: str, articles: List[Article]):
-        self.category = category
-        self.articles = articles
+class NewsData(BaseModel):
+    """뉴스 데이터 모델 (Pydantic)"""
+    category: str
+    articles: List[Article]
 
 
 class PerplexityService(AIService):
@@ -40,11 +41,14 @@ class PerplexityService(AIService):
     def __init__(self, config: AIServiceConfig):
         super().__init__(config)
         self.api_key = config.api_key
-
+        
         # 설정 관리자 초기화
         self.config_manager = ConfigManager()
         self.company_manager = CompanyInfoManager(self.config_manager)
         self.prompt_manager = PromptManager(self.config_manager)
+        
+        # LangChain JSON Output Parser 초기화
+        self.json_parser = JsonOutputParser(pydantic_object=NewsData)
     
     async def validate_config(self) -> bool:
         """설정이 유효한지 검증합니다."""
@@ -121,20 +125,15 @@ class PerplexityService(AIService):
     async def crawl_topic(self, topic: str, keywords: list = None) -> Dict[str, Any]:
         """
         특정 토픽에 대한 정보를 크롤링합니다.
-
+        
         Args:
             topic: 크롤링할 토픽
             keywords: 관련 키워드 목록
-
+        
         Returns:
             크롤링된 정보
         """
-        # TODO: logger 지우기
         logger.info(f"토픽 크롤링 시작: {topic}")
-        # API 키 확인
-        if not self.api_key or len(self.api_key) < 10:
-            logger.error(f"Perplexity API 키가 유효하지 않음: {self.api_key[:10] if self.api_key else 'None'}...")
-            return {"error": "Perplexity API 키가 설정되지 않았거나 유효하지 않습니다."}
         
         try:
             # 설정 관리자를 통해 회사 정보와 프롬프트 생성
@@ -148,7 +147,7 @@ class PerplexityService(AIService):
                 "messages": [
                     {"role": "user", "content": prompt}
                 ],
-                "search_domain_filter": company_info["sources"], # TODO: 이게 뭔지 주석 좀더 적어주세요!
+                "search_domain_filter": company_info["sources"],
                 "search_recency_filter": "week",  # 노트북과 동일
                 "return_citations": True,
                 "max_tokens": 4000
@@ -165,7 +164,7 @@ class PerplexityService(AIService):
                 try:
                     timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=60.0)
                     async with httpx.AsyncClient(timeout=timeout) as client:
-                        response = await client.post(self.API_URL, headers=headers, json=payload) # TODO: 비동기 꼭 필요한거 아니면 빼주세요
+                        response = await client.post(self.API_URL, headers=headers, json=payload)
                         if response.status_code in (429, 500, 502, 503, 504):
                             raise httpx.HTTPStatusError("Server busy", request=response.request, response=response)
                         response.raise_for_status()
@@ -173,34 +172,54 @@ class PerplexityService(AIService):
                         response_data = response.json()
                         content = response_data["choices"][0]['message']['content']
 
-                        logger.info(f"Perplexity 원본 응답 (처음 500자): {content[:500]}")
-
-                        # JSON 파싱 시도
+                        # LangChain JSON Output Parser 사용
                         try:
-                            # TODO: 제 작업물 돌려주세요 재욱님
-                            # JSON 마크다운 블록 제거
-                            if content.startswith("```json"):
-                                content = content.replace("```json", "").replace("```", "").strip()
-                                logger.info("JSON 마크다운 블록 제거")
-
-                            raw_data = json.loads(content)
-                            logger.info(f"JSON 파싱 성공")
-
-                            # 기사 개수 로깅
-                            article_count = len(raw_data.get("articles", []))
-                            logger.info(f"수집된 기사 개수: {article_count}")
-
+                            parsed_data = self.json_parser.parse(content)
+                            # 기사 비어있음 처리
+                            try:
+                                if not parsed_data or len(parsed_data.articles) == 0:
+                                    return {
+                                        "error": "NO_ARTICLES",
+                                        "details": {
+                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
+                                        },
+                                    }
+                            except Exception:
+                                pass
                             return {
                                 "service": "perplexity",
                                 "status": "success",
-                                "data": raw_data
+                                "data": parsed_data
                             }
-                        except json.JSONDecodeError as je:
-                            logger.error(f"JSON 파싱 실패: {je}")
-                            return {
-                                "error": "JSON 파싱 실패",
-                                "raw_content": content[:1000]
-                            }
+                        except Exception as e:
+                            logger.error(f"LangChain JSON 파싱 실패: {e}")
+                            # 폴백: 수동 파싱 시도
+                            try:
+                                if content.startswith("```json"):
+                                    content = content.replace("```json", "").replace("```", "").strip()
+
+                                raw_data = json.loads(content)
+                                news_data = NewsData(**raw_data)
+                                if len(news_data.articles) == 0:
+                                    return {
+                                        "error": "NO_ARTICLES",
+                                        "details": {
+                                            "message": "크롤링 결과에 유효한 기사 항목이 없습니다.",
+                                        },
+                                    }
+                                return {
+                                    "service": "perplexity",
+                                    "status": "success",
+                                    "data": news_data.model_dump()
+                                }
+                            except Exception as fallback_error:
+                                logger.error(f"폴백 파싱도 실패: {fallback_error}")
+                                return {
+                                    "error": "JSON 파싱 실패",
+                                    "raw_content": content,
+                                    "langchain_error": str(e),
+                                    "fallback_error": str(fallback_error)
+                                }
                 except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.HTTPStatusError) as e:
                     logger.warning(f"Perplexity 크롤링 시도 {attempt}/{max_retries} 실패: {type(e).__name__}: {e}")
                     if attempt == max_retries:
