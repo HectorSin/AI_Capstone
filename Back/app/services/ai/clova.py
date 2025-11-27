@@ -21,7 +21,6 @@ except Exception:  # pydub 미설치 환경에서도 코드가 import 되도록 
 logger = logging.getLogger(__name__)
 
 
-# TODO: 기존 제 코드로 롤백 해주세요
 class ClovaService(AIService):
     """Naver Clova Voice 서비스 구현체"""
     
@@ -170,10 +169,9 @@ class ClovaService(AIService):
         logger.info("팟캐스트 음성 생성 시작")
 
         # 출력 경로 준비
-        # TODO: 현재 경로 하드코딩 되어 있는데 전부 .env, docker-compose.yml, config 에서 관리해주세요 & 변수는 1번만 호출해주세요
         output_dir = output_dir or "/app/podcasts"
         try:
-            os.makedirs(output_dir, mode=0o755, exist_ok=True) # TODO: MODE이거 뭔가요? AI똥이면 지워주세요
+            os.makedirs(output_dir, mode=0o755, exist_ok=True)
         except Exception:
             pass
         if not filename:
@@ -325,4 +323,3 @@ class ClovaService(AIService):
                 "voice": "mixed",
             },
         }
-
