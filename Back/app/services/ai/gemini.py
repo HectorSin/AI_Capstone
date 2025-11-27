@@ -21,12 +21,19 @@ class ArticleSection(BaseModel):
     body: str
 
 
-class ArticleOutput(BaseModel):
+class DifficultyArticle(BaseModel):
+    """난이도별 문서"""
     title: str
-    summary: str
     sections: List[ArticleSection]
     sources: List[str]
     word_count: int
+
+
+class ArticleOutput(BaseModel):
+    """세 가지 난이도의 문서를 한 번에 생성"""
+    beginner: DifficultyArticle
+    intermediate: DifficultyArticle
+    advanced: DifficultyArticle
 
 
 class ScriptTurn(BaseModel):
@@ -34,10 +41,18 @@ class ScriptTurn(BaseModel):
     text: str
 
 
-class ScriptOutput(BaseModel):
+class DifficultyScript(BaseModel):
+    """난이도별 대본"""
     intro: str
     turns: List[ScriptTurn]
     outro: str
+
+
+class ScriptOutput(BaseModel):
+    """세 가지 난이도의 대본을 한 번에 생성"""
+    beginner: DifficultyScript
+    intermediate: DifficultyScript
+    advanced: DifficultyScript
 
 
 class GeminiService(AIService):
@@ -79,73 +94,79 @@ class GeminiService(AIService):
     
     async def generate_article(self, title: str, content: str = "", sources: List[str] = None, articles: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Perplexity 기사 목록을 바탕으로 구조화된 JSON 기사 생성
-        - JsonOutputParser(Pydantic)로 안전 파싱
-        """
-        logger.info(f"문서 생성 시작: {title}")
+        BeautifulSoup 크롤링 기사 목록을 바탕으로 세 가지 난이도의 문서를 한 번에 생성
+        - with_structured_output(ArticleOutput)로 Pydantic 검증
 
-        # Perplexity 결과가 구조화되어 있으므로 articles 우선 사용
+        Returns:
+            {
+                "service": "gemini",
+                "status": "success",
+                "data": {
+                    "beginner": {title, sections, sources, word_count},
+                    "intermediate": {title, sections, sources, word_count},
+                    "advanced": {title, sections, sources, word_count}
+                }
+            }
+        """
+        logger.info(f"난이도별 문서 생성 시작: {title}")
+
+        # BeautifulSoup 크롤링 데이터 사용
         articles_list = articles or []
         prompt = self.prompt_manager.create_article_prompt(topic=title, articles=articles_list)
 
         try:
-            # 구조화 출력 체인: 모델에 ArticleOutput 스키마를 부여
+            # 구조화 출력 체인: 모델에 ArticleOutput 스키마 부여 (beginner/intermediate/advanced)
             structured_model = self.chat_model.with_structured_output(ArticleOutput)
-            parsed = await structured_model.ainvoke(self.prompt_manager.create_article_prompt(topic=title, articles=articles_list))
+            parsed = await structured_model.ainvoke(prompt)
             data = parsed.model_dump() if hasattr(parsed, "model_dump") else parsed
-
-            # 스크립트 생성을 위해 결합된 본문 문자열 제공
-            try:
-                combined_content = data.get("summary", "") + "\n\n" + "\n\n".join(
-                    [s.get("body", "") for s in data.get("sections", [])]
-                )
-            except Exception:
-                combined_content = data.get("summary", "")
 
             return {
                 "service": "gemini",
                 "status": "success",
-                "data": {**data, "content": combined_content},
+                "data": data,  # {beginner: {...}, intermediate: {...}, advanced: {...}}
             }
         except Exception as e:
-            logger.error(f"문서 생성 실패: {e}")
-            return {"error": f"문서 생성 실패: {str(e)}"}
+            logger.error(f"난이도별 문서 생성 실패: {e}")
+            return {"error": f"난이도별 문서 생성 실패: {str(e)}"}
     
-    async def generate_script(self, article_title: str, article_content: str) -> Dict[str, Any]:
+    async def generate_script(self, article_title: str, article_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        기사 내용을 바탕으로 팟캐스트 대본을 생성합니다.
-        
+        난이도별 문서를 바탕으로 세 가지 난이도의 팟캐스트 대본을 한 번에 생성합니다.
+
         Args:
             article_title: 기사 제목
-            article_content: 기사 내용
-        
-        Returns:
-            생성된 대본
-        """
-        logger.info(f"대본 생성 시작: {article_title}")
-        try:
-            # 스피커는 기본 ["man", "woman"]로 설정. 필요 시 상위에서 전달 가능하도록 오버로드 준비
-            speakers = ["man", "woman"]
-            prompt = self.prompt_manager.create_script_prompt(article_title, article_content, speakers)
+            article_data: 난이도별 문서 데이터 {beginner: {...}, intermediate: {...}, advanced: {...}}
 
-            # 구조화 출력으로 안전하게 JSON 생성
+        Returns:
+            {
+                "service": "gemini",
+                "status": "success",
+                "data": {
+                    "beginner": {intro, turns, outro},
+                    "intermediate": {intro, turns, outro},
+                    "advanced": {intro, turns, outro}
+                }
+            }
+        """
+        logger.info(f"난이도별 대본 생성 시작: {article_title}")
+        try:
+            # 스피커는 기본 ["man", "woman"]로 설정
+            speakers = ["man", "woman"]
+            prompt = self.prompt_manager.create_script_prompt(article_title, article_data, speakers)
+
+            # 구조화 출력으로 안전하게 JSON 생성 (beginner/intermediate/advanced)
             structured_model = self.chat_model.with_structured_output(ScriptOutput)
             parsed = await structured_model.ainvoke(prompt)
             data = parsed.model_dump() if hasattr(parsed, "model_dump") else parsed
 
-            # content 필드에 턴들을 합쳐 스크립트 원문도 제공
-            joined = data.get("intro", "") + "\n\n" + "\n\n".join(
-                [f"[{t.get('speaker','')}] {t.get('text','')}" for t in data.get("turns", [])]
-            ) + "\n\n" + data.get("outro", "")
-
             return {
                 "service": "gemini",
                 "status": "success",
-                "data": {**data, "content": joined},
+                "data": data,  # {beginner: {...}, intermediate: {...}, advanced: {...}}
             }
         except Exception as e:
-            logger.error(f"대본 생성 실패: {e}")
-            return {"error": f"대본 생성 실패: {str(e)}"}
+            logger.error(f"난이도별 대본 생성 실패: {e}")
+            return {"error": f"난이도별 대본 생성 실패: {str(e)}"}
     
     async def summarize_text(self, text: str) -> Dict[str, Any]:
         """
