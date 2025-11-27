@@ -141,11 +141,14 @@ class PodcastService:
             logger.error(f"크롤링 원문 데이터 저장 실패: {e}")
             raise
     
-    def _save_article(self, podcast_id: str, article: Dict[str, Any]) -> str:
-        """생성된 문서 저장"""
+    def _save_article(self, podcast_id: str, article_index: int, article: Dict[str, Any]) -> str:
+        """생성된 문서 저장 (기사별 개별 파일)"""
         podcast_dir = self._get_podcast_directory(podcast_id)
-        file_path = os.path.join(podcast_dir, "03_article.json")
-        
+        articles_dir = os.path.join(podcast_dir, "03_articles")
+        os.makedirs(articles_dir, mode=0o755, exist_ok=True)
+
+        file_path = os.path.join(articles_dir, f"article_{article_index}.json")
+
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(article, f, ensure_ascii=False, indent=2)
@@ -154,12 +157,15 @@ class PodcastService:
         except Exception as e:
             logger.error(f"문서 저장 실패: {e}")
             raise
-    
-    def _save_script(self, podcast_id: str, script: Dict[str, Any]) -> str:
-        """생성된 대본 저장"""
+
+    def _save_script(self, podcast_id: str, script_index: int, script: Dict[str, Any]) -> str:
+        """생성된 대본 저장 (기사별 개별 파일)"""
         podcast_dir = self._get_podcast_directory(podcast_id)
-        file_path = os.path.join(podcast_dir, "04_script.json")
-        
+        scripts_dir = os.path.join(podcast_dir, "04_scripts")
+        os.makedirs(scripts_dir, mode=0o755, exist_ok=True)
+
+        file_path = os.path.join(scripts_dir, f"script_{script_index}.json")
+
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(script, f, ensure_ascii=False, indent=2)
@@ -168,19 +174,22 @@ class PodcastService:
         except Exception as e:
             logger.error(f"대본 저장 실패: {e}")
             raise
-    
-    def _save_audio(self, podcast_id: str, audio: Dict[str, Any]) -> str:
-        """생성된 음성 파일 정보 저장"""
+
+    def _save_audio_metadata(self, podcast_id: str, audio_index: int, audio: Dict[str, Any]) -> str:
+        """생성된 음성 파일 메타데이터 저장 (기사별)"""
         podcast_dir = self._get_podcast_directory(podcast_id)
-        file_path = os.path.join(podcast_dir, "05_audio.json")
-        
+        audios_dir = os.path.join(podcast_dir, "05_audios")
+        os.makedirs(audios_dir, mode=0o755, exist_ok=True)
+
+        file_path = os.path.join(audios_dir, f"audio_{audio_index}_metadata.json")
+
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(audio, f, ensure_ascii=False, indent=2)
-            logger.info(f"음성 정보 저장: {file_path}")
+            logger.info(f"음성 메타데이터 저장: {file_path}")
             return file_path
         except Exception as e:
-            logger.error(f"음성 정보 저장 실패: {e}")
+            logger.error(f"음성 메타데이터 저장 실패: {e}")
             raise
     
     def _save_metadata(self, podcast_id: str, metadata: Dict[str, Any]) -> str:
@@ -341,137 +350,187 @@ class PodcastService:
             metadata["steps"]["beautifulsoup_crawling"]["crawled_count"] = len(crawled_articles)
             self._save_metadata(podcast_id, metadata)
             
-            # 3. Gemini로 난이도별 문서 생성
-            logger.info("Step 3: 난이도별 문서 생성 (Gemini)")
+            # 3. Gemini로 난이도별 문서 생성 (기사별 개별 처리)
+            logger.info("Step 3: 난이도별 문서 생성 (Gemini) - 기사별 개별 처리")
             metadata["steps"]["article_generation"]["status"] = "running"
             metadata["steps"]["article_generation"]["started_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
 
-            # BeautifulSoup으로 크롤링된 기사들을 Gemini에 전달
-            # 반환: {beginner: {...}, intermediate: {...}, advanced: {...}}
-            article = await self.gemini.generate_article(
-                title=topic,
-                articles=crawled_articles  # BeautifulSoup 크롤링 데이터 사용
-            )
-            # 오류 가드: 문서 생성 실패 시 중단
-            if isinstance(article, dict) and article.get("error"):
+            # 각 크롤링된 기사마다 개별적으로 문서 생성
+            generated_articles = []
+            for idx, crawled_article in enumerate(crawled_articles):
+                logger.info(f"문서 생성 중 ({idx+1}/{len(crawled_articles)}): {crawled_article.get('url', '')}")
+
+                article = await self.gemini.generate_article(
+                    title=topic,
+                    article=crawled_article  # 단일 기사 전달
+                )
+
+                # 오류 가드: 문서 생성 실패 시 경고하고 계속 진행
+                if isinstance(article, dict) and article.get("error"):
+                    logger.error(f"문서 {idx} 생성 실패: {article}")
+                    generated_articles.append({"error": article.get("error"), "url": crawled_article.get("url")})
+                else:
+                    # 성공한 문서 저장
+                    self._save_article(podcast_id, idx, article)
+                    generated_articles.append(article)
+                    logger.info(f"문서 {idx} 생성 완료")
+
+            # 최소 1개 이상의 문서가 생성되어야 함
+            success_count = sum(1 for a in generated_articles if not (isinstance(a, dict) and a.get("error")))
+            if success_count == 0:
+                error_data = {"error": "ALL_ARTICLES_FAILED", "details": generated_articles}
                 metadata["steps"]["article_generation"]["status"] = "failed"
                 metadata["steps"]["article_generation"]["completed_at"] = datetime.now().isoformat()
                 metadata["status"] = "failed"
-                metadata["error"] = article
+                metadata["error"] = error_data
                 self._save_metadata(podcast_id, metadata)
-                try:
-                    self._save_article(podcast_id, article)
-                except Exception:
-                    pass
-                raise RuntimeError(f"Article generation failed: {article}")
-            self._save_article(podcast_id, article)
+                raise RuntimeError(f"All article generation failed: {error_data}")
 
             metadata["steps"]["article_generation"]["status"] = "completed"
             metadata["steps"]["article_generation"]["completed_at"] = datetime.now().isoformat()
+            metadata["steps"]["article_generation"]["generated_count"] = success_count
             self._save_metadata(podcast_id, metadata)
             
-            # 4. Gemini로 난이도별 대본 생성
-            logger.info("Step 4: 난이도별 대본 생성 (Gemini)")
+            # 4. Gemini로 난이도별 대본 생성 (기사별 개별 처리)
+            logger.info("Step 4: 난이도별 대본 생성 (Gemini) - 기사별 개별 처리")
             metadata["steps"]["script_generation"]["status"] = "running"
             metadata["steps"]["script_generation"]["started_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
 
-            # 난이도별 문서 데이터를 전달
-            # 반환: {beginner: {intro, turns, outro}, intermediate: {...}, advanced: {...}}
-            script = await self.gemini.generate_script(
-                article_title=topic,
-                article_data=article.get("data", {})  # 난이도별 문서 데이터
-            )
-            # 오류 가드: 대본 생성 실패 시 중단
-            if isinstance(script, dict) and script.get("error"):
+            # 성공한 문서들에 대해서만 대본 생성
+            generated_scripts = []
+            for idx, article in enumerate(generated_articles):
+                # 오류가 있는 문서는 건너뛰기
+                if isinstance(article, dict) and article.get("error"):
+                    logger.warning(f"문서 {idx}에 오류가 있어 대본 생성을 건너뜁니다.")
+                    generated_scripts.append({"error": "ARTICLE_FAILED", "article_error": article.get("error")})
+                    continue
+
+                logger.info(f"대본 생성 중 ({idx+1}/{len(generated_articles)})")
+
+                script = await self.gemini.generate_script(
+                    article_title=topic,
+                    article_data=article.get("data", {})  # 난이도별 문서 데이터
+                )
+
+                # 오류 가드: 대본 생성 실패 시 경고하고 계속 진행
+                if isinstance(script, dict) and script.get("error"):
+                    logger.error(f"대본 {idx} 생성 실패: {script}")
+                    generated_scripts.append({"error": script.get("error")})
+                else:
+                    # 성공한 대본 저장
+                    self._save_script(podcast_id, idx, script)
+                    generated_scripts.append(script)
+                    logger.info(f"대본 {idx} 생성 완료")
+
+            # 최소 1개 이상의 대본이 생성되어야 함
+            script_success_count = sum(1 for s in generated_scripts if not (isinstance(s, dict) and s.get("error")))
+            if script_success_count == 0:
+                error_data = {"error": "ALL_SCRIPTS_FAILED", "details": generated_scripts}
                 metadata["steps"]["script_generation"]["status"] = "failed"
                 metadata["steps"]["script_generation"]["completed_at"] = datetime.now().isoformat()
                 metadata["status"] = "failed"
-                metadata["error"] = script
+                metadata["error"] = error_data
                 self._save_metadata(podcast_id, metadata)
-                try:
-                    self._save_script(podcast_id, script)
-                except Exception:
-                    pass
-                raise RuntimeError(f"Script generation failed: {script}")
-            self._save_script(podcast_id, script)
+                raise RuntimeError(f"All script generation failed: {error_data}")
 
             metadata["steps"]["script_generation"]["status"] = "completed"
             metadata["steps"]["script_generation"]["completed_at"] = datetime.now().isoformat()
+            metadata["steps"]["script_generation"]["generated_count"] = script_success_count
             self._save_metadata(podcast_id, metadata)
             
-            # 5. Clova로 난이도별 TTS 생성
-            logger.info("Step 5: 난이도별 음성 생성 (Clova)")
+            # 5. Clova로 난이도별 TTS 생성 (기사별 개별 처리)
+            logger.info("Step 5: 난이도별 음성 생성 (Clova) - 기사별 개별 처리")
             metadata["steps"]["audio_generation"]["status"] = "running"
             metadata["steps"]["audio_generation"]["started_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
 
-            # 난이도별 대본 데이터
-            script_data = script.get("data", {})
-            audio_results = {}
+            # 오디오 디렉토리 생성
+            audios_dir = os.path.join(self._get_podcast_directory(podcast_id), "05_audios")
+            os.makedirs(audios_dir, mode=0o755, exist_ok=True)
 
-            # 세 가지 난이도 각각 TTS 생성
-            for difficulty in ["beginner", "intermediate", "advanced"]:
-                difficulty_script = script_data.get(difficulty, {})
-                if not difficulty_script:
-                    logger.warning(f"{difficulty} 대본이 없습니다. 건너뜁니다.")
+            # 성공한 대본들에 대해서만 오디오 생성
+            generated_audios = []
+            total_audio_count = 0
+
+            for idx, script in enumerate(generated_scripts):
+                # 오류가 있는 대본은 건너뛰기
+                if isinstance(script, dict) and script.get("error"):
+                    logger.warning(f"대본 {idx}에 오류가 있어 오디오 생성을 건너뜁니다.")
+                    generated_audios.append({"error": "SCRIPT_FAILED", "script_error": script.get("error")})
                     continue
 
-                logger.info(f"{difficulty} 난이도 TTS 생성 중...")
-                audio = await self.clova.generate_podcast_audio(
-                    script=difficulty_script,
-                    output_dir=self._get_podcast_directory(podcast_id),
-                    filename=f"05_audio_{difficulty}.mp3",
-                    speaker_voices={"man": "jinho", "woman": "nara"}
-                )
+                logger.info(f"오디오 생성 중 ({idx+1}/{len(generated_scripts)})")
 
-                # 오류 가드: 오디오 생성 실패 시 경고만 하고 계속 진행
-                if isinstance(audio, dict) and audio.get("error"):
-                    logger.error(f"{difficulty} TTS 생성 실패: {audio}")
-                    audio_results[difficulty] = {"error": audio.get("error")}
-                else:
-                    audio_results[difficulty] = audio.get("data", {})
-                    logger.info(f"{difficulty} TTS 생성 완료")
+                # 난이도별 대본 데이터
+                script_data = script.get("data", {})
+                audio_results = {}
+
+                # 세 가지 난이도 각각 TTS 생성
+                for difficulty in ["beginner", "intermediate", "advanced"]:
+                    difficulty_script = script_data.get(difficulty, {})
+                    if not difficulty_script:
+                        logger.warning(f"기사 {idx} - {difficulty} 대본이 없습니다. 건너뜁니다.")
+                        continue
+
+                    logger.info(f"기사 {idx} - {difficulty} 난이도 TTS 생성 중...")
+                    audio = await self.clova.generate_podcast_audio(
+                        script=difficulty_script,
+                        output_dir=audios_dir,
+                        filename=f"audio_{idx}_{difficulty}.mp3",
+                        speaker_voices={"man": "jinho", "woman": "nara"}
+                    )
+
+                    # 오류 가드: 오디오 생성 실패 시 경고만 하고 계속 진행
+                    if isinstance(audio, dict) and audio.get("error"):
+                        logger.error(f"기사 {idx} - {difficulty} TTS 생성 실패: {audio}")
+                        audio_results[difficulty] = {"error": audio.get("error")}
+                    else:
+                        audio_results[difficulty] = audio.get("data", {})
+                        total_audio_count += 1
+                        logger.info(f"기사 {idx} - {difficulty} TTS 생성 완료")
+
+                # 이 기사의 오디오 정보 저장
+                self._save_audio_metadata(podcast_id, idx, {"service": "clova", "status": "success", "data": audio_results})
+                generated_audios.append({"service": "clova", "status": "success", "data": audio_results})
 
             # 최소 1개 이상의 오디오가 생성되어야 함
-            success_count = sum(1 for v in audio_results.values() if not v.get("error"))
-            if success_count == 0:
-                error_data = {"error": "ALL_AUDIO_FAILED", "details": audio_results}
+            if total_audio_count == 0:
+                error_data = {"error": "ALL_AUDIO_FAILED", "details": generated_audios}
                 metadata["steps"]["audio_generation"]["status"] = "failed"
                 metadata["steps"]["audio_generation"]["completed_at"] = datetime.now().isoformat()
                 metadata["status"] = "failed"
                 metadata["error"] = error_data
                 self._save_metadata(podcast_id, metadata)
-                try:
-                    self._save_audio(podcast_id, error_data)
-                except Exception:
-                    pass
                 raise RuntimeError(f"All audio generation failed: {error_data}")
-
-            # 난이도별 오디오 정보 저장
-            self._save_audio(podcast_id, {"service": "clova", "status": "success", "data": audio_results})
 
             metadata["steps"]["audio_generation"]["status"] = "completed"
             metadata["steps"]["audio_generation"]["completed_at"] = datetime.now().isoformat()
-            metadata["steps"]["audio_generation"]["generated_count"] = success_count
+            metadata["steps"]["audio_generation"]["generated_count"] = total_audio_count
             metadata["status"] = "completed"
             metadata["completed_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
             
-            # 결과 정리 (난이도별 데이터)
+            # 결과 정리 (기사별 개별 데이터)
             result = {
                 "podcast_id": podcast_id,
                 "topic": topic,
                 "keywords": keywords or [],
-                "article": article.get("data", {}),  # {beginner: {...}, intermediate: {...}, advanced: {...}}
-                "script": script.get("data", {}),    # {beginner: {...}, intermediate: {...}, advanced: {...}}
-                "audio": audio_results,              # {beginner: {...}, intermediate: {...}, advanced: {...}}
+                "articles": generated_articles,  # 기사별 문서 리스트
+                "scripts": generated_scripts,    # 기사별 대본 리스트
+                "audios": generated_audios,      # 기사별 오디오 리스트
                 "status": "completed",
-                "storage_path": self._get_podcast_directory(podcast_id)
+                "storage_path": self._get_podcast_directory(podcast_id),
+                "summary": {
+                    "total_articles": len(crawled_articles),
+                    "successful_articles": success_count,
+                    "successful_scripts": script_success_count,
+                    "total_audio_files": total_audio_count
+                }
             }
 
-            logger.info(f"난이도별 팟캐스트 생성 완료: {podcast_id}")
+            logger.info(f"기사별 팟캐스트 생성 완료: {podcast_id} (기사 {len(crawled_articles)}개, 오디오 {total_audio_count}개)")
             return result
             
         except Exception as e:

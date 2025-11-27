@@ -92,10 +92,14 @@ class GeminiService(AIService):
             logger.error(f"Gemini 오류: {e}")
             return {"error": f"Gemini 오류: {str(e)}"}
     
-    async def generate_article(self, title: str, content: str = "", sources: List[str] = None, articles: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def generate_article(self, title: str, article: Dict[str, Any]) -> Dict[str, Any]:
         """
-        BeautifulSoup 크롤링 기사 목록을 바탕으로 세 가지 난이도의 문서를 한 번에 생성
+        BeautifulSoup 크롤링 기사 1개를 바탕으로 세 가지 난이도의 문서를 한 번에 생성
         - with_structured_output(ArticleOutput)로 Pydantic 검증
+
+        Args:
+            title: 주제/토픽 제목
+            article: 크롤링된 기사 1개 {url, title, content, content_length, perplexity_metadata}
 
         Returns:
             {
@@ -108,11 +112,10 @@ class GeminiService(AIService):
                 }
             }
         """
-        logger.info(f"난이도별 문서 생성 시작: {title}")
+        logger.info(f"난이도별 문서 생성 시작: {title} - {article.get('url', '')}")
 
-        # BeautifulSoup 크롤링 데이터 사용
-        articles_list = articles or []
-        prompt = self.prompt_manager.create_article_prompt(topic=title, articles=articles_list)
+        # 단일 기사로 프롬프트 생성
+        prompt = self.prompt_manager.create_article_prompt(topic=title, article=article)
 
         try:
             # 구조화 출력 체인: 모델에 ArticleOutput 스키마 부여 (beginner/intermediate/advanced)

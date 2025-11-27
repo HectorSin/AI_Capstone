@@ -253,27 +253,28 @@ class PromptManager:
         - speaker 값은 [{speakers_text}] 중 하나여야 함.
         """
 
-    def create_article_prompt(self, topic: str, articles: List[Dict[str, Any]]) -> str:
-        """BeautifulSoup 크롤링 기사 목록을 바탕으로 세 가지 난이도의 문서를 생성하는 프롬프트"""
-        # 기사 리스트를 프롬프트에 포함하기 위해 간단한 텍스트로 직렬화
+    def create_article_prompt(self, topic: str, article: Dict[str, Any]) -> str:
+        """BeautifulSoup 크롤링 기사 1개를 바탕으로 세 가지 난이도의 문서를 생성하는 프롬프트"""
         # BeautifulSoup 크롤링 데이터 형식: {url, title, content, content_length, perplexity_metadata}
-        articles_text = "\n\n".join(
-            [
-                f"[기사 {idx+1}]\nURL: {a.get('url', '')}\nTITLE: {a.get('title', '')}\nDATE: {a.get('perplexity_metadata', {}).get('date', '')}\nCONTENT:\n{a.get('content', '')}"
-                for idx, a in enumerate(articles or [])
-            ]
-        )
+        article_url = article.get('url', '')
+        article_title = article.get('title', '')
+        article_date = article.get('perplexity_metadata', {}).get('date', '')
+        article_content = article.get('content', '')
 
         return f"""
-너는 최신 기술 뉴스를 한국어로 통합 정리하는 전문 기술 기자야.
+너는 최신 기술 뉴스를 한국어로 정리하는 전문 기술 기자야.
 
 주제: {topic}
 
-입력 기사들 (BeautifulSoup으로 크롤링된 원문):
-{articles_text}
+입력 기사 (BeautifulSoup으로 크롤링된 원문):
+URL: {article_url}
+TITLE: {article_title}
+DATE: {article_date}
+CONTENT:
+{article_content}
 
 작성 목표:
-위 기사들을 바탕으로 **세 가지 난이도의 문서**를 작성해.
+위 기사를 바탕으로 **세 가지 난이도의 문서**를 작성해.
 
 난이도별 작성 지침:
 
