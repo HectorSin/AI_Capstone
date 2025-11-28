@@ -1,41 +1,22 @@
 # 🎙️ SnackCast : 넘쳐나는 AI 소식, 한 입에 쏙
 
-<!-- PROJECT LOGO -->
-<br />
+<div align="center">
+<img src="./img/Symbol.png" alt="Logo" width="500px">
+</div>
+
 <p align="center">
-    <img src="./img/Symbol.png" alt="Logo" width="500px">
+  <a href="https://www.canva.com/design/DAG5yPiyQ3c/wxNM3e20RRpy5fEln2sUAg/edit?utm_content=DAG5yPiyQ3c&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton">
+    <img src="https://img.shields.io/badge/Canva-%EB%B0%9C%ED%91%9C%EC%9E%90%EB%A3%8C_%EB%B3%B4%EB%9F%AC%EA%B0%80%EA%B8%B0-00C4CC?style=for-the-badge&logo=Canva&logoColor=white" height="30"/>
   </a>
-
-  <h3 align="center">SnackCast</h3>
-    <table width="100%">
-    <tr>
-        <td width="50%" align="center">
-        <a href="https://www.canva.com/design/DAG5yPiyQ3c/wxNM3e20RRpy5fEln2sUAg/edit?utm_content=DAG5yPiyQ3c&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton">
-            📑 Presentation (발표자료)
-        </a>
-        </td>
-        <td width="50%" align="center">
-        <a href="https://drive.google.com/file/d/1A4rJ98v5IshSCUr57mK5RXdPsSh6hp7M/view?usp=drive_link">
-            📺 동영상 (시연영상)
-        </a>
-        </td>
-    </tr>
-    </table>
+  &nbsp;&nbsp;
+  <a href="https://drive.google.com/file/d/1A4rJ98v5IshSCUr57mK5RXdPsSh6hp7M/view?usp=drive_link">
+    <img src="https://img.shields.io/badge/Google_Drive-%EC%8B%9C%EC%97%B0_%EC%98%81%EC%83%81_%EB%B3%B4%EA%B8%B0-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" height="30"/>
+  </a>
 </p>
-<hr>
 
-<table width="100%">
-  <tr>
-    <td bgcolor="#e3f2fd" align="center" style="padding: 10px;">
-      <p>
-        <br>
-        <b>🎙️ EchoMind</b> 팀이 개발한,<br>
-        출퇴근길에 듣기 좋은 <b>2인 대화형 팟캐스트 플랫폼</b>입니다.
-        <br><br>
-      </p>
-    </td>
-  </tr>
-</table>
+<div align="center">
+<img src="https://img.shields.io/badge/🎙️_EchoMind-팀이_개발한,_출퇴근길에_듣기_좋은_2인_대화형_팟캐스트_플랫폼입니다.-E3F2FD?style=for-the-badge&labelColor=E3F2FD&logoColor=black&color=black" width="100%">
+</div>
 
 ---
 
