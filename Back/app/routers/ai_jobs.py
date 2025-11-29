@@ -45,7 +45,8 @@ async def create_ai_podcast_test(
         # 팟캐스트 생성 요청
         podcast = await podcast_service.create_podcast(
             topic=podcast_data.topic,
-            keywords=podcast_data.keywords
+            keywords=podcast_data.keywords,
+            db=db
         )
         
         return podcast
@@ -80,7 +81,8 @@ async def create_ai_podcast(
         # 팟캐스트 생성 요청
         podcast = await podcast_service.create_podcast(
             topic=podcast_data.topic,
-            keywords=podcast_data.keywords
+            keywords=podcast_data.keywords,
+            db=db
         )
         
         return podcast

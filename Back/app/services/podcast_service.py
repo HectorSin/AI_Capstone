@@ -7,8 +7,10 @@ import os
 import json
 from typing import Dict, Any, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 import threading
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.ai import (
     PerplexityService,
@@ -18,6 +20,8 @@ from app.services.ai import (
 )
 from app.services.crawler_service import WebCrawlerService
 from app.config import settings
+from app.database.models import Article
+from app import crud
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +103,7 @@ class PodcastService:
     def _get_podcast_directory(self, podcast_id: str) -> str:
         """팟캐스트별 디렉토리 경로 반환"""
         return os.path.join(self.base_storage_path, podcast_id)
-    
+
     def _create_podcast_directory(self, podcast_id: str) -> str:
         """팟캐스트별 디렉토리 생성"""
         podcast_dir = self._get_podcast_directory(podcast_id)
@@ -112,6 +116,49 @@ class PodcastService:
             logger.error(f"팟캐스트 디렉토리 생성 실패: {e}")
             # 디렉토리 생성 실패 시에도 계속 진행
             return podcast_dir
+
+    def _get_next_article_number(self, topic_name: str) -> int:
+        """토픽별 다음 Article 번호 반환"""
+        topic_dir = os.path.join(self.base_storage_path, topic_name)
+        last_id_file = os.path.join(topic_dir, "last_id.txt")
+
+        try:
+            if os.path.exists(last_id_file):
+                with open(last_id_file, 'r') as f:
+                    last_id = int(f.read().strip())
+                return last_id + 1
+            else:
+                return 0
+        except Exception as e:
+            logger.error(f"Article ID 로드 실패: {e}")
+            return 0
+
+    def _save_article_number(self, topic_name: str, article_number: int):
+        """토픽별 Article 번호 저장"""
+        topic_dir = os.path.join(self.base_storage_path, topic_name)
+        os.makedirs(topic_dir, mode=0o755, exist_ok=True)
+        last_id_file = os.path.join(topic_dir, "last_id.txt")
+
+        try:
+            with open(last_id_file, 'w') as f:
+                f.write(str(article_number))
+        except Exception as e:
+            logger.error(f"Article ID 저장 실패: {e}")
+
+    def _get_article_directory(self, topic_name: str, article_number: int) -> str:
+        """Article별 디렉토리 경로 반환"""
+        return os.path.join(self.base_storage_path, topic_name, f"article_{article_number}")
+
+    def _create_article_directory(self, topic_name: str, article_number: int) -> str:
+        """Article별 디렉토리 생성"""
+        article_dir = self._get_article_directory(topic_name, article_number)
+        try:
+            os.makedirs(article_dir, mode=0o755, exist_ok=True)
+            logger.info(f"Article 디렉토리 생성: {article_dir}")
+            return article_dir
+        except Exception as e:
+            logger.error(f"Article 디렉토리 생성 실패: {e}")
+            return article_dir
     
     def _save_perplexity_urls(self, podcast_id: str, perplexity_data: Dict[str, Any]) -> str:
         """Perplexity에서 수집한 URL 데이터 저장"""
@@ -127,10 +174,21 @@ class PodcastService:
             logger.error(f"Perplexity URL 데이터 저장 실패: {e}")
             raise
 
-    def _save_crawled_data(self, podcast_id: str, crawled_data: Dict[str, Any]) -> str:
-        """BeautifulSoup으로 크롤링된 원문 데이터 저장"""
-        podcast_dir = self._create_podcast_directory(podcast_id)
-        file_path = os.path.join(podcast_dir, "02_crawled_data.json")
+    def _save_crawled_data(self, dir_or_id: str, crawled_data: Dict[str, Any] = None, is_article_dir: bool = False) -> str:
+        """BeautifulSoup으로 크롤링된 원문 데이터 저장
+
+        Args:
+            dir_or_id: podcast_id (기존) 또는 article_dir (새로운)
+            crawled_data: 크롤링 데이터 (기존 호출 시 필수)
+            is_article_dir: True면 dir_or_id를 article_dir로 사용
+        """
+        if is_article_dir:
+            # 새로운 방식: article_dir 직접 사용
+            file_path = os.path.join(dir_or_id, "crawled_data.json")
+        else:
+            # 기존 방식: podcast_id 사용
+            podcast_dir = self._create_podcast_directory(dir_or_id)
+            file_path = os.path.join(podcast_dir, "02_crawled_data.json")
 
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -207,7 +265,7 @@ class PodcastService:
             logger.error(f"메타데이터 저장 실패: {e}")
             raise
     
-    async def create_podcast(self, topic: str, keywords: list = None) -> Dict[str, Any]:
+    async def create_podcast(self, topic: str, keywords: list = None, db: AsyncSession = None) -> Dict[str, Any]:
         """
         팟캐스트 생성 파이프라인
         1. Perplexity로 데이터 크롤링
@@ -222,10 +280,21 @@ class PodcastService:
         Returns:
             생성된 팟캐스트 정보
         """
+        if db is None:
+            raise ValueError("Database session is required")
+
         try:
+            # Topic 조회
+            topic_obj = await crud.get_topic_by_name(db, topic)
+            if not topic_obj:
+                raise ValueError(f"Topic '{topic}' not found in database")
+
+            # Topic 이름을 디렉토리명으로 사용 (띄어쓰기 없음)
+            topic_dir_name = topic_obj.name
+
             # 팟캐스트 ID 생성 (5자리 숫자)
             podcast_id = self._generate_podcast_id()
-            logger.info(f"팟캐스트 생성 시작: {topic} (ID: {podcast_id})")
+            logger.info(f"팟캐스트 생성 시작: {topic} (ID: {podcast_id}, Topic: {topic_dir_name})")
             
             # 메타데이터 생성 및 저장
             metadata = {
@@ -358,21 +427,60 @@ class PodcastService:
 
             # 각 크롤링된 기사마다 개별적으로 문서 생성
             generated_articles = []
-            for idx, crawled_article in enumerate(crawled_articles):
-                logger.info(f"문서 생성 중 ({idx+1}/{len(crawled_articles)}): {crawled_article.get('url', '')}")
+            db_articles = []  # DB Article 객체 리스트
 
+            for idx, crawled_article in enumerate(crawled_articles):
+                logger.info(f"기사 처리 중 ({idx+1}/{len(crawled_articles)}): {crawled_article.get('url', '')}")
+
+                # Article 번호 생성
+                article_number = self._get_next_article_number(topic_dir_name)
+                logger.info(f"Article 번호: {article_number}")
+
+                # DB Article 레코드 생성
+                article_title = crawled_article.get("title") or f"Article {article_number}"
+                db_article = Article(
+                    topic_id=topic_obj.id,
+                    title=article_title,
+                    date=date.today(),
+                    source_url=crawled_article.get("url"),
+                    status='processing'
+                )
+                db.add(db_article)
+                await db.flush()  # article.id 생성
+                db_articles.append(db_article)
+                logger.info(f"DB Article 생성: {db_article.id}")
+
+                # 스토리지 경로 설정
+                article_dir = self._get_article_directory(topic_dir_name, article_number)
+                self._create_article_directory(topic_dir_name, article_number)
+                db_article.storage_path = article_dir
+
+                # Article 번호 저장
+                self._save_article_number(topic_dir_name, article_number)
+
+                # 크롤링 데이터 저장 (파일)
+                self._save_crawled_data(article_dir, crawled_article, is_article_dir=True)
+
+                # 문서 생성
                 article = await self.gemini.generate_article(
                     title=topic,
-                    article=crawled_article  # 단일 기사 전달
+                    article=crawled_article
                 )
 
-                # 오류 가드: 문서 생성 실패 시 경고하고 계속 진행
+                # 오류 가드: 문서 생성 실패 시
                 if isinstance(article, dict) and article.get("error"):
                     logger.error(f"문서 {idx} 생성 실패: {article}")
+                    db_article.status = 'failed'
+                    db_article.error_message = str(article.get("error"))
+                    await db.commit()
                     generated_articles.append({"error": article.get("error"), "url": crawled_article.get("url")})
                 else:
                     # 성공한 문서 저장
+                    article_data = article.get("data", {})
                     self._save_article(podcast_id, idx, article)
+                    # DB에 article_data 저장
+                    db_article.article_data = article_data
+                    await db.commit()
                     generated_articles.append(article)
                     logger.info(f"문서 {idx} 생성 완료")
 
@@ -414,13 +522,20 @@ class PodcastService:
                     article_data=article.get("data", {})  # 난이도별 문서 데이터
                 )
 
-                # 오류 가드: 대본 생성 실패 시 경고하고 계속 진행
+                # 오류 가드: 대본 생성 실패 시
                 if isinstance(script, dict) and script.get("error"):
                     logger.error(f"대본 {idx} 생성 실패: {script}")
+                    db_articles[idx].status = 'failed'
+                    db_articles[idx].error_message = str(script.get("error"))
+                    await db.commit()
                     generated_scripts.append({"error": script.get("error")})
                 else:
                     # 성공한 대본 저장
+                    script_data = script.get("data", {})
                     self._save_script(podcast_id, idx, script)
+                    # DB에 script_data 저장
+                    db_articles[idx].script_data = script_data
+                    await db.commit()
                     generated_scripts.append(script)
                     logger.info(f"대본 {idx} 생성 완료")
 
@@ -491,9 +606,16 @@ class PodcastService:
                         total_audio_count += 1
                         logger.info(f"기사 {idx} - {difficulty} TTS 생성 완료")
 
-                # 이 기사의 오디오 정보 저장
+                # 이 기사의 오디오 정보 저장 (파일)
                 self._save_audio_metadata(podcast_id, idx, {"service": "clova", "status": "success", "data": audio_results})
                 generated_audios.append({"service": "clova", "status": "success", "data": audio_results})
+
+                # DB에 audio_data 저장 및 완료 처리
+                db_articles[idx].audio_data = audio_results
+                db_articles[idx].status = 'completed'
+                db_articles[idx].completed_at = datetime.now()
+                await db.commit()
+                logger.info(f"기사 {idx} 처리 완료 (DB 업데이트)")
 
             # 최소 1개 이상의 오디오가 생성되어야 함
             if total_audio_count == 0:
