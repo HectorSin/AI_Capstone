@@ -465,14 +465,24 @@ class PodcastService:
 
                 # DB Article 레코드 생성
                 # Perplexity 제목 우선 사용 (한글), 없으면 크롤링된 제목
-                perplexity_title = crawled_article.get("perplexity_metadata", {}).get("title", "")
+                perplexity_metadata = crawled_article.get("perplexity_metadata", {})
+                perplexity_title = perplexity_metadata.get("title", "")
                 crawled_title = crawled_article.get("title", "")
                 article_title = perplexity_title or crawled_title or f"Article {article_number}"
+
+                # Perplexity에서 가져온 실제 기사 날짜 사용, 없으면 오늘 날짜
+                article_date_str = perplexity_metadata.get("date", "")
+                try:
+                    # YYYY-MM-DD 형식의 날짜 문자열을 date 객체로 변환
+                    article_date = datetime.strptime(article_date_str, "%Y-%m-%d").date() if article_date_str else date.today()
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid date format: {article_date_str}, using today's date")
+                    article_date = date.today()
 
                 db_article = Article(
                     topic_id=topic_obj.id,
                     title=article_title,
-                    date=date.today(),
+                    date=article_date,
                     source_url=crawled_article.get("url"),
                     status='processing'
                 )
