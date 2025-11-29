@@ -84,7 +84,7 @@ function FeedCardComponent({
       </View>
       <View style={styles.bottomSection}>
         <Text style={styles.title}>{title}</Text>
-        <Text numberOfLines={3} style={styles.summary}>
+        <Text style={styles.summary}>
           {summary}
         </Text>
       </View>
