@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
 import { FeedCard } from '@/components/FeedCard';
-import { ServerConnectivityBanner } from '@/components/ServerConnectivityBanner';
 import { getArticleFeed } from '@/utils/api';
 import type { FeedItem } from '@/types';
 import { FeedErrorState, FeedLoadingState } from '@/components/FeedState';
@@ -50,7 +49,6 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ServerConnectivityBanner />
         <FeedLoadingState message="피드를 불러오는 중..." />
       </View>
     );
@@ -59,7 +57,6 @@ export default function HomeScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <ServerConnectivityBanner />
         <FeedErrorState title="피드를 불러올 수 없습니다" message={error} onRetry={reload} />
       </View>
     );
@@ -67,7 +64,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <ServerConnectivityBanner />
       <SectionList
         sections={feedSections}
         keyExtractor={(item) => item.id}

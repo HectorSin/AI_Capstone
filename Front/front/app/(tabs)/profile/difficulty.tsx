@@ -51,7 +51,7 @@ export default function DifficultySettingScreen() {
 
   const handleSave = async () => {
     if (!selectedDifficulty) {
-      Alert.alert('안내', '난이도를 선택해주세요.');
+      Alert.alert('안내', '레벨을 선택해주세요.');
       return;
     }
 
@@ -65,14 +65,14 @@ export default function DifficultySettingScreen() {
       const success = await updateDifficulty(selectedDifficulty);
 
       if (success) {
-        Alert.alert('성공', '난이도 설정이 변경되었습니다.');
+        Alert.alert('성공', '맞춤 레벨 설정이 변경되었습니다.');
         setInitialDifficulty(selectedDifficulty);
       } else {
-        Alert.alert('안내', '난이도 설정 변경에 실패했습니다. 다시 시도해주세요.');
+        Alert.alert('안내', '맞춤 레벨 설정 변경에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       console.warn('[Difficulty] Update failed', error);
-      Alert.alert('안내', '난이도 설정 변경 중 문제가 발생했습니다.');
+      Alert.alert('안내', '맞춤 레벨 설정 변경 중 문제가 발생했습니다.');
     } finally {
       setIsUpdating(false);
     }
@@ -92,7 +92,7 @@ export default function DifficultySettingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <NavigationHeader
-        title="난이도 설정"
+        title="맞춤 레벨 설정"
         onBack={() => router.back()}
         rightButton={{
           text: isUpdating ? '저장 중' : '저장',
@@ -104,8 +104,8 @@ export default function DifficultySettingScreen() {
       {/* 컨텐츠 */}
       <View style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>학습 난이도</Text>
-          <Text style={styles.sectionDescription}>선호하는 학습 난이도를 선택해주세요.</Text>
+          <Text style={styles.sectionLabel}>맞춤 레벨</Text>
+          <Text style={styles.sectionDescription}>선호하는 콘텐츠 레벨을 선택해주세요.</Text>
           <View style={styles.optionsContainer}>
             {DIFFICULTY_OPTIONS.map((option) => {
               const isSelected = selectedDifficulty === option.value;

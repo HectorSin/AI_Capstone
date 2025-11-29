@@ -234,7 +234,7 @@ export default function RegisterScreen() {
 
   const handleNextToStep3 = () => {
     if (!canProceedToStep3) {
-      Alert.alert('안내', '난이도를 선택해주세요.');
+      Alert.alert('안내', '레벨을 선택해주세요.');
       return;
     }
     setStep(3);
@@ -392,11 +392,11 @@ export default function RegisterScreen() {
         </View>
       )}
 
-      {/* Step 2: 난이도 선택 */}
+      {/* Step 2: 맞춤 레벨 선택 */}
       {step === 2 && (
         <View>
-          <Text style={styles.title}>학습 난이도 선택</Text>
-          <Text style={styles.subtitle}>선호하는 학습 난이도를 선택해주세요. (2/3)</Text>
+          <Text style={styles.title}>맞춤 레벨 선택</Text>
+          <Text style={styles.subtitle}>선호하는 콘텐츠 레벨을 선택해주세요. (2/3)</Text>
 
           <View style={styles.form}>
             {DIFFICULTY_OPTIONS.map((option) => {

@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   const menuItems: MenuItem[] = [
     { label: '구독 관리', onPress: () => router.push('/(tabs)/profile/subscriptions') },
     { label: '알림 설정', onPress: () => router.push('/(tabs)/profile/notifications') },
-    { label: '난이도 설정', onPress: () => router.push('/(tabs)/profile/difficulty') },
+    { label: '맞춤 레벨 설정', onPress: () => router.push('/(tabs)/profile/difficulty') },
     { label: '로그아웃', onPress: handleSignOut },
     { label: '회원탈퇴', onPress: handleDeleteAccount },
   ];
@@ -69,7 +69,6 @@ export default function ProfileScreen() {
         <Text style={styles.greeting}>
           {user?.nickname || '사용자'}님 안녕하세요!
         </Text>
-        <Text style={styles.email}>{user?.email || ''}</Text>
         <Text style={styles.joinDate}>{user?.createdAt ? formatDate(user.createdAt) : ''}</Text>
       </View>
 
@@ -107,11 +106,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 8,
-  },
-  email: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
   },
   joinDate: {
     fontSize: 13,
