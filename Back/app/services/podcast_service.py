@@ -561,10 +561,6 @@ class PodcastService:
             metadata["steps"]["audio_generation"]["started_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
 
-            # 오디오 디렉토리 생성
-            audios_dir = os.path.join(self._get_podcast_directory(podcast_id), "05_audios")
-            os.makedirs(audios_dir, mode=0o755, exist_ok=True)
-
             # 성공한 대본들에 대해서만 오디오 생성
             generated_audios = []
             total_audio_count = 0
@@ -577,6 +573,9 @@ class PodcastService:
                     continue
 
                 logger.info(f"오디오 생성 중 ({idx+1}/{len(generated_scripts)})")
+
+                # 해당 Article 디렉토리 가져오기
+                article_output_dir = db_articles[idx].storage_path
 
                 # 난이도별 대본 데이터
                 script_data = script.get("data", {})
@@ -592,8 +591,8 @@ class PodcastService:
                     logger.info(f"기사 {idx} - {difficulty} 난이도 TTS 생성 중...")
                     audio = await self.clova.generate_podcast_audio(
                         script=difficulty_script,
-                        output_dir=audios_dir,
-                        filename=f"audio_{idx}_{difficulty}.mp3",
+                        output_dir=article_output_dir,
+                        filename=f"{difficulty}.mp3",
                         speaker_voices={"man": "jinho", "woman": "nara"}
                     )
 
