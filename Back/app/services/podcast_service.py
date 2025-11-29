@@ -199,8 +199,35 @@ class PodcastService:
             logger.error(f"크롤링 원문 데이터 저장 실패: {e}")
             raise
     
+    def _save_article_file(self, article_dir: str, article_data: Dict[str, Any]) -> str:
+        """생성된 문서 저장 (article_dir에 직접 저장)"""
+        file_path = os.path.join(article_dir, "article.json")
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(article_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"문서 저장: {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"문서 저장 실패: {e}")
+            raise
+
+    def _save_script_file(self, article_dir: str, script_data: Dict[str, Any]) -> str:
+        """생성된 대본 저장 (article_dir에 직접 저장)"""
+        file_path = os.path.join(article_dir, "script.json")
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(script_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"대본 저장: {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"대본 저장 실패: {e}")
+            raise
+
+    # 기존 함수들 (하위 호환성)
     def _save_article(self, podcast_id: str, article_index: int, article: Dict[str, Any]) -> str:
-        """생성된 문서 저장 (기사별 개별 파일)"""
+        """생성된 문서 저장 (기사별 개별 파일) - 기존 방식"""
         podcast_dir = self._get_podcast_directory(podcast_id)
         articles_dir = os.path.join(podcast_dir, "03_articles")
         os.makedirs(articles_dir, mode=0o755, exist_ok=True)
@@ -217,7 +244,7 @@ class PodcastService:
             raise
 
     def _save_script(self, podcast_id: str, script_index: int, script: Dict[str, Any]) -> str:
-        """생성된 대본 저장 (기사별 개별 파일)"""
+        """생성된 대본 저장 (기사별 개별 파일) - 기존 방식"""
         podcast_dir = self._get_podcast_directory(podcast_id)
         scripts_dir = os.path.join(podcast_dir, "04_scripts")
         os.makedirs(scripts_dir, mode=0o755, exist_ok=True)
@@ -477,9 +504,23 @@ class PodcastService:
                 else:
                     # 성공한 문서 저장
                     article_data = article.get("data", {})
-                    self._save_article(podcast_id, idx, article)
+                    self._save_article_file(article_dir, article_data)  # 새로운 방식으로 저장
+
                     # DB에 article_data 저장
                     db_article.article_data = article_data
+
+                    # 한글 제목으로 업데이트 (Gemini가 생성한 제목 사용)
+                    # article_data에서 한글 제목 추출 (beginner, intermediate, advanced 중 하나)
+                    korean_title = None
+                    for difficulty in ["intermediate", "beginner", "advanced"]:
+                        if difficulty in article_data and "title" in article_data[difficulty]:
+                            korean_title = article_data[difficulty]["title"]
+                            break
+
+                    if korean_title:
+                        db_article.title = korean_title
+                        logger.info(f"제목 업데이트: {korean_title}")
+
                     await db.commit()
                     generated_articles.append(article)
                     logger.info(f"문서 {idx} 생성 완료")
@@ -532,7 +573,8 @@ class PodcastService:
                 else:
                     # 성공한 대본 저장
                     script_data = script.get("data", {})
-                    self._save_script(podcast_id, idx, script)
+                    article_output_dir = db_articles[idx].storage_path
+                    self._save_script_file(article_output_dir, script_data)  # 새로운 방식으로 저장
                     # DB에 script_data 저장
                     db_articles[idx].script_data = script_data
                     await db.commit()
