@@ -502,9 +502,8 @@ class PodcastService:
                 # 크롤링 데이터 저장 (파일)
                 self._save_crawled_data(article_dir, crawled_article, is_article_dir=True)
 
-                # DB에 crawled_data 저장
+                # DB에 crawled_data 저장 (commit은 나중에)
                 db_article.crawled_data = crawled_article
-                await db.commit()
 
                 # 문서 생성
                 article = await self.gemini.generate_article(
@@ -517,7 +516,6 @@ class PodcastService:
                     logger.error(f"문서 {idx} 생성 실패: {article}")
                     db_article.status = 'failed'
                     db_article.error_message = str(article.get("error"))
-                    await db.commit()
                     generated_articles.append({"error": article.get("error"), "url": crawled_article.get("url")})
                 else:
                     # 성공한 문서 저장
@@ -539,7 +537,6 @@ class PodcastService:
                         db_article.title = korean_title
                         logger.info(f"제목 업데이트: {korean_title}")
 
-                    await db.commit()
                     generated_articles.append(article)
                     logger.info(f"문서 {idx} 생성 완료")
 
@@ -586,7 +583,6 @@ class PodcastService:
                     logger.error(f"대본 {idx} 생성 실패: {script}")
                     db_articles[idx].status = 'failed'
                     db_articles[idx].error_message = str(script.get("error"))
-                    await db.commit()
                     generated_scripts.append({"error": script.get("error")})
                 else:
                     # 성공한 대본 저장
@@ -595,7 +591,6 @@ class PodcastService:
                     self._save_script_file(article_output_dir, script_data)  # 새로운 방식으로 저장
                     # DB에 script_data 저장
                     db_articles[idx].script_data = script_data
-                    await db.commit()
                     generated_scripts.append(script)
                     logger.info(f"대본 {idx} 생성 완료")
 
@@ -673,8 +668,7 @@ class PodcastService:
                 db_articles[idx].audio_data = audio_results
                 db_articles[idx].status = 'completed'
                 db_articles[idx].completed_at = datetime.now()
-                await db.commit()
-                logger.info(f"기사 {idx} 처리 완료 (DB 업데이트)")
+                logger.info(f"기사 {idx} 처리 완료")
 
             # 최소 1개 이상의 오디오가 생성되어야 함
             if total_audio_count == 0:
@@ -692,7 +686,11 @@ class PodcastService:
             metadata["status"] = "completed"
             metadata["completed_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
-            
+
+            # 모든 처리가 끝난 후 DB에 한 번에 저장
+            await db.commit()
+            logger.info(f"모든 기사 DB 저장 완료 (총 {len(db_articles)}개)")
+
             # 결과 정리 (기사별 개별 데이터)
             result = {
                 "podcast_id": podcast_id,
