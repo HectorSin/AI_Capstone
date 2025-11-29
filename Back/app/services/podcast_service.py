@@ -464,7 +464,11 @@ class PodcastService:
                 logger.info(f"Article 번호: {article_number}")
 
                 # DB Article 레코드 생성
-                article_title = crawled_article.get("title") or f"Article {article_number}"
+                # Perplexity 제목 우선 사용 (한글), 없으면 크롤링된 제목
+                perplexity_title = crawled_article.get("perplexity_metadata", {}).get("title", "")
+                crawled_title = crawled_article.get("title", "")
+                article_title = perplexity_title or crawled_title or f"Article {article_number}"
+
                 db_article = Article(
                     topic_id=topic_obj.id,
                     title=article_title,
@@ -487,6 +491,10 @@ class PodcastService:
 
                 # 크롤링 데이터 저장 (파일)
                 self._save_crawled_data(article_dir, crawled_article, is_article_dir=True)
+
+                # DB에 crawled_data 저장
+                db_article.crawled_data = crawled_article
+                await db.commit()
 
                 # 문서 생성
                 article = await self.gemini.generate_article(
