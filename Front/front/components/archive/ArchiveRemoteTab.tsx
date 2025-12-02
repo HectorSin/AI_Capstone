@@ -104,13 +104,8 @@ type RemoteCardProps = {
 function RemoteCard({ summary, isDownloading, onDownload }: RemoteCardProps) {
   const totalDuration = formatDuration(summary.total_duration_seconds);
 
-  // 난이도를 한글로 변환 (첫 번째 세그먼트 기준)
-  const difficulty = summary.segments[0]?.difficulty || 'intermediate';
-  const difficultyLabel = {
-    beginner: '초급',
-    intermediate: '중급',
-    advanced: '고급',
-  }[difficulty] || difficulty;
+  // 첫 번째 세그먼트의 난이도 가져오기
+  const difficultyLabel = summary.segments[0]?.difficulty || 'intermediate';
 
   return (
     <View style={styles.card}>

@@ -70,12 +70,7 @@ export function ArchiveDownloadsTab() {
 }
 
 function DownloadCard({ playlist, onDelete, onPlay }: { playlist: DownloadedPlaylist; onDelete: () => void; onPlay: () => void }) {
-  // 난이도를 한글로 변환
-  const difficultyLabel = {
-    beginner: '초급',
-    intermediate: '중급',
-    advanced: '고급',
-  }[playlist.difficulty] || playlist.difficulty;
+  const difficultyLabel = playlist.difficulty;
 
   return (
     <View style={styles.card}>
