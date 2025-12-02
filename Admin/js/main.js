@@ -25,10 +25,20 @@ window.loadTopics = async () => {
 
 window.loadArticles = async () => {
     try {
+        const articles = await fetchAllArticles();
         const topics = await fetchTopics();
-        renderTopics(topics, 'Articles', { showToolbar: false });
+        renderArticles(articles, topics);
     } catch (error) {
         console.error("Failed to load articles:", error);
+    }
+};
+
+window.loadJobs = async () => {
+    try {
+        const topics = await fetchTopics();
+        renderJobs(topics);
+    } catch (error) {
+        console.error("Failed to load jobs:", error);
     }
 };
 
@@ -49,7 +59,8 @@ window.logout = () => {
 const routes = {
     '#/dashboard': window.loadDashboard,
     '#/topics': window.loadTopics,
-    '#/articles': window.loadArticles
+    '#/articles': window.loadArticles,
+    '#/jobs': window.loadJobs
 };
 
 function setActiveNav(route) {

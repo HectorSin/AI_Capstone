@@ -163,3 +163,63 @@ async function deleteTopic(topicId) {
         throw error;
     }
 }
+
+async function fetchAllArticles(skip = 0, limit = 100) {
+    try {
+        const url = `${API_BASE_URL}/dashboard/articles?skip=${skip}&limit=${limit}`;
+        console.log('Fetching articles from:', url);
+        const response = await fetch(url, { headers: getAuthHeaders() });
+        const data = await handleApiResponse(response);
+        console.log('Articles response:', data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching articles:', error);
+        return [];
+    }
+}
+
+async function fetchArticleById(articleId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/articles/${articleId}/`, { headers: getAuthHeaders() });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error fetching article details for ${articleId}:`, error);
+        return null;
+    }
+}
+
+async function generatePodcast(topicId) {
+    try {
+        const headers = getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(`${API_BASE_URL}/podcasts/generate/${topicId}`, {
+            method: 'POST',
+            headers: headers
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error generating podcast for topic ${topicId}:`, error);
+        throw error;
+    }
+}
+
+async function fetchPodcastStatus(topicId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/podcasts/status/${topicId}`, { headers: getAuthHeaders() });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error fetching podcast status for topic ${topicId}:`, error);
+        return null;
+    }
+}
+
+async function fetchGeneratedFiles(topicId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/podcasts/files/${topicId}`, { headers: getAuthHeaders() });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error(`Error fetching generated files for topic ${topicId}:`, error);
+        return null;
+    }
+}

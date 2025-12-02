@@ -6,7 +6,7 @@ from app.database.redis_client import redis_client
 from app.config import settings
 from app.database import models  # 모델 import 추가 - 테이블 생성을 위해 필요
 from app.routers import users, auth, cache, topics, ai_jobs, articles, podcasts
-from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics
+from app.routers.admin import dashboard as admin_dashboard, topics as admin_topics, podcasts as admin_podcasts
 from app import crud, schemas
 import logging
 from pathlib import Path
@@ -134,6 +134,7 @@ app.include_router(podcasts.router)
 admin_router = APIRouter()
 admin_router.include_router(admin_dashboard.router, prefix="/dashboard", tags=["Admin Dashboard"])
 admin_router.include_router(admin_topics.router, prefix="/topics", tags=["Admin Topics"])
+admin_router.include_router(admin_podcasts.router, prefix="/podcasts", tags=["Admin Podcasts"])
 
 app.include_router(admin_router, prefix="/api/v1/admin")
 # ==========================================================

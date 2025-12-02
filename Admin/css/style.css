@@ -329,3 +329,431 @@ button:disabled {
     margin-top: 0;
     white-space: nowrap;
 }
+
+/* ==================== Article 페이지 스타일 ==================== */
+
+/* 2단 레이아웃 */
+.articles-layout {
+    display: flex;
+    gap: 1.5rem;
+    height: calc(100vh - 200px);
+    margin-top: 1rem;
+}
+
+.articles-table-panel {
+    flex: 0 0 50%;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.articles-table-panel table {
+    margin-top: 0;
+}
+
+.article-detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+}
+
+/* Article 행 선택 스타일 */
+.article-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.article-row.selected {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #3498db;
+}
+
+.article-row.selected:hover {
+    background-color: #bbdefb !important;
+}
+
+/* Article 상세 정보 헤더 */
+.article-detail-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.article-detail-header h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.article-detail-header p {
+    margin: 0.3rem 0;
+    color: #555;
+}
+
+.article-controls {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.article-controls label {
+    font-weight: 600;
+    color: #555;
+}
+
+.article-controls select {
+    padding: 6px 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: white;
+    cursor: pointer;
+}
+
+.article-controls select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* 난이도 탭 */
+.difficulty-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #eee;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    background-color: transparent;
+    color: #7f8c8d;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 0;
+}
+
+.tab-button:hover {
+    color: #3498db;
+    background-color: #f8f9fa;
+}
+
+.tab-button.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+    background-color: transparent;
+}
+
+/* Article 콘텐츠 */
+.article-content {
+    line-height: 1.8;
+    color: #333;
+    font-size: 1rem;
+    white-space: pre-wrap;
+}
+
+.placeholder-text {
+    text-align: center;
+    color: #95a5a6;
+    font-size: 1.1rem;
+    margin-top: 3rem;
+}
+
+/* ==================== Jobs 페이지 스타일 ==================== */
+
+/* Jobs 레이아웃 */
+.jobs-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.topics-grid-panel {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.topics-grid-panel h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.topics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.topic-card {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.topic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: #3498db;
+}
+
+.topic-card.selected {
+    background-color: #e3f2fd;
+    border-color: #3498db;
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+}
+
+.topic-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.topic-card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    border: none;
+    padding: 0;
+}
+
+.topic-type-badge {
+    background-color: #3498db;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.topic-summary {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 0.5rem 0;
+    line-height: 1.4;
+}
+
+.topic-card-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Job 모니터 패널 */
+.job-monitor-panel {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.job-monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.job-monitor-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.status-section {
+    margin-bottom: 2rem;
+}
+
+.status-section h4 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.status-section h5 {
+    color: #555;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.status-item {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.status-label {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.status-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.status-value.status-completed {
+    color: #27ae60;
+}
+
+.status-value.status-processing {
+    color: #f39c12;
+}
+
+.status-value.status-failed {
+    color: #e74c3c;
+}
+
+.status-value.status-pending {
+    color: #95a5a6;
+}
+
+.articles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.article-status-item {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border-left: 4px solid #3498db;
+}
+
+.article-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.status-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: white;
+}
+
+.status-badge.status-completed {
+    background-color: #27ae60;
+}
+
+.status-badge.status-processing {
+    background-color: #f39c12;
+}
+
+.status-badge.status-failed {
+    background-color: #e74c3c;
+}
+
+.status-badge.status-pending {
+    background-color: #95a5a6;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0 0;
+    padding: 0.5rem;
+    background-color: #fadbd8;
+    border-radius: 4px;
+}
+
+/* 파일 섹션 */
+.files-section {
+    margin-top: 2rem;
+}
+
+.files-section h4 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.file-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.file-item:hover {
+    background-color: #e9ecef;
+}
+
+.file-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.file-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.file-info strong {
+    color: #2c3e50;
+}
+
+.file-info small {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.file-path {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #95a5a6;
+    margin-top: 0.25rem;
+}

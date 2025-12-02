@@ -489,3 +489,432 @@ window.cancelAddTopic = async () => {
     const topics = await fetchTopics();
     renderTopics(topics);
 };
+
+// ==================== Article 관련 렌더링 함수 ====================
+let selectedArticleId = null;
+let selectedDifficulty = 'intermediate';
+let selectedContentType = 'article'; // 'article' or 'script'
+
+async function renderArticles(articles, topics) {
+    const content = document.getElementById('content');
+    if (!articles || articles.length === 0) {
+        content.innerHTML = '<h2>Articles</h2><p>No articles found.</p>';
+        return;
+    }
+
+    // topic_id로 topic 정보를 매핑
+    const topicMap = {};
+    if (topics && topics.length > 0) {
+        topics.forEach(topic => {
+            topicMap[topic.id] = topic;
+        });
+    }
+
+    // 테이블 행 생성
+    const tableRows = articles.map(article => {
+        const topic = topicMap[article.topic_id];
+        const topicName = topic ? topic.name : 'Unknown';
+
+        // article_data에서 summary 추출
+        let summary = 'N/A';
+        if (article.article_data && article.article_data.summary) {
+            summary = article.article_data.summary.substring(0, 100) + '...';
+        }
+
+        return `
+            <tr class="article-row ${selectedArticleId === article.id ? 'selected' : ''}"
+                data-article-id="${article.id}"
+                onclick="selectArticle('${article.id}')">
+                <td>${topicName}</td>
+                <td>${article.title}</td>
+                <td>${summary}</td>
+                <td>${new Date(article.created_at).toLocaleDateString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    content.innerHTML = `
+        <h2>Articles</h2>
+        <div class="articles-layout">
+            <div class="articles-table-panel">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Topic</th>
+                            <th>Title</th>
+                            <th>Summary</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+            <div class="article-detail-panel">
+                <div id="article-detail-content">
+                    <p class="placeholder-text">Select an article to view details</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.selectArticle = async (articleId) => {
+    selectedArticleId = articleId;
+
+    // 테이블 행 선택 상태 업데이트
+    document.querySelectorAll('.article-row').forEach(row => {
+        row.classList.toggle('selected', row.dataset.articleId === articleId);
+    });
+
+    // Article 상세 정보 가져오기
+    const articles = await fetchAllArticles();
+    const article = articles.find(a => a.id === articleId);
+
+    if (!article) {
+        return;
+    }
+
+    // Topic 정보 가져오기
+    const topics = await fetchTopics();
+    const topic = topics.find(t => t.id === article.topic_id);
+    const topicName = topic ? topic.name : 'Unknown';
+
+    renderArticleDetail(article, topicName);
+};
+
+function renderArticleDetail(article, topicName) {
+    const detailContent = document.getElementById('article-detail-content');
+
+    if (!detailContent) {
+        return;
+    }
+
+    // 난이도별 데이터 확인
+    const hasArticleData = article.article_data &&
+        (article.article_data.beginner || article.article_data.intermediate || article.article_data.advanced);
+    const hasScriptData = article.script_data &&
+        (article.script_data.beginner || article.script_data.intermediate || article.script_data.advanced);
+
+    if (!hasArticleData && !hasScriptData) {
+        detailContent.innerHTML = `
+            <div class="article-detail-header">
+                <h3>${article.title}</h3>
+                <p><strong>Topic:</strong> ${topicName}</p>
+                <p><strong>Date:</strong> ${new Date(article.created_at).toLocaleDateString()}</p>
+                <p><strong>Status:</strong> ${article.status}</p>
+            </div>
+            <p>No article or script data available.</p>
+        `;
+        return;
+    }
+
+    // 콘텐츠 타입 드롭다운
+    const contentTypeOptions = [];
+    if (hasArticleData) contentTypeOptions.push('<option value="article">Article</option>');
+    if (hasScriptData) contentTypeOptions.push('<option value="script">Script</option>');
+
+    // 현재 선택된 콘텐츠 타입의 데이터
+    const currentData = selectedContentType === 'article' ? article.article_data : article.script_data;
+    const difficultyData = currentData ? currentData[selectedDifficulty] : null;
+
+    let contentHtml = '';
+    if (difficultyData && difficultyData.content) {
+        contentHtml = `<div class="article-content">${difficultyData.content.replace(/\n/g, '<br>')}</div>`;
+    } else {
+        contentHtml = `<p>No content available for ${selectedDifficulty} level.</p>`;
+    }
+
+    detailContent.innerHTML = `
+        <div class="article-detail-header">
+            <h3>${article.title}</h3>
+            <p><strong>Topic:</strong> ${topicName}</p>
+            <p><strong>Date:</strong> ${new Date(article.created_at).toLocaleDateString()}</p>
+            <p><strong>Status:</strong> ${article.status}</p>
+
+            <div class="article-controls">
+                <label for="content-type-select">Content Type:</label>
+                <select id="content-type-select" onchange="changeContentType(this.value)">
+                    ${contentTypeOptions.join('')}
+                </select>
+            </div>
+        </div>
+
+        <div class="difficulty-tabs">
+            <button class="tab-button ${selectedDifficulty === 'beginner' ? 'active' : ''}"
+                    onclick="changeDifficulty('beginner')">Beginner</button>
+            <button class="tab-button ${selectedDifficulty === 'intermediate' ? 'active' : ''}"
+                    onclick="changeDifficulty('intermediate')">Intermediate</button>
+            <button class="tab-button ${selectedDifficulty === 'advanced' ? 'active' : ''}"
+                    onclick="changeDifficulty('advanced')">Advanced</button>
+        </div>
+
+        ${contentHtml}
+    `;
+
+    // 드롭다운 값 설정
+    const contentTypeSelect = document.getElementById('content-type-select');
+    if (contentTypeSelect) {
+        contentTypeSelect.value = selectedContentType;
+    }
+}
+
+window.changeDifficulty = async (difficulty) => {
+    selectedDifficulty = difficulty;
+
+    if (!selectedArticleId) return;
+
+    const articles = await fetchAllArticles();
+    const article = articles.find(a => a.id === selectedArticleId);
+
+    if (!article) return;
+
+    const topics = await fetchTopics();
+    const topic = topics.find(t => t.id === article.topic_id);
+    const topicName = topic ? topic.name : 'Unknown';
+
+    renderArticleDetail(article, topicName);
+};
+
+window.changeContentType = async (contentType) => {
+    selectedContentType = contentType;
+
+    if (!selectedArticleId) return;
+
+    const articles = await fetchAllArticles();
+    const article = articles.find(a => a.id === selectedArticleId);
+
+    if (!article) return;
+
+    const topics = await fetchTopics();
+    const topic = topics.find(t => t.id === article.topic_id);
+    const topicName = topic ? topic.name : 'Unknown';
+
+    renderArticleDetail(article, topicName);
+};
+
+// ==================== Jobs 페이지 렌더링 함수 ====================
+let selectedJobTopicId = null;
+let jobMonitorInterval = null;
+
+async function renderJobs(topics) {
+    const content = document.getElementById('content');
+
+    if (!topics || topics.length === 0) {
+        content.innerHTML = '<h2>Podcast Jobs</h2><p>No topics found.</p>';
+        return;
+    }
+
+    // 토픽 카드 생성
+    const topicCards = topics.map(topic => `
+        <div class="topic-card ${selectedJobTopicId === topic.id ? 'selected' : ''}"
+             data-topic-id="${topic.id}"
+             onclick="selectJobTopic('${topic.id}')">
+            <div class="topic-card-header">
+                <h3>${topic.name}</h3>
+                <span class="topic-type-badge">${topic.type}</span>
+            </div>
+            <p class="topic-summary">${topic.summary || 'No summary'}</p>
+            <div class="topic-card-actions">
+                <button class="btn-small button-success" onclick="event.stopPropagation(); generatePodcastForTopic('${topic.id}')">
+                    Generate Podcast
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    content.innerHTML = `
+        <h2>Podcast Jobs</h2>
+        <div class="jobs-layout">
+            <div class="topics-grid-panel">
+                <h3>Topics</h3>
+                <div class="topics-grid">
+                    ${topicCards}
+                </div>
+            </div>
+            <div class="job-monitor-panel">
+                <div id="job-monitor-content">
+                    <p class="placeholder-text">Select a topic to view job status</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.selectJobTopic = async (topicId) => {
+    selectedJobTopicId = topicId;
+
+    // 카드 선택 상태 업데이트
+    document.querySelectorAll('.topic-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.topicId === topicId);
+    });
+
+    // 모니터링 시작
+    await updateJobMonitor(topicId);
+
+    // 기존 인터벌 클리어
+    if (jobMonitorInterval) {
+        clearInterval(jobMonitorInterval);
+    }
+
+    // 5초마다 상태 업데이트
+    jobMonitorInterval = setInterval(async () => {
+        await updateJobMonitor(topicId);
+    }, 5000);
+};
+
+async function updateJobMonitor(topicId) {
+    const monitorContent = document.getElementById('job-monitor-content');
+    if (!monitorContent) return;
+
+    try {
+        // 상태 및 파일 정보 가져오기
+        const [status, files, topics] = await Promise.all([
+            fetchPodcastStatus(topicId),
+            fetchGeneratedFiles(topicId),
+            fetchTopics()
+        ]);
+
+        const topic = topics.find(t => t.id === topicId);
+        const topicName = topic ? topic.name : 'Unknown';
+
+        // 상태 정보 렌더링
+        let statusHtml = '';
+        if (status) {
+            const statusCounts = status.status_counts || {};
+            statusHtml = `
+                <div class="status-section">
+                    <h4>Status Overview</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">Total Articles:</span>
+                            <span class="status-value">${status.total_articles}</span>
+                        </div>
+                        ${Object.entries(statusCounts).map(([s, count]) => `
+                            <div class="status-item">
+                                <span class="status-label">${s}:</span>
+                                <span class="status-value status-${s}">${count}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <h5>Recent Articles</h5>
+                    <div class="articles-list">
+                        ${status.recent_articles && status.recent_articles.length > 0
+                            ? status.recent_articles.map(article => `
+                                <div class="article-status-item">
+                                    <div class="article-status-header">
+                                        <strong>${article.title}</strong>
+                                        <span class="status-badge status-${article.status}">${article.status}</span>
+                                    </div>
+                                    ${article.error_message ? `<p class="error-message">${article.error_message}</p>` : ''}
+                                    <small>${new Date(article.created_at).toLocaleString()}</small>
+                                </div>
+                            `).join('')
+                            : '<p>No recent articles</p>'
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        // 파일 정보 렌더링
+        let filesHtml = '';
+        if (files && files.files && files.files.length > 0) {
+            filesHtml = `
+                <div class="files-section">
+                    <h4>Generated Files (${files.total_files})</h4>
+                    <div class="files-list">
+                        ${files.files.map(file => `
+                            <div class="file-item">
+                                <div class="file-icon">${getFileIcon(file.type)}</div>
+                                <div class="file-info">
+                                    <strong>${file.name}</strong>
+                                    <small>${formatFileSize(file.size)} • ${new Date(file.modified * 1000).toLocaleString()}</small>
+                                    <div class="file-path">${file.path}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            filesHtml = `
+                <div class="files-section">
+                    <h4>Generated Files</h4>
+                    <p class="placeholder-text">No files generated yet</p>
+                </div>
+            `;
+        }
+
+        monitorContent.innerHTML = `
+            <div class="job-monitor-header">
+                <h3>${topicName}</h3>
+                <button class="btn-small" onclick="refreshJobMonitor()">Refresh</button>
+            </div>
+            ${statusHtml}
+            ${filesHtml}
+        `;
+
+    } catch (error) {
+        console.error('Error updating job monitor:', error);
+        monitorContent.innerHTML = '<p class="error-message">Error loading job information</p>';
+    }
+}
+
+window.generatePodcastForTopic = async (topicId) => {
+    if (!confirm('Are you sure you want to generate a podcast for this topic? This may take some time.')) {
+        return;
+    }
+
+    try {
+        const result = await generatePodcast(topicId);
+        alert(`Podcast generation started: ${result.message}`);
+
+        // 모니터링 업데이트
+        if (selectedJobTopicId === topicId) {
+            await updateJobMonitor(topicId);
+        }
+    } catch (error) {
+        console.error('Error generating podcast:', error);
+        alert('Failed to generate podcast: ' + error.message);
+    }
+};
+
+window.refreshJobMonitor = async () => {
+    if (selectedJobTopicId) {
+        await updateJobMonitor(selectedJobTopicId);
+    }
+};
+
+function getFileIcon(fileType) {
+    const icons = {
+        '.json': '📄',
+        '.mp3': '🎵',
+        '.wav': '🎵',
+        '.txt': '📝',
+        '.md': '📝',
+        '.pdf': '📕',
+        '.jpg': '🖼️',
+        '.jpeg': '🖼️',
+        '.png': '🖼️'
+    };
+    return icons[fileType] || '📎';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// 페이지를 떠날 때 인터벌 클리어
+window.addEventListener('hashchange', () => {
+    if (jobMonitorInterval) {
+        clearInterval(jobMonitorInterval);
+        jobMonitorInterval = null;
+    }
+});
