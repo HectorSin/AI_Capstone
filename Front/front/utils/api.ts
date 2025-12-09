@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.snackcast.shop';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://35.216.97.52:8000';
 
 let authTokenLoader: (() => Promise<string | null>) | null = null;
 

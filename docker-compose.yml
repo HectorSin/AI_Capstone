@@ -23,14 +23,13 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
       - UPLOAD_DIR=/app/database
-      - SERVER_URL=${SERVER_URL:-https://api.snackcast.shop}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://api.snackcast.shop,http://localhost:3000,http://127.0.0.1:3000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     volumes:
       - ./Back/app:/app/app
-      - ../database:/app/database
+      - ./database:/app/database
       - ./AI:/app/ai_modules  # AI 모듈 마운트
       - ./podcasts:/app/podcasts  # 팟캐스트 데이터 저장용 볼륨
       - ./Back/uploads:/app/uploads  # 업로드 디렉토리 마운트
@@ -105,37 +104,6 @@ services:
     networks:
       - capstone_network
     restart: unless-stopped
-
-  # ===========================================
-  # Nginx 리버스 프록시 (HTTPS)
-  # ===========================================
-  nginx:
-    image: nginx:alpine
-    container_name: capstone_nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
-    depends_on:
-      - backend
-    networks:
-      - capstone_network
-    restart: unless-stopped
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-
-  # ===========================================
-  # Certbot (SSL 인증서 자동 갱신)
-  # ===========================================
-  certbot:
-    image: certbot/certbot
-    container_name: capstone_certbot
-    volumes:
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   postgres_data:
