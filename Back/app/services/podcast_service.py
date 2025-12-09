@@ -7,8 +7,10 @@ import os
 import json
 from typing import Dict, Any, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 import threading
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.ai import (
     PerplexityService,
@@ -18,6 +20,8 @@ from app.services.ai import (
 )
 from app.services.crawler_service import WebCrawlerService
 from app.config import settings
+from app.database.models import Article
+from app import crud
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +103,7 @@ class PodcastService:
     def _get_podcast_directory(self, podcast_id: str) -> str:
         """팟캐스트별 디렉토리 경로 반환"""
         return os.path.join(self.base_storage_path, podcast_id)
-    
+
     def _create_podcast_directory(self, podcast_id: str) -> str:
         """팟캐스트별 디렉토리 생성"""
         podcast_dir = self._get_podcast_directory(podcast_id)
@@ -112,6 +116,49 @@ class PodcastService:
             logger.error(f"팟캐스트 디렉토리 생성 실패: {e}")
             # 디렉토리 생성 실패 시에도 계속 진행
             return podcast_dir
+
+    def _get_next_article_number(self, topic_name: str) -> int:
+        """토픽별 다음 Article 번호 반환"""
+        topic_dir = os.path.join(self.base_storage_path, topic_name)
+        last_id_file = os.path.join(topic_dir, "last_id.txt")
+
+        try:
+            if os.path.exists(last_id_file):
+                with open(last_id_file, 'r') as f:
+                    last_id = int(f.read().strip())
+                return last_id + 1
+            else:
+                return 0
+        except Exception as e:
+            logger.error(f"Article ID 로드 실패: {e}")
+            return 0
+
+    def _save_article_number(self, topic_name: str, article_number: int):
+        """토픽별 Article 번호 저장"""
+        topic_dir = os.path.join(self.base_storage_path, topic_name)
+        os.makedirs(topic_dir, mode=0o755, exist_ok=True)
+        last_id_file = os.path.join(topic_dir, "last_id.txt")
+
+        try:
+            with open(last_id_file, 'w') as f:
+                f.write(str(article_number))
+        except Exception as e:
+            logger.error(f"Article ID 저장 실패: {e}")
+
+    def _get_article_directory(self, topic_name: str, article_number: int) -> str:
+        """Article별 디렉토리 경로 반환"""
+        return os.path.join(self.base_storage_path, topic_name, f"article_{article_number}")
+
+    def _create_article_directory(self, topic_name: str, article_number: int) -> str:
+        """Article별 디렉토리 생성"""
+        article_dir = self._get_article_directory(topic_name, article_number)
+        try:
+            os.makedirs(article_dir, mode=0o755, exist_ok=True)
+            logger.info(f"Article 디렉토리 생성: {article_dir}")
+            return article_dir
+        except Exception as e:
+            logger.error(f"Article 디렉토리 생성 실패: {e}")
+            return article_dir
     
     def _save_perplexity_urls(self, podcast_id: str, perplexity_data: Dict[str, Any]) -> str:
         """Perplexity에서 수집한 URL 데이터 저장"""
@@ -127,10 +174,21 @@ class PodcastService:
             logger.error(f"Perplexity URL 데이터 저장 실패: {e}")
             raise
 
-    def _save_crawled_data(self, podcast_id: str, crawled_data: Dict[str, Any]) -> str:
-        """BeautifulSoup으로 크롤링된 원문 데이터 저장"""
-        podcast_dir = self._create_podcast_directory(podcast_id)
-        file_path = os.path.join(podcast_dir, "02_crawled_data.json")
+    def _save_crawled_data(self, dir_or_id: str, crawled_data: Dict[str, Any] = None, is_article_dir: bool = False) -> str:
+        """BeautifulSoup으로 크롤링된 원문 데이터 저장
+
+        Args:
+            dir_or_id: podcast_id (기존) 또는 article_dir (새로운)
+            crawled_data: 크롤링 데이터 (기존 호출 시 필수)
+            is_article_dir: True면 dir_or_id를 article_dir로 사용
+        """
+        if is_article_dir:
+            # 새로운 방식: article_dir 직접 사용
+            file_path = os.path.join(dir_or_id, "crawled_data.json")
+        else:
+            # 기존 방식: podcast_id 사용
+            podcast_dir = self._create_podcast_directory(dir_or_id)
+            file_path = os.path.join(podcast_dir, "02_crawled_data.json")
 
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -141,8 +199,35 @@ class PodcastService:
             logger.error(f"크롤링 원문 데이터 저장 실패: {e}")
             raise
     
+    def _save_article_file(self, article_dir: str, article_data: Dict[str, Any]) -> str:
+        """생성된 문서 저장 (article_dir에 직접 저장)"""
+        file_path = os.path.join(article_dir, "article.json")
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(article_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"문서 저장: {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"문서 저장 실패: {e}")
+            raise
+
+    def _save_script_file(self, article_dir: str, script_data: Dict[str, Any]) -> str:
+        """생성된 대본 저장 (article_dir에 직접 저장)"""
+        file_path = os.path.join(article_dir, "script.json")
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(script_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"대본 저장: {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"대본 저장 실패: {e}")
+            raise
+
+    # 기존 함수들 (하위 호환성)
     def _save_article(self, podcast_id: str, article_index: int, article: Dict[str, Any]) -> str:
-        """생성된 문서 저장 (기사별 개별 파일)"""
+        """생성된 문서 저장 (기사별 개별 파일) - 기존 방식"""
         podcast_dir = self._get_podcast_directory(podcast_id)
         articles_dir = os.path.join(podcast_dir, "03_articles")
         os.makedirs(articles_dir, mode=0o755, exist_ok=True)
@@ -159,7 +244,7 @@ class PodcastService:
             raise
 
     def _save_script(self, podcast_id: str, script_index: int, script: Dict[str, Any]) -> str:
-        """생성된 대본 저장 (기사별 개별 파일)"""
+        """생성된 대본 저장 (기사별 개별 파일) - 기존 방식"""
         podcast_dir = self._get_podcast_directory(podcast_id)
         scripts_dir = os.path.join(podcast_dir, "04_scripts")
         os.makedirs(scripts_dir, mode=0o755, exist_ok=True)
@@ -207,7 +292,7 @@ class PodcastService:
             logger.error(f"메타데이터 저장 실패: {e}")
             raise
     
-    async def create_podcast(self, topic: str, keywords: list = None) -> Dict[str, Any]:
+    async def create_podcast(self, topic: str, keywords: list = None, db: AsyncSession = None) -> Dict[str, Any]:
         """
         팟캐스트 생성 파이프라인
         1. Perplexity로 데이터 크롤링
@@ -222,10 +307,21 @@ class PodcastService:
         Returns:
             생성된 팟캐스트 정보
         """
+        if db is None:
+            raise ValueError("Database session is required")
+
         try:
+            # Topic 조회
+            topic_obj = await crud.get_topic_by_name(db, topic)
+            if not topic_obj:
+                raise ValueError(f"Topic '{topic}' not found in database")
+
+            # Topic 이름을 디렉토리명으로 사용 (띄어쓰기 없음)
+            topic_dir_name = topic_obj.name
+
             # 팟캐스트 ID 생성 (5자리 숫자)
             podcast_id = self._generate_podcast_id()
-            logger.info(f"팟캐스트 생성 시작: {topic} (ID: {podcast_id})")
+            logger.info(f"팟캐스트 생성 시작: {topic} (ID: {podcast_id}, Topic: {topic_dir_name})")
             
             # 메타데이터 생성 및 저장
             metadata = {
@@ -248,7 +344,6 @@ class PodcastService:
             logger.info("Step 1: URL 수집 (Perplexity)")
             metadata["steps"]["perplexity_crawling"]["status"] = "running"
             metadata["steps"]["perplexity_crawling"]["started_at"] = datetime.now().isoformat()
-            self._save_metadata(podcast_id, metadata)
 
             perplexity_data = await self.perplexity.crawl_topic(topic, keywords)
             # 오류 가드: 크롤링 실패 시 중단
@@ -291,7 +386,6 @@ class PodcastService:
             logger.info("Step 2: 원문 크롤링 (BeautifulSoup)")
             metadata["steps"]["beautifulsoup_crawling"]["status"] = "running"
             metadata["steps"]["beautifulsoup_crawling"]["started_at"] = datetime.now().isoformat()
-            self._save_metadata(podcast_id, metadata)
 
             # Perplexity에서 가져온 모든 기사 URL에 대해 크롤링
             articles = perplexity_data.get("data", {}).get("articles", [])
@@ -354,25 +448,95 @@ class PodcastService:
             logger.info("Step 3: 난이도별 문서 생성 (Gemini) - 기사별 개별 처리")
             metadata["steps"]["article_generation"]["status"] = "running"
             metadata["steps"]["article_generation"]["started_at"] = datetime.now().isoformat()
-            self._save_metadata(podcast_id, metadata)
 
             # 각 크롤링된 기사마다 개별적으로 문서 생성
             generated_articles = []
-            for idx, crawled_article in enumerate(crawled_articles):
-                logger.info(f"문서 생성 중 ({idx+1}/{len(crawled_articles)}): {crawled_article.get('url', '')}")
+            db_articles = []  # DB Article 객체 리스트
 
+            for idx, crawled_article in enumerate(crawled_articles):
+                logger.info(f"기사 처리 중 ({idx+1}/{len(crawled_articles)}): {crawled_article.get('url', '')}")
+
+                # Article 번호 생성
+                article_number = self._get_next_article_number(topic_dir_name)
+                logger.info(f"Article 번호: {article_number}")
+
+                # DB Article 레코드 생성
+                # Perplexity 제목 우선 사용 (한글), 없으면 크롤링된 제목
+                perplexity_metadata = crawled_article.get("perplexity_metadata", {})
+                perplexity_title = perplexity_metadata.get("title", "")
+                crawled_title = crawled_article.get("title", "")
+                article_title = perplexity_title or crawled_title or f"Article {article_number}"
+
+                # Perplexity에서 가져온 실제 기사 날짜 사용, 없으면 오늘 날짜
+                article_date_str = perplexity_metadata.get("date", "")
+                try:
+                    # YYYY-MM-DD 형식의 날짜 문자열을 date 객체로 변환
+                    article_date = datetime.strptime(article_date_str, "%Y-%m-%d").date() if article_date_str else date.today()
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid date format: {article_date_str}, using today's date")
+                    article_date = date.today()
+
+                db_article = Article(
+                    topic_id=topic_obj.id,
+                    title=article_title,
+                    date=article_date,
+                    source_url=crawled_article.get("url"),
+                    status='processing'
+                )
+                db.add(db_article)
+                await db.flush()  # article.id 생성
+                db_articles.append(db_article)
+                logger.info(f"DB Article 생성: {db_article.id}")
+
+                # 스토리지 경로 설정
+                article_dir = self._get_article_directory(topic_dir_name, article_number)
+                self._create_article_directory(topic_dir_name, article_number)
+                db_article.storage_path = article_dir
+
+                # Article 번호 저장
+                self._save_article_number(topic_dir_name, article_number)
+
+                # 크롤링 데이터 저장 (파일)
+                self._save_crawled_data(article_dir, crawled_article, is_article_dir=True)
+
+                # DB에 crawled_data 저장
+                db_article.crawled_data = crawled_article
+                await db.commit()
+
+                # 문서 생성
                 article = await self.gemini.generate_article(
                     title=topic,
-                    article=crawled_article  # 단일 기사 전달
+                    article=crawled_article
                 )
 
-                # 오류 가드: 문서 생성 실패 시 경고하고 계속 진행
+                # 오류 가드: 문서 생성 실패 시
                 if isinstance(article, dict) and article.get("error"):
                     logger.error(f"문서 {idx} 생성 실패: {article}")
+                    db_article.status = 'failed'
+                    db_article.error_message = str(article.get("error"))
+                    await db.commit()
                     generated_articles.append({"error": article.get("error"), "url": crawled_article.get("url")})
                 else:
                     # 성공한 문서 저장
-                    self._save_article(podcast_id, idx, article)
+                    article_data = article.get("data", {})
+                    self._save_article_file(article_dir, article_data)  # 새로운 방식으로 저장
+
+                    # DB에 article_data 저장
+                    db_article.article_data = article_data
+
+                    # 한글 제목으로 업데이트 (Gemini가 생성한 제목 사용)
+                    # article_data에서 한글 제목 추출 (beginner, intermediate, advanced 중 하나)
+                    korean_title = None
+                    for difficulty in ["intermediate", "beginner", "advanced"]:
+                        if difficulty in article_data and "title" in article_data[difficulty]:
+                            korean_title = article_data[difficulty]["title"]
+                            break
+
+                    if korean_title:
+                        db_article.title = korean_title
+                        logger.info(f"제목 업데이트: {korean_title}")
+
+                    await db.commit()
                     generated_articles.append(article)
                     logger.info(f"문서 {idx} 생성 완료")
 
@@ -396,7 +560,6 @@ class PodcastService:
             logger.info("Step 4: 난이도별 대본 생성 (Gemini) - 기사별 개별 처리")
             metadata["steps"]["script_generation"]["status"] = "running"
             metadata["steps"]["script_generation"]["started_at"] = datetime.now().isoformat()
-            self._save_metadata(podcast_id, metadata)
 
             # 성공한 문서들에 대해서만 대본 생성
             generated_scripts = []
@@ -414,13 +577,21 @@ class PodcastService:
                     article_data=article.get("data", {})  # 난이도별 문서 데이터
                 )
 
-                # 오류 가드: 대본 생성 실패 시 경고하고 계속 진행
+                # 오류 가드: 대본 생성 실패 시
                 if isinstance(script, dict) and script.get("error"):
                     logger.error(f"대본 {idx} 생성 실패: {script}")
+                    db_articles[idx].status = 'failed'
+                    db_articles[idx].error_message = str(script.get("error"))
+                    await db.commit()
                     generated_scripts.append({"error": script.get("error")})
                 else:
                     # 성공한 대본 저장
-                    self._save_script(podcast_id, idx, script)
+                    script_data = script.get("data", {})
+                    article_output_dir = db_articles[idx].storage_path
+                    self._save_script_file(article_output_dir, script_data)  # 새로운 방식으로 저장
+                    # DB에 script_data 저장
+                    db_articles[idx].script_data = script_data
+                    await db.commit()
                     generated_scripts.append(script)
                     logger.info(f"대본 {idx} 생성 완료")
 
@@ -444,11 +615,6 @@ class PodcastService:
             logger.info("Step 5: 난이도별 음성 생성 (Clova) - 기사별 개별 처리")
             metadata["steps"]["audio_generation"]["status"] = "running"
             metadata["steps"]["audio_generation"]["started_at"] = datetime.now().isoformat()
-            self._save_metadata(podcast_id, metadata)
-
-            # 오디오 디렉토리 생성
-            audios_dir = os.path.join(self._get_podcast_directory(podcast_id), "05_audios")
-            os.makedirs(audios_dir, mode=0o755, exist_ok=True)
 
             # 성공한 대본들에 대해서만 오디오 생성
             generated_audios = []
@@ -462,6 +628,9 @@ class PodcastService:
                     continue
 
                 logger.info(f"오디오 생성 중 ({idx+1}/{len(generated_scripts)})")
+
+                # 해당 Article 디렉토리 가져오기
+                article_output_dir = db_articles[idx].storage_path
 
                 # 난이도별 대본 데이터
                 script_data = script.get("data", {})
@@ -477,8 +646,8 @@ class PodcastService:
                     logger.info(f"기사 {idx} - {difficulty} 난이도 TTS 생성 중...")
                     audio = await self.clova.generate_podcast_audio(
                         script=difficulty_script,
-                        output_dir=audios_dir,
-                        filename=f"audio_{idx}_{difficulty}.mp3",
+                        output_dir=article_output_dir,
+                        filename=f"{difficulty}.mp3",
                         speaker_voices={"man": "jinho", "woman": "nara"}
                     )
 
@@ -491,9 +660,16 @@ class PodcastService:
                         total_audio_count += 1
                         logger.info(f"기사 {idx} - {difficulty} TTS 생성 완료")
 
-                # 이 기사의 오디오 정보 저장
+                # 이 기사의 오디오 정보 저장 (파일)
                 self._save_audio_metadata(podcast_id, idx, {"service": "clova", "status": "success", "data": audio_results})
                 generated_audios.append({"service": "clova", "status": "success", "data": audio_results})
+
+                # DB에 audio_data 저장 및 완료 처리
+                db_articles[idx].audio_data = audio_results
+                db_articles[idx].status = 'completed'
+                db_articles[idx].completed_at = datetime.now()
+                await db.commit()
+                logger.info(f"기사 {idx} 처리 완료 (DB 저장)")
 
             # 최소 1개 이상의 오디오가 생성되어야 함
             if total_audio_count == 0:
@@ -511,7 +687,7 @@ class PodcastService:
             metadata["status"] = "completed"
             metadata["completed_at"] = datetime.now().isoformat()
             self._save_metadata(podcast_id, metadata)
-            
+
             # 결과 정리 (기사별 개별 데이터)
             result = {
                 "podcast_id": podcast_id,

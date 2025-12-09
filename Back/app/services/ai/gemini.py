@@ -16,21 +16,14 @@ from .config_manager import ConfigManager, PromptManager
 logger = logging.getLogger(__name__)
 
 
-class ArticleSection(BaseModel):
-    heading: str
-    body: str
-
-
 class DifficultyArticle(BaseModel):
-    """난이도별 문서"""
-    title: str
-    sections: List[ArticleSection]
-    sources: List[str]
-    word_count: int
+    """난이도별 문서 (프론트엔드 호환 형식)"""
+    content: str  # 전체 내용 (heading은 **bold**, 섹션 간 개행 포함)
 
 
 class ArticleOutput(BaseModel):
     """세 가지 난이도의 문서를 한 번에 생성"""
+    summary: str  # 공통 요약
     beginner: DifficultyArticle
     intermediate: DifficultyArticle
     advanced: DifficultyArticle

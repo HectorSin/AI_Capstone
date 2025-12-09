@@ -42,14 +42,15 @@ def _select_audio_payload(
 
 @router.get("/daily", response_model=List[schemas.DailyPodcastSummary])
 async def get_daily_podcasts(
-    start_date: Optional[date] = Query(None, description="조회 시작 날짜 (기본: 오늘 - 6일)"),
+    start_date: Optional[date] = Query(None, description="조회 시작 날짜 (기본: 제한 없음)"),
     end_date: Optional[date] = Query(None, description="조회 종료 날짜 (기본: 오늘)"),
     current_user: models.User = Depends(auth.get_current_user),
     db: AsyncSession = Depends(auth.get_db),
 ):
     today = date.today()
     resolved_end = end_date or today
-    resolved_start = start_date or (resolved_end - timedelta(days=6))
+    # 기본값을 충분히 과거로 설정하여 모든 팟캐스트 조회
+    resolved_start = start_date or date(2020, 1, 1)
 
     if resolved_start > resolved_end:
         raise HTTPException(
